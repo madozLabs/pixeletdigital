@@ -29,6 +29,7 @@ Use this inventory to expose every launch content dependency, accountable role a
 | General contact journey | Shared | Commercial owner | Purpose, questions, routing and next-step wording | Consent/legal review; mobile error states defined |
 | Project and quotation journeys | Relevant live world | Commercial owner | Qualification questions, source and owner routing | Unknown answers allowed; no promised price or response time |
 | Navigation, ecosystem links and footer | Shared | Project owner | Approved labels, destinations and public notices | Orientation, keyboard path and mobile order checked |
+| Pixel&Digital logo assets and usage metadata | Pixel&Digital | Project owner | Registered raster sources, authoritative vector/master files, approved variants, usage rules and rights authority | Three PNG inputs are documented; blocked until missing masters, rules and authority are approved |
 | Studio teaser | Foundation only | Project owner | Approved provisional descriptor, status and contact action | No full catalogue, pricing, schedule or availability |
 | Training teaser | Foundation only | Project owner | Approved provisional descriptor, status and contact action | No full catalogue, registration, pricing or availability |
 | SEO metadata | Per live world | Content owner | Accurate title, description, stable naming and media context | Matches approved on-page content and world ownership |
@@ -58,4 +59,5 @@ Before publication, the accountable owner verifies that the item is accurate, at
 - Studio and Training final names and teaser wording; neither is a live MVP world.
 - Legal identity, public notices, consent wording, privacy terms and retention requirements.
 - Whether Insights has enough governed content for MVP inclusion.
-- Media-production budget, launch date and final brand assets, colours and type families.
+- Media-production budget and launch date.
+- Final brand assets, colours and type families. Pixel&Digital logo evidence is partially documented, but authoritative vector/master files and formal usage rules remain missing; sampled raster red `#E81B2C` is not an approved universal token.

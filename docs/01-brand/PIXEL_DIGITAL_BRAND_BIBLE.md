@@ -1,7 +1,7 @@
 # Pixel&Digital — Brand Bible
 
-Status: Directional foundation; final identity inputs pending owner approval
-Parent references: `docs/00-vision/PROJECT_BIBLE.md`, `docs/01-brand/BRAND_ARCHITECTURE.md`
+Status: Directional foundation; logo evidence partially documented and final identity inputs pending owner approval
+Parent references: `docs/00-vision/PROJECT_BIBLE.md`, `docs/01-brand/BRAND_ARCHITECTURE.md`, `docs/01-brand/PIXEL_DIGITAL_LOGO_REGISTER.md`
 
 ## 1. Purpose
 
@@ -19,7 +19,7 @@ Define an actionable brand direction for the parent agency and its public experi
 
 ### Visual language
 
-- Red is the dominant signature; exact values and supporting palette remain undecided.
+- Red is the dominant signature. The supplied symbol raster samples at `#E81B2C`, but this is observed raster evidence, not an approved universal brand token; authoritative colour values and the supporting palette remain undecided.
 - Use controlled contrast, strong editorial hierarchy, deliberate whitespace and precise alignment.
 - Prefer authentic work, people, processes and outcomes over generic stock imagery.
 - Use graphic systems that suggest connection, transformation and momentum without visual noise.
@@ -78,7 +78,7 @@ Required content inputs include a validated positioning statement, service hiera
 ## 10. Open owner decisions
 
 - Official positioning language and tagline.
-- Final logo assets and usage rules.
+- Final logo assets and usage rules. Three supplied PNG presentations are documented in the logo register, but the decision remains open pending authoritative vector/master files and formal usage rules.
 - Approved type families and exact colour values.
 - Launch languages, priority geographies and service catalogue.
 - Pricing visibility and consultation-booking approach.
