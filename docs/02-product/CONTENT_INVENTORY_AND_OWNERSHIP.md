@@ -29,7 +29,7 @@ Use this inventory to expose every launch content dependency, accountable role a
 | General contact journey | Shared | Commercial owner | Purpose, questions, routing and next-step wording | Consent/legal review; mobile error states defined |
 | Project and quotation journeys | Relevant live world | Commercial owner | Qualification questions, source and owner routing | Unknown answers allowed; no promised price or response time |
 | Navigation, ecosystem links and footer | Shared | Project owner | Approved labels, destinations and public notices | Orientation, keyboard path and mobile order checked |
-| Pixel&Digital logo assets and usage metadata | Pixel&Digital | Project owner | Registered raster sources, authoritative vector/master files, approved variants, usage rules and rights authority | Three PNG inputs are documented; blocked until missing masters, rules and authority are approved |
+| Pixel&Digital logo assets and usage metadata | Pixel&Digital | Project owner | Registered raster sources, authoritative vector/master files, approved variants, usage rules and rights authority | Four repository PNG sources are documented with hashes; blocked until missing masters, rules and authority are approved |
 | Studio teaser | Foundation only | Project owner | Approved provisional descriptor, status and contact action | No full catalogue, pricing, schedule or availability |
 | Training teaser | Foundation only | Project owner | Approved provisional descriptor, status and contact action | No full catalogue, registration, pricing or availability |
 | SEO metadata | Per live world | Content owner | Accurate title, description, stable naming and media context | Matches approved on-page content and world ownership |

@@ -1,53 +1,50 @@
 # Pixel&Digital — Logo Register
 
-Status: Partially documented; owner decision remains open
+Status: Four repository raster sources registered; owner decision remains open
 Parent references: `docs/01-brand/PIXEL_DIGITAL_BRAND_BIBLE.md`, `docs/01-brand/ASSET_PRODUCTION_PLAN.md`, `docs/08-governance/OWNER_DECISION_REGISTER.md`
 
 ## 1. Purpose
 
-Record the supplied Pixel&Digital logo evidence without promoting raster observations or visual references into approved identity rules. This register is an evidence inventory, not a logo specification or authorization for final production use.
+Record the actual Pixel&Digital logo files present in the repository without promoting raster observations into final identity rules. This register is an evidence inventory, not a complete logo specification.
 
-## 2. Supplied raster files
+## 2. Repository source assets
 
-Three PNG files were supplied in chat. Each is 1418 × 1418 pixels and uses RGBA colour mode.
+The following files are stored under `assets/brand/pixel-digital/source`. Each is a 1418 × 1418 PNG with an alpha-capable pixel format.
 
-| Source file | Verified visible content | Evidence status | Current limitation |
-|---|---|---|---|
-| `P&D.png` | Red circular Pixel&Digital symbol on transparency | Supplied raster | No vector or master source supplied |
-| `P&D-01.png` | White symbol on a red gradient field | Supplied raster | Gradient values and construction are not documented |
-| `P&D-02.png` | White horizontal Pixel & Digital lockup on a red gradient field | Supplied raster | Typography/font and lockup construction are not documented |
+| Repository file | Visible content | Background | Bytes | SHA-256 |
+|---|---|---|---:|---|
+| `pixel-digital-lockup-red-dark-transparent.png` | Red symbol with dark horizontal `Pixel & Digital` wordmark | Transparent | 26,569 | `1b52a9364a2f4dc358e61569acbe5abe0acee5cdb0649ac11c4b14d4362c4f1e` |
+| `pixel-digital-symbol-white-red-gradient.png` | White circular symbol | Opaque red gradient | 145,229 | `7585fcf437861b1234b84486ed561fdfb6549430977953bc41b116e5b3a6c9dc` |
+| `pixel-digital-lockup-white-red-gradient.png` | White symbol with horizontal `Pixel & Digital` wordmark | Opaque red gradient | 167,434 | `27624d037eac23e13dc3cb6fcc866cdc6a3e51bcbe2d2f1e13d0fbd08a161843` |
+| `pixel-digital-symbol-red-transparent.png` | Red circular symbol | Transparent | 36,591 | `c8f983d51513096822cbd1d37665df8f97e161f784b1d3e987d7216ba3fbe20f` |
+
+These four files are now traceable repository assets. They remain raster-only and are not authoritative vector masters.
 
 ## 3. Observed colour evidence
 
-The dominant opaque red sampled from `P&D.png` is RGB 232, 27, 44 / `#E81B2C`.
+The opaque red observed in `pixel-digital-symbol-red-transparent.png` samples as RGB 232, 27, 44 / `#E81B2C`.
 
-This is an observed value from the supplied raster only. It is not an approved universal brand token, print specification, colour-space conversion or authoritative master value. Source confirmation and applicable colour specifications are required before it can be adopted as a final identity colour.
+This is a raster observation only. It is not yet an approved universal brand token, print specification, colour-space conversion or authoritative master value. No gradient stops, direction, interpolation or official gradient values are approved.
 
-No gradient stops, direction, interpolation or colour values are recorded because none were supplied or formally confirmed.
+## 4. Current provisional use
 
-## 4. Reference presentation
+The transparent symbol and lockup files may be used as controlled review and prototyping inputs where their resolution is sufficient. The gradient files may be used only as supplied compositions; their backgrounds must not be reconstructed from inferred values.
 
-A dark-wordmark/light-background presentation is visible as a reference. No distinct fourth source file for that presentation is mounted or registered. It must therefore remain a visual reference, not an available production asset or approved variant.
+No file may be presented as proof of formal usage rights, trademark status, print accuracy or a complete responsive logo system.
 
 ## 5. Missing authority and specifications
 
-The following have not been supplied or confirmed:
+The following remain missing or unconfirmed:
 
-- vector or other master logo files;
+- vector or other authoritative master files;
 - font identification or authoritative wordmark construction;
-- clear-space rules;
-- minimum-size rules;
-- approved background, colour, monochrome or responsive variants;
-- gradient specifications;
+- clear-space and minimum-size rules;
+- approved responsive, monochrome and background variants;
+- authoritative colour and gradient specifications;
 - misuse rules;
-- trademark status;
-- ownership or rights evidence;
-- formal usage and approval rules.
-
-No ownership, trademark, licensing or usage authorization may be inferred from possession of the raster files.
+- trademark status, ownership and rights authority;
+- formal usage, approval and export rules.
 
 ## 6. Decision status and release gate
 
-Owner decision ODR-012 is partially progressed because three raster presentations and one sampled raster colour are now documented. It remains `Open` and continues to block final visual-design and asset-production approval until authoritative master/vector files and formal usage rules are supplied or approved.
-
-The next owner action is to provide or designate authoritative logo masters and approve the complete variant and usage specification, including rights authority. Until then, the registered files may be used only as traceable inputs for brand review and planning, not represented as a complete final logo system.
+Owner decision ODR-012 is materially progressed because four repository raster sources, dimensions, transparency behavior, file sizes and SHA-256 hashes are now documented. It remains `Open` and continues to block final visual-design and production approval until authoritative masters, rights authority and formal usage rules are supplied or approved.
