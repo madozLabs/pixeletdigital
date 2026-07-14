@@ -15,8 +15,14 @@ Il ne valide jamais par défaut. Il challenge les décisions faibles, détecte l
 - Dépôt local : `D:\Dev\pixeldigital`
 - Dépôt distant : `madozLabs/pixeletdigital`
 - Branche principale : `main`
-- Statut produit : à préciser par le propriétaire
-- Objectif produit, utilisateurs cibles, contraintes métier, légales et techniques : à formaliser avant implémentation produit
+- Statut produit : phase de fondations produit, direction de marque et UX en cours ; architecture technique et développement non autorisés à ce stade
+- Objectif produit : plateforme unifiée à deux faces — expérience publique premium multi-marque orientée conversion et Workspace interne pour les contenus, l'activité commerciale, la production et la collaboration
+- Activité : agence de communication et marketing augmentée par une plateforme logicielle interne ; le logiciel soutient l'exécution et n'est pas le produit principal vendu
+- Marques et unités : Pixel&Digital, marque mère ; Kwaliti Print, unité distincte ; Studio audiovisuel et Formation, noms et identités finales à arbitrer
+- Utilisateurs publics : décideurs, responsables marketing et communication, organisations recherchant des services créatifs ou de production, prospects Formation et clients existants
+- Utilisateurs internes : administration, responsables de marque, édition, commerce, contributeurs opérationnels et lecteurs à périmètre limité
+- Périmètre MVP : sites publics Pixel&Digital et Kwaliti Print, CMS structuré, demandes entrantes, suivi léger des leads, rôles et permissions, médias, SEO, accessibilité, performance et analytics ; Studio et Formation restent des fondations ou teasers sauf changement de périmètre approuvé par le propriétaire
+- Contraintes encore ouvertes : langues et géographies de lancement, catalogue et visibilité des prix, noms Studio et Formation, approche de prise de rendez-vous, informations légales et conservation des données, budget de production média et date de lancement
 
 ## Sources de vérité
 

@@ -34,7 +34,7 @@ Le Super Admin ne doit pas devenir l'opérateur obligatoire de chaque action cou
 6. Affecter les demandes entrantes au bon commercial ou collaborateur.
 7. Suivre les actions en retard et les contenus à actualiser.
 
-## Parcours 3 — Éditeur de contenu
+## Parcours 3 — Éditeur
 
 1. Consulter son espace de travail éditorial.
 2. Créer un contenu à partir d'un modèle structuré.
@@ -83,13 +83,13 @@ Les droits d'utilisation et la traçabilité doivent être prévus dès le MVP, 
 
 ## Parcours 7 — Publication
 
-1. Création en brouillon.
-2. Contrôle éditorial.
-3. Prévisualisation.
-4. Validation par le rôle autorisé.
-5. Publication immédiate ou planifiée.
-6. Journalisation.
-7. Mise à jour ou archivage ultérieur.
+1. Création à l'état Brouillon.
+2. Prévisualisation puis soumission à l'état En revue.
+3. Contrôle par un rôle autorisé.
+4. En cas de refus, retour à Brouillon avec une note de revue.
+5. En cas d'accord, passage à Publié immédiatement ou à Planifié pour une publication différée.
+6. Journalisation du changement d'état et de l'identité des intervenants.
+7. Passage ultérieur à Archivé lorsque le contenu n'est plus public.
 
 Un contenu publié doit conserver l'identité de son auteur, de son validateur et de sa dernière modification.
 

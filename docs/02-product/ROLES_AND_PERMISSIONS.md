@@ -10,7 +10,7 @@ Définir un modèle d'accès simple, extensible et sécurisé pour le Workspace 
 - Les actions sensibles sont journalisées.
 - Les accès sont limités par univers métier lorsque nécessaire.
 - La suppression destructive est réservée au Super Admin ; les autres rôles archivent.
-- Les contenus suivent un cycle brouillon, revue, publication et archivage.
+- Les contenus suivent le cycle canonique : Brouillon, En revue, Planifié si nécessaire, Publié, Archivé. Un refus renvoie au Brouillon avec une note de revue.
 - Les permissions doivent rester lisibles ; aucun rôle ne doit devenir un fourre-tout.
 
 ## Rôles du MVP
@@ -64,6 +64,8 @@ Ces rôles seront introduits lorsque les modules opérationnels correspondants e
 | Leads et demandes | gérer | gérer | gérer son univers | consulter si autorisé | gérer | consulter si affecté | non |
 | Notes commerciales | gérer | gérer | gérer son univers | non | gérer | consulter si affecté | non |
 | Journal d'activité | consulter | consulter partiellement | consulter son univers | non | non | non | non |
+
+La prévisualisation est une action, pas un état. Le passage de En revue à Publié ou Planifié est réservé au Super Admin, à l'Administrateur ou au Responsable de marque dans son univers. Planifié est optionnel ; à l'échéance, le contenu devient Publié et l'action est journalisée.
 
 ## Actions sensibles
 

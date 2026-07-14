@@ -230,7 +230,7 @@ This does not authorize technical implementation yet. It establishes the product
 
 ## 11. Brand governance
 
-The super administrator governs all brands.
+The Super Admin governs all brands.
 
 Delegated users may be assigned to specific business units. A user must not automatically gain access to every brand’s unpublished content or operational data.
 

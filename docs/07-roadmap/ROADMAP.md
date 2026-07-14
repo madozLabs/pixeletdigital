@@ -27,7 +27,7 @@ Livrables :
 
 - Brand Bible Pixel&Digital ;
 - Brand Bible Kwaliti Print ;
-- fondations Studio et Formation ;
+- fondations et teasers Studio et Formation, sans lancement complet au MVP sauf changement de périmètre approuvé ;
 - architecture de l'information ;
 - wireframes des parcours prioritaires ;
 - règles d'immersion, mouvement, 3D et accessibilité ;
@@ -98,7 +98,7 @@ Périmètre :
 - utilisateurs, rôles et périmètres ;
 - CMS structuré multi-univers ;
 - bibliothèque médias ;
-- workflow brouillon, revue et publication ;
+- cycle éditorial canonique Brouillon, En revue, Planifié si nécessaire, Publié et Archivé ;
 - leads, qualification, affectation et prochaines actions ;
 - activité récente et notifications essentielles ;
 - audit des actions sensibles.

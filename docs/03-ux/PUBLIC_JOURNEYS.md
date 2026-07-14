@@ -67,6 +67,8 @@ Le changement d'univers doit être spectaculaire mais réversible. Un repère pe
 
 ## Parcours 5 — Studio photo et vidéo
 
+Statut MVP : fondation et teaser public uniquement, sauf changement de périmètre approuvé par le propriétaire. Le parcours détaillé ci-dessous décrit la cible post-MVP et ne constitue pas un engagement de lancement initial.
+
 1. Entrée dans un univers plus cinématographique.
 2. Découverte des formats : shooting, publicité, interview, podcast, événement et contenu social.
 3. Lecture d'un showreel ou d'une sélection éditorialisée.
@@ -78,13 +80,15 @@ Le nom définitif du Studio reste à arbitrer.
 
 ## Parcours 6 — Formation
 
+Statut MVP : fondation et teaser public uniquement, sauf changement de périmètre approuvé par le propriétaire. Le parcours détaillé ci-dessous décrit la cible post-MVP et ne constitue pas un engagement de lancement initial.
+
 1. Entrée dans un univers pédagogique bleu et lumineux.
 2. Découverte des formations par objectif, niveau ou métier.
 3. Consultation d'une fiche formation : résultats attendus, programme, durée, prérequis et formateur.
 4. Consultation des prochaines sessions.
 5. Préinscription ou demande d'information.
 
-Le paiement, les attestations et l'espace apprenant ne sont pas exigés dans le premier MVP, sauf arbitrage contraire.
+Le paiement, les attestations et l'espace apprenant sont hors MVP. Leur ajout, comme le lancement complet de l'univers Formation, exige un changement de périmètre approuvé.
 
 ## Parcours 7 — Visiteur orienté preuve
 

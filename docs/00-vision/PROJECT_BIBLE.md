@@ -203,10 +203,11 @@ The platform should feel like a focused modern SaaS product, not a generic admin
 
 ### Internal
 
-- super administrator;
-- administrators;
-- content editors;
-- commercial team;
+- Super Admin;
+- Administrateur;
+- Responsable de marque;
+- Éditeur;
+- Commercial;
 - project and production managers;
 - designers and motion designers;
 - community managers;
@@ -238,7 +239,7 @@ Projects, production work, responsibilities and deliverables become traceable.
 
 ### 9.5 Business-unit autonomy
 
-Each unit manages its own relevant content and workflows while the super administrator retains global control.
+Each unit manages its own relevant content and workflows while the Super Admin retains global control.
 
 ### 9.6 Evidence and reporting
 
@@ -279,7 +280,7 @@ The MVP must prove the brand experience, content workflow and commercial convers
 - Content is structured, not free-form by default.
 - Each content object has an owning business unit.
 - Cross-unit case studies can reference contributions from multiple units.
-- Publishing supports draft and published states.
+- Publishing follows the canonical lifecycle: Draft, In review, Scheduled (optional), Published and Archived. Rejection returns content to Draft.
 - Public URLs and metadata must be stable and SEO-aware.
 - Media assets require ownership, alternative text and usage context.
 - Sensitive operational data is separate from public content.
@@ -293,7 +294,7 @@ The project succeeds when:
 - the experience remains understandable on mobile;
 - qualified enquiries increase and their sources are traceable;
 - internal teams can manage content without developer intervention;
-- super administrators can govern users, brands and publication;
+- the Super Admin can govern users, brands and publication;
 - the technical foundation can add operational modules without redesigning the product from zero.
 
 ## 14. Open owner decisions
@@ -311,15 +312,8 @@ The following require owner input before final branding or launch decisions:
 
 These decisions do not block continued product discovery, information architecture or workflow definition.
 
-## 15. Next documents
+## 15. Controlled documentation set and next gate
 
-The next controlled deliverables are:
+The vision, brand architecture, MVP scope, roles and permissions, public and internal journeys, roadmap, brand bibles, information architecture, motion guidelines and wireframe specifications form the controlled product baseline under `docs`.
 
-1. `docs/01-brand/BRAND_ARCHITECTURE.md`;
-2. `docs/02-product/MVP_SCOPE.md`;
-3. `docs/02-product/ROLES_AND_PERMISSIONS.md`;
-4. `docs/03-ux/PUBLIC_JOURNEYS.md`;
-5. `docs/03-ux/ADMIN_JOURNEYS.md`;
-6. `docs/07-roadmap/ROADMAP.md`.
-
-No application architecture or production code should be approved until the MVP scope and primary journeys are reviewed.
+The next gate is owner review of the open brand, market, legal, scope and launch decisions, followed by completion of the remaining Phase 1 deliverables identified in the roadmap. No application architecture or production code should be approved until that review explicitly authorizes Phase 2.

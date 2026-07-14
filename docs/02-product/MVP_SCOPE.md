@@ -52,7 +52,7 @@ Required for MVP:
 - public teaser or coming-soon capability if approved;
 - navigation and brand architecture capable of adding the full worlds later.
 
-Full Studio and Training launches are not mandatory for the first release unless the owner prioritizes them before scope freeze.
+Full Studio and Training launches are outside the approved MVP. Adding either requires an explicit owner-approved scope change before scope freeze.
 
 ## 3. Content administration scope
 
@@ -94,12 +94,13 @@ The MVP does not include full invoicing, accounting or a generic sales automatio
 
 Initial roles:
 
-- super administrator;
-- administrator;
-- content editor;
-- commercial user;
-- business-unit contributor;
-- read-only user.
+- Super Admin;
+- Administrateur;
+- Responsable de marque;
+- Éditeur;
+- Commercial;
+- Collaborateur;
+- Lecteur.
 
 Permissions must distinguish:
 
@@ -112,12 +113,15 @@ Final permission matrices will be defined in `ROLES_AND_PERMISSIONS.md`.
 
 ## 6. Publishing workflow
 
-Minimum workflow:
+Canonical lifecycle:
 
-1. draft;
-2. review-ready;
-3. published;
-4. archived.
+1. Draft;
+2. In review;
+3. Scheduled, when delayed publication is requested;
+4. Published;
+5. Archived.
+
+Rejection returns content to Draft with a review note. Preview is an action available before publication, not a lifecycle state. Only an authorized publishing role may move content from In review to Published or Scheduled.
 
 The system should record who created, updated and published significant content.
 
@@ -263,7 +267,7 @@ The MVP is accepted only when:
 - the public experience clearly differentiates Pixel&Digital and Kwaliti Print;
 - visitors can understand and act without getting lost;
 - the site remains usable on mobile and reduced-capability devices;
-- content editors can perform routine updates safely;
+- Éditeurs can perform routine updates safely;
 - incoming opportunities are visible and assignable;
 - permissions prevent obvious cross-unit or privilege leakage;
 - quality gates pass;
@@ -271,8 +275,8 @@ The MVP is accepted only when:
 
 ## 15. Owner decisions needed before scope freeze
 
-- whether Studio launches fully in MVP or remains a foundation/teaser;
-- whether Training launches fully in MVP or remains a foundation/teaser;
+- whether a future scope change promotes Studio from its approved MVP foundation/teaser to a full launch;
+- whether a future scope change promotes Training from its approved MVP foundation/teaser to a full launch;
 - languages required at launch;
 - whether service pricing is public, indicative or quotation-only;
 - preferred consultation booking approach;
