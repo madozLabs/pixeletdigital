@@ -1,4 +1,4 @@
-﻿# Kwaliti Print — Capability Catalogue Draft
+# Kwaliti Print â€” Capability Catalogue Draft
 
 Status: Owner-stated working draft; not approved for publication
 Source: Project-owner statements in product discovery
@@ -14,17 +14,17 @@ Confirmed direction: personalization of promotional or branded objects.
 
 Validation still required: supported objects, materials, techniques, minimum quantities, client-file requirements, sourcing responsibility, samples, durability and safety constraints.
 
-### Banner Printing
-Confirmed direction: printing on banner material.
+### Banner Printing â€” Future Capability
+Owner-stated future direction: printing on banner material.
 
-Validation still required: material types, maximum dimensions, finishing options, indoor/outdoor use, installation, colour expectations and file preparation.
+MVP rule: do not publish as currently available until equipment, materials, formats, dimensions, finishing options, process, constraints, evidence and launch status are explicitly confirmed.
 
-### Vinyl Printing
-Confirmed direction: vinyl printing.
+### Vinyl Printing â€” Future Capability
+Owner-stated future direction: vinyl printing.
 
-Validation still required: vinyl types, surfaces, finishing, lamination, cutting, installation, durability, dimensions and file preparation.
+MVP rule: do not publish as currently available until equipment, vinyl types, surfaces, finishing, lamination, cutting, installation, durability, dimensions, file preparation, evidence and launch status are explicitly confirmed.
 
-### 3D Lettering
+### 3D Lettering â€” Future Capability
 Owner-stated future capability: 3D lettering using a CNC cutter, described as coming soon.
 
 MVP rule: do not publish as currently available until equipment, materials, process, constraints, evidence and launch status are explicitly confirmed.
@@ -42,7 +42,7 @@ Kwaliti Print remains a distinct, predominantly white, tactile and production-or
 
 - Final capability catalogue and names.
 - Materials, formats, dimensions and finishing options.
-- Current versus future availability.
+- Personalized Gadgets is the only currently stated available capability; Banner Printing, Vinyl Printing and 3D Lettering/CNC are future capabilities pending explicit launch confirmation.
 - Service area and fulfilment constraints.
 - File acceptance and customer-upload guidance.
 - Pricing posture and quotation questions.
