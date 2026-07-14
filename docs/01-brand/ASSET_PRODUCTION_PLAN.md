@@ -12,7 +12,7 @@ Produce a rights-cleared, accessible and performance-conscious asset set that ex
 
 | Asset package | World | Accountable owner | Required purpose | Release gate |
 |---|---|---|---|---|
-| Pixel&Digital brand marks and variants | Pixel&Digital | Project owner | Four repository PNG raster sources are registered as controlled inputs; complete identity, ecosystem orientation and legible use | Authoritative vector/master files, approved variants, usage rules and rights authority recorded |
+| Pixel&Digital brand marks and variants | Pixel&Digital | Project owner | Four repository source PNG assets are registered as raster-only inputs; complete identity, ecosystem orientation and legible use | Vector/master files, approved variants, formal usage rules, rights authority, clear space, minimum size, typography and authoritative colour/gradient specifications recorded |
 | Brand marks and approved variants | Other worlds/shared endorsement | Project owner | Identity, ecosystem orientation and legible use | Final assets and usage rights approved |
 | Hero/editorial media | Pixel&Digital | Pixel&Digital content owner | Communicate promise without carrying essential text | Mobile crop, fallback and reduced-motion path approved |
 | Service and process evidence | Pixel&Digital | Service owner | Explain verified work and method | Claim linkage and rights recorded |
@@ -53,7 +53,7 @@ Produce a rights-cleared, accessible and performance-conscious asset set that ex
 
 An asset is launch-ready only when ownership and rights are recorded, the represented claim/capability is verified, privacy/legal dependencies are cleared, mobile presentation preserves meaning, accessibility alternatives exist, enhanced media has a lightweight fallback, and the asset supports a defined content or conversion purpose. Missing final assets use labelled planning gaps, not fabricated public material.
 
-The four repository Pixel&Digital PNG files are documented in `docs/01-brand/PIXEL_DIGITAL_LOGO_REGISTER.md`. They partially progress the logo audit but do not pass the readiness gate: no authoritative vector/master files, rights authority or formal usage rules have been supplied. The sampled raster red `#E81B2C` is observational evidence only and is not an approved universal brand token.
+The four Pixel&Digital PNG files under `assets/brand/pixel-digital/source/` are documented in `docs/01-brand/PIXEL_DIGITAL_LOGO_REGISTER.md` as repository source assets. They partially progress the logo audit but remain raster-only and do not pass the readiness gate: vector/master files, formal usage rules, rights authority, clear space, minimum size, typography and authoritative colour/gradient specifications remain pending. The sampled raster red `#E81B2C` is observational evidence only and is not an approved universal brand token.
 
 ## 6. Open owner decisions
 

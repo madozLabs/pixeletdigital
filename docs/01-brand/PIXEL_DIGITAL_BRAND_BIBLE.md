@@ -78,7 +78,7 @@ Required content inputs include a validated positioning statement, service hiera
 ## 10. Open owner decisions
 
 - Official positioning language and tagline.
-- Final logo assets and usage rules. Four repository PNG sources are documented in the logo register, but the decision remains open pending authoritative vector/master files and formal usage rules.
+- Final logo assets and usage rules. Four repository source PNG assets are documented in the logo register, but remain raster-only; ODR-012 remains open pending vector/master files, formal usage rules, rights authority, clear space, minimum size, typography and authoritative colour/gradient specifications.
 - Approved type families and exact colour values.
 - Launch languages, priority geographies and service catalogue.
 - Pricing visibility and consultation-booking approach.

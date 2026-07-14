@@ -26,11 +26,9 @@ The opaque red observed in `pixel-digital-symbol-red-transparent.png` samples as
 
 This is a raster observation only. It is not yet an approved universal brand token, print specification, colour-space conversion or authoritative master value. No gradient stops, direction, interpolation or official gradient values are approved.
 
-## 4. Current provisional use
+## 4. Evidence boundary
 
-The transparent symbol and lockup files may be used as controlled review and prototyping inputs where their resolution is sufficient. The gradient files may be used only as supplied compositions; their backgrounds must not be reconstructed from inferred values.
-
-No file may be presented as proof of formal usage rights, trademark status, print accuracy or a complete responsive logo system.
+Repository presence establishes source location and traceability only. It does not authorize a usage context or establish formal usage rights, trademark status, print accuracy or a complete responsive logo system.
 
 ## 5. Missing authority and specifications
 
@@ -47,4 +45,4 @@ The following remain missing or unconfirmed:
 
 ## 6. Decision status and release gate
 
-Owner decision ODR-012 is materially progressed because four repository raster sources, dimensions, transparency behavior, file sizes and SHA-256 hashes are now documented. It remains `Open` and continues to block final visual-design and production approval until authoritative masters, rights authority and formal usage rules are supplied or approved.
+Owner decision ODR-012 is materially progressed because four repository raster sources, dimensions, transparency behavior, file sizes and SHA-256 hashes are now documented. It remains `Open` and continues to block final visual-design and production approval pending vector/master files, formal usage rules, rights authority, clear-space rules, minimum-size rules, typography specifications and authoritative colour/gradient specifications.

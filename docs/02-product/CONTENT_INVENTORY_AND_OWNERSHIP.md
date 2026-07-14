@@ -29,7 +29,7 @@ Use this inventory to expose every launch content dependency, accountable role a
 | General contact journey | Shared | Commercial owner | Purpose, questions, routing and next-step wording | Consent/legal review; mobile error states defined |
 | Project and quotation journeys | Relevant live world | Commercial owner | Qualification questions, source and owner routing | Unknown answers allowed; no promised price or response time |
 | Navigation, ecosystem links and footer | Shared | Project owner | Approved labels, destinations and public notices | Orientation, keyboard path and mobile order checked |
-| Pixel&Digital logo assets and usage metadata | Pixel&Digital | Project owner | Registered raster sources, authoritative vector/master files, approved variants, usage rules and rights authority | Four repository PNG sources are documented with hashes; blocked until missing masters, rules and authority are approved |
+| Pixel&Digital logo assets and usage metadata | Pixel&Digital | Project owner | Four repository source PNG assets, vector/master files, approved variants, formal usage rules, rights authority, clear space, minimum size, typography and authoritative colour/gradient specifications | Repository sources remain raster-only; ODR-012 is blocked until the missing authority and specifications are approved |
 | Studio teaser | Foundation only | Project owner | Approved provisional descriptor, status and contact action | No full catalogue, pricing, schedule or availability |
 | Training teaser | Foundation only | Project owner | Approved provisional descriptor, status and contact action | No full catalogue, registration, pricing or availability |
 | SEO metadata | Per live world | Content owner | Accurate title, description, stable naming and media context | Matches approved on-page content and world ownership |
@@ -60,4 +60,4 @@ Before publication, the accountable owner verifies that the item is accurate, at
 - Legal identity, public notices, consent wording, privacy terms and retention requirements.
 - Whether Insights has enough governed content for MVP inclusion.
 - Media-production budget and launch date.
-- Final brand assets, colours and type families. Pixel&Digital logo evidence is partially documented, but authoritative vector/master files and formal usage rules remain missing; sampled raster red `#E81B2C` is not an approved universal token.
+- Final brand assets, colours and type families. Four Pixel&Digital repository source PNG assets are documented but remain raster-only; ODR-012 remains open pending vector/master files, formal usage rules, rights authority, clear space, minimum size, typography and authoritative colour/gradient specifications. Sampled raster red `#E81B2C` is not an approved universal token.
