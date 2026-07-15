@@ -62,8 +62,8 @@ Publication is blocked when a material claim lacks a source, a metric lacks cont
 
 - Which clients, projects, testimonials, outcomes and media may be named or shown.
 - Who may grant client attribution, anonymisation and media-use approval.
-- Which launch claims and Kwaliti Print capabilities have sufficient operational evidence.
-- Whether approved evidence is sufficient for each live-world journey and for Insights inclusion.
+- Which launch claims and ODR-003-approved current Kwaliti Print capabilities have sufficient operational evidence; future-only capabilities must not be treated as launch evidence targets.
+- Whether approved evidence is sufficient for each live-world journey and, only if ODR-021 permits it, for Insights inclusion.
 - Legal identity, privacy terms, consent wording, confidentiality rules and retention requirements.
 - Launch languages/geographies, which affect approvals and contextual accuracy.
 - Media-production budget and availability; missing proof remains a gap.

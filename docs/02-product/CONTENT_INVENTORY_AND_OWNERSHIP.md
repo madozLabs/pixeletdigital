@@ -22,9 +22,9 @@ Use this inventory to expose every launch content dependency, accountable role a
 | Service families and details | Pixel&Digital | Pixel&Digital content owner | Confirmed scope, problem, outcome, method, related proof | Mobile-readable; primary enquiry defined |
 | Team profiles | Pixel&Digital | Project owner | Approved identity, role, biography, portrait rights | Privacy and publication consent recorded |
 | Work and case studies | Pixel&Digital | Case-study owner | Approved client attribution, work, outcomes and media | Evidence framework passes |
-| Insights or resources | Pixel&Digital | Editorial owner | Topic, author/owner, review date, related service | Inclusion decision and conversion role approved |
-| Capability categories | Kwaliti Print | Kwaliti Print content owner | Confirmed categories, uses and constraints | No implied inventory, feasibility or lead time |
-| Materials, formats and guidance | Kwaliti Print | Operational owner | Confirmed facts, limits, definitions and review date | Useful without colour, texture, 3D or zoom |
+| Insights or resources | Pixel&Digital | Editorial owner | Topic, author/owner, review date, related service | Included only if ODR-021 confirms sufficient governed content and an approved conversion role |
+| Current capability content | Kwaliti Print | Kwaliti Print content owner | ODR-003-approved current category, uses and constraints; Personalized Gadgets is the only current-stated candidate | No implied inventory, feasibility or lead time; future-only capabilities excluded |
+| Materials, formats and guidance | Kwaliti Print | Operational owner | Confirmed facts, limits, definitions and review date for an approved current capability | Useful without colour, texture, 3D or zoom; no guidance for future-only capabilities |
 | Project or product examples | Kwaliti Print | Case-study owner | Context, scale, approved media, rights and capability proof | No unverified price, capacity or specification |
 | General contact journey | Shared | Commercial owner | Purpose, questions, routing and next-step wording | Consent/legal review; mobile error states defined |
 | Project and quotation journeys | Relevant live world | Commercial owner | Qualification questions, source and owner routing | Unknown answers allowed; no promised price or response time |

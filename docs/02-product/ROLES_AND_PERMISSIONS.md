@@ -25,7 +25,7 @@ Pilote les opérations courantes, les contenus, les équipes et les prospects, s
 
 ### Responsable de marque
 
-Gère un univers précis — Pixel&Digital, Kwaliti Print, Studio ou Formation — ainsi que ses contenus, médias, offres, réalisations et demandes entrantes.
+Gère un univers MVP actif — Pixel&Digital ou Kwaliti Print — ainsi que ses contenus, médias, offres approuvées, réalisations et demandes entrantes. Studio et Formation restent teaser/fondation uniquement ; ils ne reçoivent pas de responsable d’univers opérationnel au MVP sans changement de périmètre explicite.
 
 ### Éditeur
 
@@ -59,7 +59,7 @@ Ces rôles seront introduits lorsque les modules opérationnels correspondants e
 | Univers de marque | gérer | gérer | gérer son univers | consulter | consulter | consulter | consulter |
 | Pages et services | publier | publier | publier son univers | créer/modifier | consulter | consulter | consulter |
 | Études de cas | publier | publier | publier son univers | créer/modifier | consulter | contribuer si affecté | consulter |
-| Blog et ressources | publier | publier | publier son univers | créer/modifier | consulter | contribuer si affecté | consulter |
+| Insights et ressources, uniquement si ODR-021 les inclut au MVP | publier | publier | publier son univers | créer/modifier | consulter | contribuer si affecté | consulter |
 | Médias | gérer | gérer | gérer son univers | importer/utiliser | consulter | importer si autorisé | consulter |
 | Leads et demandes | gérer | gérer | gérer son univers | consulter si autorisé | gérer | consulter si affecté | non |
 | Notes commerciales | gérer | gérer | gérer son univers | non | gérer | consulter si affecté | non |

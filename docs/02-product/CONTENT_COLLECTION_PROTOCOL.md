@@ -16,7 +16,7 @@ For each proposed launch service collect: approved name, client problem, confirm
 
 ## 4. Kwaliti Print capabilities
 
-For each capability collect: approved category, application, confirmed materials/formats, constraints, quantity or dimension questions, file guidance, service area, fulfilment limitations, authentic examples, operational owner and quotation route. Never infer inventory, turnaround, price or feasibility.
+Collect launch content only for capabilities approved as current under ODR-003. Personalized Gadgets is the only current-stated candidate. For each approved current capability collect: approved category, application, confirmed materials/formats, constraints, quantity or dimension questions, file guidance, service area, fulfilment limitations, authentic examples, operational owner and quotation route. Banner Printing, Vinyl Printing and 3D Lettering/CNC remain future-only and receive no current quotation route. Never infer inventory, turnaround, price or feasibility.
 
 ## 5. Team
 
