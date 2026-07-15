@@ -29,12 +29,18 @@ placeholders before using database commands. The example contains no credentials
 ```sh
 npm run prisma:generate
 npm run prisma:validate
+npm run test:integration:db
 ```
 
-Local migration creation and verification require a reachable PostgreSQL instance,
-installed directly or supplied through Docker. Neither PostgreSQL nor Docker was
-available when this foundation was added, so no migration was created, executed, or
-claimed as database-tested.
+The database integration command starts an isolated PostgreSQL-compatible PGlite
+server, applies the versioned initial migration SQL, tests the Prisma Worlds repository,
+and removes the temporary database. This is repository-level PostgreSQL protocol
+evidence, not production parity.
+
+Docker and a native PostgreSQL installation are still unavailable on this machine.
+`prisma migrate deploy` could not connect to PGlite through Prisma's migration engine,
+so deployment-engine migration verification remains open until native PostgreSQL or
+Docker is available.
 
 ## Architecture
 

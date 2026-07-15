@@ -12,6 +12,8 @@
     "format:check": "prettier --check .",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:integration:db": "node scripts/run-db-integration.mjs",
+    "test:integration:db:raw": "vitest run --config vitest.integration.config.ts",
     "check": "npm run format:check && npm run lint && npm run prisma:validate && npm run prisma:generate && npm run typecheck && npm run test:run",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate"
@@ -26,6 +28,8 @@
     "server-only": "0.0.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.4.1",
+    "@electric-sql/pglite-socket": "0.1.1",
     "@testing-library/dom": "10.4.1",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.2",
