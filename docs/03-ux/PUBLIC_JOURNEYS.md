@@ -55,11 +55,11 @@ Le discours doit vendre une transformation, pas une simple liste de publications
 
 1. Découverte depuis l'écosystème Pixel&Digital ou une URL directe.
 2. Transition immersive claire vers l'univers Kwaliti Print.
-3. Compréhension immédiate de l'offre : impression, personnalisation, signalétique et fabrication.
-4. Exploration par catégories de produits ou usages.
-5. Visualisation de matières, finitions, formats et réalisations.
-6. Sélection du type de besoin.
-7. Demande de devis avec possibilité d'ajouter des références ou fichiers.
+3. Compréhension immédiate du périmètre actuel : personnalisation de gadgets uniquement comme capacité actuellement déclarée.
+4. Les impressions bâche et vinyle ainsi que le lettrage 3D/CNC restent futures et ne doivent pas être présentés comme disponibles.
+5. Exploration des usages, options, contraintes et preuves uniquement pour les capacités explicitement approuvées.
+6. Sélection du type de besoin dans le périmètre actuel confirmé.
+7. Demande de devis contextualisée uniquement pour une capacité actuelle approuvée ; aucune route de devis spécifique pour les capacités futures.
 
 ### Règle critique
 

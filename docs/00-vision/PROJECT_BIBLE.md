@@ -41,7 +41,7 @@ Core domains:
 - digital strategy;
 - social media management;
 - community management;
-- Meta, TikTok and LinkedIn advertising;
+- Facebook advertising as an owner-stated candidate; broader paid-media platforms remain unconfirmed;
 - content strategy and creation;
 - branding and graphic design;
 - motion design and video editing;
@@ -58,7 +58,7 @@ Experience direction:
 
 Role: printing, personalization, signage and fabrication business unit.
 
-Current and planned domains:
+Long-term directional domains; this list is not a statement of current availability:
 
 - personalized promotional items;
 - banner printing;
@@ -67,6 +67,8 @@ Current and planned domains:
 - signage;
 - three-dimensional lettering;
 - CNC-assisted cutting and fabrication.
+
+Current-status boundary: Personalized Gadgets is the only currently stated available Kwaliti Print capability. Banner Printing, Vinyl Printing and 3D Lettering/CNC are future-only. Other detailed capabilities in this vision remain unconfirmed until an explicit owner decision records them.
 
 Experience direction:
 

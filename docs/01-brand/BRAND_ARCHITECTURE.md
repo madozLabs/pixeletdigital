@@ -87,7 +87,9 @@ Motion communicates acceleration, connection and transformation. It should be re
 
 ### Strategic role
 
-Physical production, printing, personalization, signage and fabrication.
+Long-term brand role: physical production, printing, personalization, signage and fabrication. This strategic description is not a claim that every capability is currently available.
+
+Current-status boundary: Personalized Gadgets is the only currently stated available Kwaliti Print capability. Banner Printing, Vinyl Printing and 3D Lettering/CNC are future-only; other detailed capabilities remain unconfirmed pending explicit owner decisions.
 
 ### Core promise
 
