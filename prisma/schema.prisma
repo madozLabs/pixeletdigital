@@ -33,6 +33,27 @@ enum AssignmentScopeType {
   WORLD
 }
 
+enum AuditAction {
+  ACCESS_USER_ACTIVATED
+  ACCESS_USER_DEACTIVATED
+  ACCESS_ROLE_ASSIGNED
+  ACCESS_ROLE_REVOKED
+}
+
+enum AuditTargetType {
+  USER
+  ROLE_ASSIGNMENT
+}
+
+enum AuditResult {
+  SUCCEEDED
+}
+
+enum RequestOriginChannel {
+  WORKSPACE
+  SYSTEM
+}
+
 model World {
   id              String           @id @default(cuid())
   key             String           @unique
@@ -41,6 +62,7 @@ model World {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   roleAssignments RoleAssignment[]
+  auditEvents     AuditEvent[]
 
   @@map("worlds")
 }
@@ -71,4 +93,24 @@ model RoleAssignment {
   @@index([userId, validFrom, validUntil])
   @@index([worldId])
   @@map("role_assignments")
+}
+
+model AuditEvent {
+  id            String               @id
+  occurredAt    DateTime
+  actorId       String
+  action        AuditAction
+  targetType    AuditTargetType
+  targetId      String
+  result        AuditResult
+  correlationId String
+  originChannel RequestOriginChannel
+  worldId       String?
+  world         World?               @relation(fields: [worldId], references: [id], onDelete: Restrict)
+
+  @@index([occurredAt])
+  @@index([actorId, occurredAt])
+  @@index([targetType, targetId, occurredAt])
+  @@index([worldId, occurredAt])
+  @@map("audit_events")
 }
