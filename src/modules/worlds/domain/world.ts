@@ -42,13 +42,8 @@ export function createWorld(
     );
   }
 
-  const key = input.key.trim();
-  if (key.length < 2 || key.length > 64 || !WORLD_KEY_PATTERN.test(key)) {
-    return failure(
-      "INVALID_KEY",
-      "World key must use lowercase letters, digits, and internal hyphens.",
-    );
-  }
+  const keyResult = parseWorldKey(input.key);
+  if (!keyResult.ok) return keyResult;
 
   const displayName = input.displayName.trim();
   if (!displayName || displayName.length > 120) {
@@ -69,13 +64,40 @@ export function createWorld(
     ok: true,
     value: Object.freeze({
       id,
-      key: key as WorldKey,
+      key: keyResult.value,
       displayName,
       mode: input.mode,
       createdAt: new Date(input.createdAt),
       updatedAt: new Date(input.updatedAt),
     }),
   };
+}
+
+export function parseWorldKey(
+  rawKey: string,
+): Result<WorldKey, WorldValidationError> {
+  const key = rawKey.trim();
+  if (key.length < 2 || key.length > 64 || !WORLD_KEY_PATTERN.test(key)) {
+    return failure(
+      "INVALID_KEY",
+      "World key must use lowercase letters, digits, and internal hyphens.",
+    );
+  }
+
+  return { ok: true, value: key as WorldKey };
+}
+
+export function updateWorldSettings(
+  world: World,
+  input: Readonly<{ displayName: string; mode: string }>,
+  updatedAt: Date,
+): Result<World, WorldValidationError> {
+  return createWorld({
+    ...world,
+    displayName: input.displayName,
+    mode: input.mode,
+    updatedAt,
+  });
 }
 
 export function isWorldMode(value: string): value is WorldMode {
