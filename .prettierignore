@@ -1,0 +1,9 @@
+node_modules/
+.next/
+coverage/
+docs/
+assets/
+.agents/
+NVIDIA Corporation/
+AGENTS.md
+package-lock.json
