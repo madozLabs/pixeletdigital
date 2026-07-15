@@ -156,9 +156,9 @@ The platform must prioritize evidence:
 Each journey must lead naturally to one or more business actions:
 
 - request a quotation;
-- book a consultation;
+- request a consultation only where the launch contact policy explicitly approves that route;
 - send a project brief;
-- register for training;
+- request general information about Training while it remains teaser/foundation only; registration is a future capability;
 - contact a specific business unit.
 
 ## 6. Experience principles

@@ -28,7 +28,7 @@ Required:
 - work and case studies;
 - team presentation;
 - evidence, results and testimonials;
-- insights or resources;
+- Insights or resources only if ODR-021 confirms sufficient governed content for MVP;
 - contact and quotation journeys;
 - access to the ecosystem’s other worlds.
 
@@ -131,12 +131,12 @@ Complex multi-stage approvals are out of scope for the MVP unless a real operati
 
 ## 7. Forms and conversion
 
-Required forms:
+Required launch routes:
 
 - general contact;
 - project or quotation request;
-- Kwaliti Print quotation request;
-- consultation or appointment request.
+- Kwaliti Print quotation request limited to approved current capability scope;
+- consultation or appointment request only if ODR-005 explicitly approves that route.
 
 Each submission must:
 

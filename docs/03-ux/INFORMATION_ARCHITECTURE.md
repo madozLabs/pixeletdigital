@@ -23,8 +23,8 @@ Define how public and internal information is grouped, named and connected so us
 - Agency: positioning, method, team and credibility.
 - Services: service families, service detail, related evidence and enquiry action.
 - Work: case-study index and detail with context, contribution, outputs and approved outcomes.
-- Insights: resource index and detail, where sufficient governed content exists.
-- Contact: general contact, project brief, quotation and consultation routes.
+- Insights: resource index and detail only if ODR-021 confirms sufficient governed content for MVP.
+- Contact: general contact, project brief and quotation routes; consultation appears only if ODR-005 explicitly approves it.
 - Our worlds: Kwaliti Print plus clearly labelled Studio and Training teasers.
 
 ### Kwaliti Print

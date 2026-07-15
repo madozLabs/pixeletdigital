@@ -68,8 +68,8 @@ Périmètre :
 - services prioritaires ;
 - études de cas et réalisations ;
 - équipe ;
-- ressources ou actualités ;
-- contact, rendez-vous et demande de devis ;
+- ressources ou actualités uniquement si ODR-021 confirme un contenu gouverné suffisant ;
+- contact et demande de devis ; rendez-vous uniquement si ODR-005 l’approuve explicitement ;
 - SEO, analytics, performance et accessibilité.
 
 Critère de sortie : expérience publique stable, rapide, responsive et mesurable.
