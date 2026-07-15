@@ -1,6 +1,6 @@
 # Kwaliti Print â€” Capability Catalogue Intake Template
 
-Use one copy per proposed launch capability. Unknown inventory, feasibility, materials, formats, dimensions, quantities, turnaround, price, capacity and service area remain gaps.
+Use one copy only for a capability approved as current under ODR-003. Personalized Gadgets is the sole current-stated candidate. Do not use this launch template for Banner Printing, Vinyl Printing or 3D Lettering/CNC while they remain future-only. Unknown inventory, feasibility, materials, formats, dimensions, quantities, turnaround, price, capacity and service area remain gaps.
 
 ## Record control
 

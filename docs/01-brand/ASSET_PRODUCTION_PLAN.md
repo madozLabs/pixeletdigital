@@ -18,8 +18,8 @@ Produce a rights-cleared, accessible and performance-conscious asset set that ex
 | Service and process evidence | Pixel&Digital | Service owner | Explain verified work and method | Claim linkage and rights recorded |
 | Team portraits | Pixel&Digital | Project owner | Human trust and role context | Consent, privacy and alt treatment approved |
 | Case-study media | Relevant live world | Case-study owner | Prove deliverables or attributable outcomes | Evidence framework passes |
-| Materials, finishes and scale views | Kwaliti Print | Operational owner | Explain confirmed physical choices and context | No misleading crop, colour-only meaning or implied availability |
-| Workshop/process media | Kwaliti Print | Operational owner | Demonstrate verified process/capability | Safety, confidentiality and rights checked |
+| Materials, finishes and scale views | Kwaliti Print | Operational owner | Explain confirmed physical choices for an ODR-003-approved current capability | No misleading crop, colour-only meaning or implied availability; future-only capabilities excluded |
+| Workshop/process media | Kwaliti Print | Operational owner | Demonstrate a verified current process/capability only | Safety, confidentiality and rights checked; no future capability presented as operational |
 | Optional video/3D/zoom | Relevant live world | Content owner | Add decision value after core content | Lightweight equivalent; never journey-critical |
 | Icons and explanatory graphics | Shared/per world | Brand owner | Clarify navigation, process or specifications | Text labels and non-colour meaning retained |
 | Studio teaser asset | Foundation only | Project owner | Signal approved provisional purpose and status | No implied live catalogue, availability or identity finality |

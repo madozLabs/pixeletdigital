@@ -5,7 +5,7 @@ Parent references: `docs/00-vision/PROJECT_BIBLE.md`, `docs/01-brand/BRAND_ARCHI
 
 ## 1. Purpose
 
-Define Kwaliti Print as a distinct, predominantly white, tactile and industrial production brand within the Pixel&Digital ecosystem. The experience must make materials, fabrication precision and quotation paths understandable without becoming a catalogue or a visual demonstration without commercial direction.
+Define Kwaliti Print as a distinct, predominantly white, tactile and industrial production brand within the Pixel&Digital ecosystem. The experience must explain only the current capability scope approved under ODR-003. Personalized Gadgets is the sole current-stated candidate; Banner Printing, Vinyl Printing and 3D Lettering/CNC remain future-only. Materials, fabrication precision and quotation paths appear only where operationally validated for an approved current capability.
 
 ## 2. Principles
 
@@ -65,15 +65,16 @@ Define Kwaliti Print as a distinct, predominantly white, tactile and industrial 
 
 ## 8. Conversion intent
 
-- Help visitors identify the correct request category before asking for detailed inputs.
-- Place relevant examples, materials and capability evidence beside the decision they support.
-- The quotation path should capture the need, intended use, quantity or dimensions when known, references, files and contact details without forcing unknown answers.
+- Help visitors identify an approved current capability before asking for detailed inputs.
+- Place relevant examples, materials and capability evidence beside the decision they support, only when tied to an approved current capability.
+- The quotation path exists only for an ODR-003-approved current capability and should capture the need, intended use, quantity or dimensions when known, references, files and contact details without forcing unknown answers.
+- Future-only capabilities receive no capability-specific quotation route or availability treatment.
 - State the next step after submission without inventing response time, price or production commitment.
 - Preserve source category and business-unit context for later lead handling.
 
 ## 9. Content implications
 
-Required inputs include approved categories, capability statements, materials and finishes, specification guidance, real project examples, media rights, file-submission guidance and qualification questions. Every claim needs an operational owner and review cadence. Product-like records must distinguish stable descriptive content from variable commercial facts that require confirmation.
+Required launch inputs are limited to the ODR-003-approved current capability set. They may include approved capability statements, materials and finishes, specification guidance, real project examples, media rights, file-submission guidance and qualification questions only where operationally verified. Future-only capabilities remain unpublished planning records unless a later owner decision changes their status. Every claim needs an operational owner and review cadence.
 
 ## 10. Open owner decisions
 
