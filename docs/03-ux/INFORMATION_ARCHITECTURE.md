@@ -29,11 +29,12 @@ Define how public and internal information is grouped, named and connected so us
 
 ### Kwaliti Print
 
-- Home: proposition, capability families, material proof and quotation entry.
-- Capabilities: categories organized by need or application, with confirmed options and constraints.
-- Work: relevant products, projects and fabrication examples.
-- Materials and finishes: only validated guidance that supports selection.
-- Quotation request: a staged, print-specific qualification path.
+- Home: proposition, current-capability overview, approved proof and quotation entry.
+- Current capability: Personalized Gadgets is the only current-stated candidate unless ODR-003 explicitly changes it.
+- Future capabilities: Banner Printing, Vinyl Printing and 3D Lettering/CNC remain excluded from current-capability navigation, detail pages and quotation routes while future-only.
+- Work: only relevant, authentic and permissioned examples tied to an approved current capability.
+- Materials and finishes: only validated guidance that supports an approved current capability.
+- Quotation request: a staged qualification path limited to approved current capability scope.
 - Ecosystem link: persistent identification of the Pixel&Digital relationship and a clear return route.
 
 ### Studio and Training

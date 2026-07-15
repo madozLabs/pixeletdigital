@@ -37,10 +37,12 @@ Required:
 Required:
 
 - visually distinct immersive landing experience;
-- clear service and product families;
-- project or product gallery;
-- materials, formats or production capabilities where useful;
-- quotation request adapted to printing and fabrication;
+- a current-capability presentation limited to owner-approved launch scope;
+- Personalized Gadgets treated as the only current-stated capability unless ODR-003 explicitly changes it;
+- Banner Printing, Vinyl Printing and 3D Lettering/CNC excluded from current-capability pages and quotation routes while future-only;
+- project or product evidence only where authentic, permissioned and relevant to an approved current capability;
+- materials, formats or production guidance only where operationally validated;
+- quotation request adapted only to an approved current capability;
 - clear relationship to the Pixel&Digital ecosystem;
 - responsive fallback for heavy visual or 3D elements.
 
@@ -239,8 +241,10 @@ Not part of MVP:
 
 - distinct brand theme;
 - immersive public experience;
-- print-specific catalogue structure;
-- adapted quotation flow.
+- governed capability structure limited to approved current scope;
+- Personalized Gadgets as the sole current-stated candidate unless ODR-003 changes it;
+- no current pages or quotation routes for Banner Printing, Vinyl Printing or 3D Lettering/CNC while future-only;
+- adapted quotation flow for approved current capability only.
 
 ### Slice C — Administration and leads
 

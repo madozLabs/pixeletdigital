@@ -31,7 +31,7 @@ Index supports understandable filtering by relevant need or universe. Detail inc
 
 ### Kwaliti Print home and capability detail
 
-Home sequence: distinct identity and ecosystem link; proposition; capability categories; material or process evidence; selected work; quotation action. Detail sequence: intended use; confirmed options and constraints; visual evidence with scale/context; related examples; information needed for a quotation; quotation entry. 3D is an optional layer beside a complete static presentation.
+Home sequence: distinct identity and ecosystem link; proposition; current-capability overview; approved material or process evidence; selected work; quotation action. Personalized Gadgets is the only current-stated candidate unless ODR-003 explicitly changes it. Banner Printing, Vinyl Printing and 3D Lettering/CNC must not receive current-capability cards, detail pages or quotation routes while future-only. Any approved current-capability detail follows: intended use; confirmed options and constraints; visual evidence with scale/context; related examples; information needed for a quotation; quotation entry. 3D is an optional presentation layer beside a complete static experience, not evidence that CNC or 3D Lettering is available.
 
 ### Contact and quotation
 

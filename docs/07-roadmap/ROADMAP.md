@@ -6,7 +6,7 @@ La roadmap sépare clairement l'expérience publique, le Workspace interne et le
 
 ## Phase 0 — Fondations produit
 
-Statut : en cours.
+Statut : structurellement couverte et intégrée à la Phase 1 ; les décisions propriétaire critiques restent ouvertes.
 
 Livrables :
 
@@ -22,6 +22,8 @@ Livrables :
 Critère de sortie : vision cohérente, périmètre compréhensible et arbitrages critiques identifiés.
 
 ## Phase 1 — Direction de marque et UX
+
+Statut : phase active, structurellement avancée mais non clôturée ; la Phase 2 reste bloquée jusqu’à autorisation explicite du propriétaire.
 
 Livrables :
 
@@ -74,19 +76,20 @@ Critère de sortie : expérience publique stable, rapide, responsive et mesurabl
 
 ## Phase 4 — Kwaliti Print
 
-Objectifs : lancer un univers distinct, immersif et commercialement exploitable.
+Objectifs : lancer un univers distinct, immersif et commercialement exploitable dans le périmètre réellement approuvé.
 
 Périmètre :
 
 - identité et navigation propres ;
-- catégories d'impression et personnalisation ;
-- réalisations ;
-- matières et finitions ;
-- demande de devis enrichie ;
-- médias immersifs et 3D progressive lorsque pertinente ;
+- présentation limitée aux capacités actuelles explicitement approuvées ;
+- Personalized Gadgets comme seule capacité actuellement déclarée, sauf décision ODR-003 contraire ;
+- aucune page active ni route de devis pour Banner Printing, Vinyl Printing ou 3D Lettering/CNC tant qu'elles restent futures ;
+- réalisations, matières et finitions uniquement lorsqu'elles sont authentiques, autorisées et opérationnellement validées ;
+- demande de devis contextualisée pour le périmètre actuel approuvé ;
+- médias immersifs et 3D progressive lorsque pertinente comme présentation, sans implication de capacité CNC ;
 - alternative légère sur mobile ou appareils limités.
 
-Critère de sortie : Kwaliti Print peut convertir indépendamment tout en restant relié à l'écosystème.
+Critère de sortie : Kwaliti Print peut convertir dans son périmètre actuel approuvé tout en restant relié à l'écosystème.
 
 ## Phase 5 — Workspace MVP
 
