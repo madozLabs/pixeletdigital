@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { createConnection, createServer } from "node:net";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,13 +9,7 @@ import pg from "pg";
 
 const { Client } = pg;
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const migrationPath = path.join(
-  root,
-  "prisma",
-  "migrations",
-  "20260715202500_init_world",
-  "migration.sql",
-);
+const migrationsDirectory = path.join(root, "prisma", "migrations");
 const serverScript = path.join(
   root,
   "node_modules",
@@ -63,11 +57,18 @@ try {
   await rm(temporaryRoot, { recursive: true, force: true });
 }
 async function applyMigration(connectionString) {
-  const sql = await readFile(migrationPath, "utf8");
+  const entries = await readdir(migrationsDirectory, { withFileTypes: true });
+  const migrationFiles = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(migrationsDirectory, entry.name, "migration.sql"))
+    .sort();
   const client = new Client({ connectionString });
   await client.connect();
   try {
-    await client.query(sql);
+    for (const migrationFile of migrationFiles) {
+      const sql = await readFile(migrationFile, "utf8");
+      await client.query(sql);
+    }
   } finally {
     await client.end();
   }

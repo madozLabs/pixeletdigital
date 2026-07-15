@@ -13,13 +13,62 @@ enum WorldMode {
   INACTIVE
 }
 
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AccessRole {
+  SUPER_ADMIN
+  ADMIN
+  WORLD_MANAGER
+  EDITOR
+  SALES
+  CONTRIBUTOR
+  READER
+}
+
+enum AssignmentScopeType {
+  GLOBAL
+  WORLD
+}
+
 model World {
-  id          String    @id @default(cuid())
-  key         String    @unique
-  displayName String
-  mode        WorldMode
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id              String           @id @default(cuid())
+  key             String           @unique
+  displayName     String
+  mode            WorldMode
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  roleAssignments RoleAssignment[]
 
   @@map("worlds")
+}
+
+model User {
+  id              String           @id @default(cuid())
+  status          UserStatus
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  roleAssignments RoleAssignment[]
+
+  @@map("users")
+}
+
+model RoleAssignment {
+  id        String              @id @default(cuid())
+  userId    String
+  role      AccessRole
+  scopeType AssignmentScopeType
+  worldId   String?
+  validFrom DateTime
+  validUntil DateTime?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  user      User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  world     World?              @relation(fields: [worldId], references: [id], onDelete: Restrict)
+
+  @@index([userId, validFrom, validUntil])
+  @@index([worldId])
+  @@map("role_assignments")
 }
