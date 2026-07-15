@@ -18,7 +18,7 @@ export type AuthorizationScope =
 export type RequestActor = Readonly<{
   id: string;
   active: boolean;
-  role: ApprovedRole;
+  role: ApprovedRole | null;
   scopes: readonly AuthorizationScope[];
 }>;
 

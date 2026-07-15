@@ -50,7 +50,7 @@ export function hasMatchingWorldScope(
 }
 
 export function mayAttemptWorldUpdate(actor: RequestActor): boolean {
-  return WORLD_UPDATE_ROLES.includes(actor.role);
+  return actor.role !== null && WORLD_UPDATE_ROLES.includes(actor.role);
 }
 
 export function forbidden(): Result<never, WorldApplicationError> {
