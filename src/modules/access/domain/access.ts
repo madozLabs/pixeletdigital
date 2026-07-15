@@ -9,6 +9,7 @@ export const USER_STATUSES = ["ACTIVE", "INACTIVE"] as const;
 export type UserStatus = (typeof USER_STATUSES)[number];
 export type AccessValidationCode =
   | "INVALID_ID"
+  | "INVALID_IDENTITY"
   | "INVALID_USER_STATUS"
   | "INVALID_ROLE"
   | "INVALID_SCOPE"
@@ -24,6 +25,17 @@ export type User = Readonly<{
   id: string;
   status: UserStatus;
 }>;
+
+export type AuthenticatedIdentity = Readonly<{
+  provider: string;
+  providerAccountId: string;
+}>;
+
+export type AuthAccount = AuthenticatedIdentity &
+  Readonly<{
+    id: string;
+    userId: string;
+  }>;
 
 export type RoleAssignment = Readonly<{
   id: string;
@@ -54,6 +66,36 @@ export function createUser(
   return {
     ok: true,
     value: Object.freeze({ id, status: input.status as UserStatus }),
+  };
+}
+
+export function createAuthAccount(
+  input: Readonly<{
+    id: string;
+    userId: string;
+    provider: string;
+    providerAccountId: string;
+  }>,
+): Result<AuthAccount, AccessValidationError> {
+  const id = parseId(input.id);
+  const userId = parseId(input.userId);
+  const provider = parseIdentityPart(input.provider);
+  const providerAccountId = parseIdentityPart(input.providerAccountId);
+  if (!id || !userId) {
+    return failure(
+      "INVALID_ID",
+      "Auth account and user ids must be non-empty opaque identifiers.",
+    );
+  }
+  if (!provider || !providerAccountId) {
+    return failure(
+      "INVALID_IDENTITY",
+      "Provider and provider account id must be non-empty identifiers.",
+    );
+  }
+  return {
+    ok: true,
+    value: Object.freeze({ id, userId, provider, providerAccountId }),
   };
 }
 
@@ -134,6 +176,10 @@ export function isAssignmentActiveAt(
 function parseId(raw: string): string | null {
   const id = raw.trim();
   return id && id.length <= 128 ? id : null;
+}
+
+function parseIdentityPart(raw: string): string | null {
+  return raw.trim() && raw.length <= 255 ? raw : null;
 }
 
 function parseScope(scope: unknown): AuthorizationScope | null {

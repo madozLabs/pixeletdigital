@@ -1,8 +1,33 @@
-import type { RoleAssignment, User } from "../../domain/access";
 import type {
+  AuthAccount,
+  AuthenticatedIdentity,
+  RoleAssignment,
+  User,
+} from "../../domain/access";
+import type {
+  AuthAccountRepository,
   RoleAssignmentRepository,
   UserRepository,
 } from "../access-repositories";
+
+export class InMemoryAuthAccountRepository implements AuthAccountRepository {
+  readonly foundIdentities: AuthenticatedIdentity[] = [];
+
+  constructor(private readonly accounts: readonly AuthAccount[] = []) {}
+
+  async findByIdentity(
+    identity: AuthenticatedIdentity,
+  ): Promise<AuthAccount | null> {
+    this.foundIdentities.push(identity);
+    return (
+      this.accounts.find(
+        (account) =>
+          account.provider === identity.provider &&
+          account.providerAccountId === identity.providerAccountId,
+      ) ?? null
+    );
+  }
+}
 
 export class InMemoryUserRepository implements UserRepository {
   readonly foundIds: string[] = [];

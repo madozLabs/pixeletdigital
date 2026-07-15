@@ -5,7 +5,9 @@ import { PrismaClient } from "@/generated/prisma/client";
 import type { Clock } from "@/shared/clock";
 
 import { buildRequestContext } from "../application/build-request-context";
+import { resolveIdentityRequestContext } from "../application/resolve-identity-request-context";
 import {
+  PrismaAuthAccountRepository,
   PrismaRoleAssignmentRepository,
   PrismaUserRepository,
 } from "./prisma-access-repositories";
@@ -13,6 +15,7 @@ import {
 const now = new Date("2026-07-15T12:00:00.000Z");
 const clock: Clock = { now: () => new Date(now) };
 let client: PrismaClient;
+let authAccounts: PrismaAuthAccountRepository;
 let users: PrismaUserRepository;
 let assignments: PrismaRoleAssignmentRepository;
 
@@ -24,10 +27,12 @@ beforeAll(() => {
     );
   }
   client = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+  authAccounts = new PrismaAuthAccountRepository(client);
   users = new PrismaUserRepository(client);
   assignments = new PrismaRoleAssignmentRepository(client);
 });
 beforeEach(async () => {
+  await client.authAccount.deleteMany();
   await client.roleAssignment.deleteMany();
   await client.user.deleteMany();
 });
@@ -37,6 +42,97 @@ afterAll(async () => {
 });
 
 describe("Prisma Access repositories", () => {
+  it("resolves a persisted provider identity to its governed actor", async () => {
+    await client.user.create({
+      data: {
+        id: "user_identity_01",
+        status: "ACTIVE",
+        authAccounts: {
+          create: {
+            id: "auth_account_01",
+            provider: "configured-provider",
+            providerAccountId: "external-subject-01",
+          },
+        },
+      },
+    });
+    await client.roleAssignment.create({
+      data: globalAssignment(
+        "assignment_identity_01",
+        "user_identity_01",
+        "ADMIN",
+      ),
+    });
+
+    await expect(
+      resolveIdentityRequestContext(
+        { authAccounts, users, roleAssignments: assignments, clock },
+        {
+          identity: {
+            provider: "configured-provider",
+            providerAccountId: "external-subject-01",
+          },
+          correlationId: "identity-correlation",
+          origin: { channel: "WORKSPACE" },
+        },
+      ),
+    ).resolves.toMatchObject({
+      ok: true,
+      value: {
+        actor: { id: "user_identity_01", active: true, role: "ADMIN" },
+      },
+    });
+  });
+
+  it("keeps identities isolated by provider and fails closed when unlinked", async () => {
+    await expect(
+      resolveIdentityRequestContext(
+        { authAccounts, users, roleAssignments: assignments, clock },
+        {
+          identity: {
+            provider: "unconfigured-provider",
+            providerAccountId: "external-subject-01",
+          },
+          correlationId: "identity-correlation",
+          origin: { channel: "WORKSPACE" },
+        },
+      ),
+    ).resolves.toMatchObject({
+      ok: false,
+      error: { code: "UNAUTHENTICATED" },
+    });
+  });
+
+  it("enforces provider and provider-account uniqueness in persistence", async () => {
+    await client.user.createMany({
+      data: [
+        { id: "user_identity_unique_01", status: "ACTIVE" },
+        { id: "user_identity_unique_02", status: "ACTIVE" },
+      ],
+    });
+    const identity = {
+      provider: "configured-provider",
+      providerAccountId: "unique-external-subject",
+    };
+    await client.authAccount.create({
+      data: {
+        id: "auth_account_unique_01",
+        userId: "user_identity_unique_01",
+        ...identity,
+      },
+    });
+
+    await expect(
+      client.authAccount.create({
+        data: {
+          id: "auth_account_unique_02",
+          userId: "user_identity_unique_02",
+          ...identity,
+        },
+      }),
+    ).rejects.toThrow();
+  });
+
   it("builds a scoped actor from persisted records", async () => {
     const world = await client.world.create({
       data: {

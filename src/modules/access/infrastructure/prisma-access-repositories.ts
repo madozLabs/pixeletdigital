@@ -1,4 +1,5 @@
 import type {
+  AuthAccount as PrismaAuthAccount,
   PrismaClient,
   RoleAssignment as PrismaRoleAssignment,
   User as PrismaUser,
@@ -6,12 +7,16 @@ import type {
 } from "@/generated/prisma/client";
 
 import type {
+  AuthAccountRepository,
   RoleAssignmentRepository,
   UserRepository,
 } from "../application/access-repositories";
 import {
+  createAuthAccount,
   createRoleAssignment,
   createUser,
+  type AuthAccount,
+  type AuthenticatedIdentity,
   type RoleAssignment,
   type User,
 } from "../domain/access";
@@ -19,6 +24,24 @@ import {
 type AssignmentRecord = PrismaRoleAssignment & {
   world: Pick<PrismaWorld, "key"> | null;
 };
+
+export class PrismaAuthAccountRepository implements AuthAccountRepository {
+  constructor(private readonly client: PrismaClient) {}
+
+  async findByIdentity(
+    identity: AuthenticatedIdentity,
+  ): Promise<AuthAccount | null> {
+    const record = await this.client.authAccount.findUnique({
+      where: {
+        provider_providerAccountId: {
+          provider: identity.provider,
+          providerAccountId: identity.providerAccountId,
+        },
+      },
+    });
+    return record ? toAuthAccount(record) : null;
+  }
+}
 
 export class PrismaUserRepository implements UserRepository {
   constructor(private readonly client: PrismaClient) {}
@@ -45,6 +68,14 @@ function toUser(record: PrismaUser): User {
   const result = createUser(record);
   if (!result.ok) {
     throw new Error(`Persisted User is invalid: ${result.error.code}`);
+  }
+  return result.value;
+}
+
+function toAuthAccount(record: PrismaAuthAccount): AuthAccount {
+  const result = createAuthAccount(record);
+  if (!result.ok) {
+    throw new Error(`Persisted AuthAccount is invalid: ${result.error.code}`);
   }
   return result.value;
 }

@@ -2,11 +2,60 @@ import { describe, expect, it } from "vitest";
 
 import { APPROVED_ROLES } from "@/shared/request-context";
 import {
+  createAuthAccount,
   createRoleAssignment,
   createUser,
   isAssignmentActiveAt,
   USER_STATUSES,
 } from "./access";
+
+describe("AuthAccount", () => {
+  it("creates a provider-neutral identity link", () => {
+    expect(
+      createAuthAccount({
+        id: "account_01",
+        userId: "user_01",
+        provider: "configured-provider",
+        providerAccountId: "external-subject-01",
+      }),
+    ).toEqual({
+      ok: true,
+      value: {
+        id: "account_01",
+        userId: "user_01",
+        provider: "configured-provider",
+        providerAccountId: "external-subject-01",
+      },
+    });
+  });
+
+  it.each([
+    { provider: "", providerAccountId: "subject" },
+    { provider: "provider", providerAccountId: "   " },
+  ])("rejects an incomplete identity link", (identity) => {
+    expect(
+      createAuthAccount({
+        id: "account_01",
+        userId: "user_01",
+        ...identity,
+      }),
+    ).toMatchObject({ ok: false, error: { code: "INVALID_IDENTITY" } });
+  });
+
+  it("preserves provider-issued opaque account identifiers", () => {
+    expect(
+      createAuthAccount({
+        id: "account_01",
+        userId: "user_01",
+        provider: "configured-provider",
+        providerAccountId: " subject with spaces ",
+      }),
+    ).toMatchObject({
+      ok: true,
+      value: { providerAccountId: " subject with spaces " },
+    });
+  });
+});
 
 const from = new Date("2026-07-15T10:00:00.000Z");
 const until = new Date("2026-07-15T11:00:00.000Z");
