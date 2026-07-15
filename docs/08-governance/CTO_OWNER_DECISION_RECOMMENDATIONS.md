@@ -2,7 +2,7 @@
 
 Status: Advisory recommendations only; owner decision required
 
-These recommendations support owner review of ODR-001 through ODR-022. They do not approve, close or change the status of any decision. The Owner Decision Register and completed Owner Decision Form remain the governing records for owner approval. Phase 2 remains blocked.
+These recommendations support owner review of ODR-001 through ODR-022. They do not approve, close or change the status of any business or publication decision. The Owner Decision Register and completed Owner Decision Form remain the governing records for owner approval. Phase 2 architecture was authorized separately on 2026-07-15; production deployment and unresolved launch decisions remain separately gated.
 
 ## Guardrails
 
@@ -189,7 +189,7 @@ These recommendations support owner review of ODR-001 through ODR-022. They do n
 
 - **Recommended disposition:** Define business measurement needs in Phase 1; defer provider selection to authorized Phase 2 planning.
 - **Concise recommendation:** Approve only meaningful event objectives, privacy constraints and provider constraints now; select no provider through this recommendation.
-- **Rationale:** Measurement intent affects consent and readiness, while technical architecture and development remain unauthorized.
+- **Rationale:** Measurement intent affects consent and readiness. Phase 2 architecture is authorized, but analytics-provider commitment and production deployment remain outside the approved scope.
 - **Risk if deferred:** Conversion evidence requirements and privacy planning remain vague; provider work must not begin.
 - **Owner input still required:** Approved measurement objectives/events, prohibited or required constraints, privacy expectations, budget/provider authority if later applicable, approver and date.
 - **Downstream docs affected:** `OWNER_DECISION_REGISTER.md`; MVP scope, project bible and Phase 2 entry criteria.
@@ -214,4 +214,4 @@ These recommendations support owner review of ODR-001 through ODR-022. They do n
 
 ## Advisory conclusion
 
-Phase 1 should prioritize owner resolution of launch scope and public facts, conversion policy, brand authority, evidence/rights, and legal/privacy inputs. Deferrals recommended above preserve the approved MVP boundary; they do not close the corresponding ODR items. Phase 2 remains blocked until the Phase 1 close conditions and explicit authorization are satisfied.
+Owner resolution should continue for launch scope and public facts, conversion policy, brand authority, evidence/rights, and legal/privacy inputs. Deferrals recommended above preserve the approved MVP boundary; they do not close the corresponding ODR items. Phase 2 architecture is authorized, while public release, production deployment and unapproved provider commitments remain blocked.

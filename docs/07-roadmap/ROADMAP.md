@@ -23,7 +23,7 @@ Critère de sortie : vision cohérente, périmètre compréhensible et arbitrage
 
 ## Phase 1 — Direction de marque et UX
 
-Statut : phase active, structurellement avancée mais non clôturée ; la Phase 2 reste bloquée jusqu’à autorisation explicite du propriétaire.
+Statut : fondations structurellement avancées ; plusieurs décisions métier et de publication restent ouvertes, mais le gate technique a été franchi séparément.
 
 Livrables :
 
@@ -40,7 +40,7 @@ Critère de sortie : les univers sont différenciés sans perdre la cohérence d
 
 ## Phase 2 — Architecture technique
 
-Démarre uniquement après validation explicite du propriétaire.
+Statut : active et autorisée le 2026-07-15 dans le périmètre de `docs/08-governance/PHASE_2_ENTRY_CRITERIA.md`. La baseline d’architecture a été revue et acceptée le 2026-07-15 ; le scaffolding produit peut commencer dans ses limites.
 
 Livrables :
 
@@ -187,4 +187,4 @@ Chaque phase exige :
 
 ## Décision CTO
 
-La prochaine phase active est la direction de marque et l'UX. L'architecture et le développement restent bloqués jusqu'au feu vert explicite du propriétaire.
+La Phase 2 architecture est active et la baseline technique est acceptée. La prochaine action est d’initialiser le scaffold produit dans ses limites. Le déploiement réel reste soumis à une approbation propriétaire séparée.

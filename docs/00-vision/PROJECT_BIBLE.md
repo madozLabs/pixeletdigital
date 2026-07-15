@@ -318,4 +318,4 @@ These decisions do not block continued product discovery, information architectu
 
 The vision, brand architecture, MVP scope, roles and permissions, public and internal journeys, roadmap, brand bibles, information architecture, motion guidelines and wireframe specifications form the controlled product baseline under `docs`.
 
-The next gate is owner review of the open brand, market, legal, scope and launch decisions, followed by completion of the remaining Phase 1 deliverables identified in the roadmap. No application architecture or production code should be approved until that review explicitly authorizes Phase 2.
+Phase 2 technical architecture was authorized on 2026-07-15 within the scope and exclusions recorded in `docs/08-governance/PHASE_2_ENTRY_CRITERIA.md`. Open brand, market, legal, scope and launch decisions continue to govern publication and must remain reversible in the architecture. The architecture baseline passed independent review and was accepted by the CTO on 2026-07-15; product scaffolding may begin within it.

@@ -4,7 +4,7 @@ Status: Active navigation and maintenance index
 
 ## Current phase
 
-The project remains in Phase 1: product, brand, content, UX and governance foundations. Technical architecture, stack selection and application development remain blocked until the owner completes the Phase 2 authorization gate.
+Phase 2 architecture is active and authorized within `08-governance/PHASE_2_ENTRY_CRITERIA.md`. The six-document architecture baseline passed independent review and was accepted by the CTO on 2026-07-15; product scaffolding is authorized within that baseline. Production deployment, paid-provider commitments and publication of unapproved business facts remain excluded.
 
 ## Reading order
 
@@ -14,8 +14,9 @@ The project remains in Phase 1: product, brand, content, UX and governance found
 4. `02-product/MVP_SCOPE.md` — current MVP boundaries.
 5. `01-brand/BRAND_ARCHITECTURE.md` — relationship between brand worlds.
 6. `03-ux/INFORMATION_ARCHITECTURE.md` and journey documents — approved working UX structure.
-7. `04-content/drafts/` — provisional catalogues, mappings and readiness material.
-8. `08-governance/PHASE_1_READINESS_REVIEW.md` and Phase gates — closeout and authorization status.
+7. `05-architecture/` — active technical architecture baseline.
+8. `04-content/drafts/` — provisional catalogues, mappings and readiness material.
+9. `08-governance/PHASE_2_ENTRY_CRITERIA.md` and Phase records — authorization and historical closeout status.
 
 ## Documentation areas
 
@@ -24,6 +25,7 @@ The project remains in Phase 1: product, brand, content, UX and governance found
 - `02-product/` — MVP, roles, content governance and evidence standards.
 - `03-ux/` — public/admin journeys, information architecture and wireframes.
 - `04-content/` — intake templates and provisional content drafts.
+- `05-architecture/` — architecture, domains, data, contracts, security and delivery baseline.
 - `07-roadmap/` — sequencing and future scope.
 - `08-governance/` — facts, decisions, phase gates and CTO recommendations.
 ## Current factual boundaries
@@ -43,4 +45,4 @@ When documents disagree, use `08-governance/DOCUMENT_SOURCE_OF_TRUTH_MAP.md`. Do
 - Complete owner decisions instead of adding parallel recommendation documents.
 - Reconcile approved answers into catalogues, page mapping, MVP scope and UX documents.
 - Mark replaced drafts as superseded rather than deleting historical evidence.
-- Create no architecture or code until the Phase 2 entry section is explicitly completed.
+- Keep implementation within the accepted architecture baseline; production deployment remains separately gated.

@@ -1,12 +1,12 @@
 # Phase 1 Executive Brief
 
-Status: Executive working summary; owner decisions required; no publication or Phase 2 authorization
+Status: Historical Phase 1 summary; Phase 2 architecture authorization now recorded separately
 
 ## 1. Current verdict
 
-Phase 1 is structurally advanced but cannot close. Vision, brand architecture, MVP boundaries, UX journeys, wireframe specifications, content governance and decision controls exist. The launch offer, public facts, evidence, rights, legal/privacy inputs and conversion policy remain unresolved.
+Phase 1 business decisions remain partially unresolved, especially launch offer, public facts, evidence, rights, legal/privacy inputs and conversion policy. This document is retained for those unresolved owner actions.
 
-Phase 2 remains blocked. No architecture, stack selection, application scaffolding, database design, authentication design, deployment work or product code is authorized.
+Phase 2 technical architecture was authorized on 2026-07-15 under `PHASE_2_ENTRY_CRITERIA.md`. Product scaffolding remains gated on acceptance of the architecture baseline; production deployment remains excluded.
 
 ## 2. Confirmed operating boundaries
 
@@ -51,6 +51,6 @@ The CTO then reconciles the decision register, confirmed facts, catalogues, taxo
 
 Phase 1 may close only when retained launch services and capabilities have approved factual scope and accountable ownership; critical conversion, evidence, rights, legal and privacy decisions are resolved; and the content/page model can be frozen without invented claims.
 
-## 7. Phase 2 authorization condition
+## 7. Phase 2 authorization record
 
-After Phase 1 receives a documented pass, the owner must separately complete `PHASE_2_ENTRY_CRITERIA.md` as `Approved`, including approved scope, exclusions, accepted residual risks, approver and date. A general instruction to continue does not satisfy this gate.
+The owner completed the Phase 2 entry decision on 2026-07-15 with an approved scope, exclusions and accepted residual risks. That completed gate supersedes the former block described by this historical brief.

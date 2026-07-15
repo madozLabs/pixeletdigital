@@ -5,9 +5,9 @@ Scope: Documentation authority, precedence, lifecycle and consolidation only
 
 ## 1. Current phase and hard gate
 
-The repository is in Phase 1: brand direction, product/content foundations and UX. Phase 1 is structurally advanced but not complete. The current readiness verdict is fail for Phase 1 closeout because owner decisions, launch facts, evidence and rights, legal/privacy inputs and conversion policy remain open.
+Phase 2 technical architecture is active and explicitly authorized under `PHASE_2_ENTRY_CRITERIA.md`. The six-document baseline under `05-architecture/` passed independent review and was accepted by the CTO on 2026-07-15; product scaffolding may proceed within it.
 
-Phase 2 is blocked. No technical architecture, stack selection, application scaffolding, database or authentication design, deployment work or product code is authorized. Phase 2 may begin only after the Phase 1 close conditions pass and the owner completes the entry decision in `PHASE_2_ENTRY_CRITERIA.md` as `Approved`, including scope, exclusions, accepted residual risks, approver and date. A general instruction to continue is not authorization.
+Open Phase 1 business decisions still govern publication, commercial claims, launch scope, legal/privacy content and future-world boundaries. Production deployment, paid-provider commitments, full Studio/Training implementation and current treatment of future-only Kwaliti Print capabilities remain excluded.
 
 ## 2. Precedence
 
@@ -29,13 +29,13 @@ Higher precedence does not silently rewrite lower-precedence documents. A confli
 
 | Document | Authority and limit |
 |---|---|
-| `AGENTS.md` | Highest repository operating authority. It fixes the current product-foundation phase and prohibits architecture and development at this stage. |
-| `08-governance/OWNER_DECISION_REGISTER.md` | Governing register for ODR-001 through ODR-022. All entries are currently `Open`; default postures are planning controls only. |
+| `AGENTS.md` | Highest repository operating authority. It records Phase 2 architecture and product scaffolding as authorized within the accepted baseline. |
+| `08-governance/OWNER_DECISION_REGISTER.md` | Governing register for ODR-001 through ODR-022. Open entries still govern launch and publication decisions. |
 | `08-governance/CONFIRMED_OWNER_FACTS.md` | Canonical record of owner-stated and repository-verified facts. It explicitly does not approve launch inclusion, wording or publication. |
-| `08-governance/PHASE_2_ENTRY_CRITERIA.md` | Mandatory Phase 2 gate. Its entry decision is incomplete, so Phase 2 remains blocked. |
-| `08-governance/PHASE_1_OWNER_DECISION_FORM.md` | Required owner decision capture instrument. Blank fields confer no approval. Once completed consistently, its decisions must be recorded in the decision register. |
-| `08-governance/PHASE_1_READINESS_REVIEW.md` | Current readiness assessment: Phase 1 cannot close and architecture/development remain blocked. Reassess after the governing decisions change. |
-| `08-governance/PHASE_1_CLOSEOUT_PLAN.md` | Governing closeout sequence and exact conditions required before a separate Phase 2 authorization. |
+| `08-governance/PHASE_2_ENTRY_CRITERIA.md` | Mandatory Phase 2 gate. Architecture is authorized within its recorded scope, exclusions and accepted residual risks. |
+| `08-governance/PHASE_1_OWNER_DECISION_FORM.md` | Required owner decision capture instrument for unresolved business decisions. Blank fields confer no approval. |
+| `08-governance/PHASE_1_READINESS_REVIEW.md` | Historical Phase 1 readiness assessment. Its former architecture block is superseded by the completed Phase 2 gate. |
+| `08-governance/PHASE_1_CLOSEOUT_PLAN.md` | Historical closeout plan; retained for traceability and unresolved business-decision sequencing. |
 
 ## 4. Controlled baselines and supporting documents
 
@@ -46,7 +46,8 @@ These documents govern their subject only within the authoritative records above
 | Vision and scope | `00-vision/PROJECT_BIBLE.md`; `02-product/MVP_SCOPE.md`; `07-roadmap/ROADMAP.md` | None of these closes an ODR item or authorizes Phase 2. |
 | Brand | `01-brand/BRAND_ARCHITECTURE.md`; both brand bibles | `ASSET_PRODUCTION_PLAN.md`; `PIXEL_DIGITAL_ART_DIRECTION_BRIEF.md`; `PIXEL_DIGITAL_LOGO_REGISTER.md`; `PIXEL_DIGITAL_VISUAL_FOUNDATIONS.md` |
 | Product governance | `02-product/ROLES_AND_PERMISSIONS.md`; `CONTENT_INVENTORY_AND_OWNERSHIP.md`; `EVIDENCE_AND_CASE_STUDY_FRAMEWORK.md` | `CONTENT_COLLECTION_PROTOCOL.md` and the intake templates under `04-content/` |
-| UX | `03-ux/INFORMATION_ARCHITECTURE.md`; `PUBLIC_JOURNEYS.md`; `ADMIN_JOURNEYS.md`; `WIREFRAME_SPECIFICATIONS.md`; `MOTION_AND_IMMERSION_GUIDELINES.md` | These specify requirements, not final URLs, visual design, architecture or implementation. |
+| UX | `03-ux/INFORMATION_ARCHITECTURE.md`; `PUBLIC_JOURNEYS.md`; `ADMIN_JOURNEYS.md`; `WIREFRAME_SPECIFICATIONS.md`; `MOTION_AND_IMMERSION_GUIDELINES.md` | These specify requirements, not final URLs or visual design. |
+| Technical architecture | `05-architecture/ARCHITECTURE_BASELINE.md`; `DOMAIN_BOUNDARIES.md`; `DATA_MODEL.md`; `APPLICATION_CONTRACTS.md`; `SECURITY_AND_PERMISSIONS.md`; `DELIVERY_AND_OPERATIONS.md` | Accepted Phase 2 baseline; implementation must conform to it. |
 | Governance advice | None | `08-governance/CTO_OWNER_DECISION_RECOMMENDATIONS.md` is advisory only and cannot close decisions. |
 
 ## 5. Draft and review-only set
@@ -106,4 +107,4 @@ No document is deleted by this map. The following overlaps require controlled co
 3. Reconcile the service/capability catalogues, taxonomy, page mapping and readiness matrix from those governing records, preserving the Kwaliti Print current/future split and Studio/Training boundary.
 4. Reconcile Project Bible, MVP Scope, Brand Architecture, Roadmap and UX documents where approved decisions change scope or terminology.
 5. Mark convenience or draft documents superseded only when their content has been migrated and the replacement is named; delete nothing as part of this pass.
-6. Repeat the Phase 1 readiness review. Only after a documented pass should the owner make the separate Phase 2 entry decision.
+6. Continue resolving Phase 1 business decisions for launch/publication while Phase 2 architecture and product scaffolding proceed within the accepted baseline. Reassess readiness before any public release.

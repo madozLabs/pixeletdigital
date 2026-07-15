@@ -1,6 +1,6 @@
 # Phase 1 Closeout Plan
 
-Status: Proposed closeout sequence; Phase 2 remains blocked
+Status: Historical closeout sequence; Phase 2 architecture now authorized separately
 
 ## Fixed boundaries
 
@@ -9,7 +9,7 @@ Status: Proposed closeout sequence; Phase 2 remains blocked
 - Personalized Gadgets is the only current-stated Kwaliti Print capability; it is not yet publication-approved.
 - Banner Printing, Vinyl Printing and 3D Lettering/CNC remain future-only and receive no current-capability page or quotation route.
 - Studio and Training remain teaser/foundation only. Promotion to a full launch requires a separate owner-approved scope change.
-- No architecture, stack selection, scaffolding, database, authentication, deployment or product code is authorized by this plan.
+- This historical plan does not itself authorize technical work; Phase 2 architecture is authorized separately by the completed entry gate. Production deployment remains excluded.
 
 ## Smallest practical sequence
 
@@ -33,4 +33,4 @@ Phase 2 is permitted only when all of the following are true:
 5. Unresolved assumptions and residual risks are explicit and identified as reversible architecture constraints.
 6. The project owner marks `Owner authorization: Approved` in `PHASE_2_ENTRY_CRITERIA.md` and completes the approved Phase 2 scope, explicit exclusions, accepted residual risks, approver and decision date.
 
-Until every condition is satisfied, Phase 2 remains blocked and no technical architecture or implementation work may begin.
+These conditions remain the historical business-closeout standard. Phase 2 architecture was authorized separately on 2026-07-15 with unresolved items recorded as reversible risks; public release and production deployment remain blocked until their applicable conditions are satisfied.

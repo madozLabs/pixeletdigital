@@ -51,7 +51,7 @@ An owner-stated fact records what the owner has said. It does not by itself appr
 - Four Pixel&Digital PNG raster source assets are versioned in the repository.
 - The observed raster red is approximately `#E81B2C`; it is not an approved universal brand token.
 - Vector masters, formal logo rules, typography, authoritative colours/gradients and rights authority remain unresolved.
-- Technical architecture and application development remain unauthorized until explicit owner approval of Phase 2.
+- Phase 2 technical architecture was explicitly authorized by the project owner on 2026-07-15 within the scope and exclusions recorded in `PHASE_2_ENTRY_CRITERIA.md`. The architecture baseline passed independent review and was accepted by the CTO on 2026-07-15; product scaffolding is authorized within it, while production deployment remains separately excluded.
 
 ## Change rule
 
