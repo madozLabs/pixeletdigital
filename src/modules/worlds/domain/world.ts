@@ -22,6 +22,11 @@ export type World = Readonly<{
   createdAt: Date;
   updatedAt: Date;
 }>;
+
+export type WorldSettings = Readonly<{
+  displayName: string;
+  mode: WorldMode;
+}>;
 const WORLD_KEY_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
 export function createWorld(
@@ -45,28 +50,16 @@ export function createWorld(
   const keyResult = parseWorldKey(input.key);
   if (!keyResult.ok) return keyResult;
 
-  const displayName = input.displayName.trim();
-  if (!displayName || displayName.length > 120) {
-    return failure(
-      "INVALID_DISPLAY_NAME",
-      "World display name must contain between 1 and 120 characters.",
-    );
-  }
-
-  if (!isWorldMode(input.mode)) {
-    return failure(
-      "INVALID_MODE",
-      "World mode is not part of the controlled vocabulary.",
-    );
-  }
+  const settingsResult = parseWorldSettings(input);
+  if (!settingsResult.ok) return settingsResult;
 
   return {
     ok: true,
     value: Object.freeze({
       id,
       key: keyResult.value,
-      displayName,
-      mode: input.mode,
+      displayName: settingsResult.value.displayName,
+      mode: settingsResult.value.mode,
       createdAt: new Date(input.createdAt),
       updatedAt: new Date(input.updatedAt),
     }),
@@ -87,16 +80,36 @@ export function parseWorldKey(
   return { ok: true, value: key as WorldKey };
 }
 
-export function updateWorldSettings(
-  world: World,
+export function parseWorldSettings(
   input: Readonly<{ displayName: string; mode: string }>,
+): Result<WorldSettings, WorldValidationError> {
+  const displayName = input.displayName.trim();
+  if (!displayName || displayName.length > 120) {
+    return failure(
+      "INVALID_DISPLAY_NAME",
+      "World display name must contain between 1 and 120 characters.",
+    );
+  }
+
+  if (!isWorldMode(input.mode)) {
+    return failure(
+      "INVALID_MODE",
+      "World mode is not part of the controlled vocabulary.",
+    );
+  }
+
+  return { ok: true, value: { displayName, mode: input.mode } };
+}
+
+export function applyWorldSettings(
+  world: World,
+  settings: WorldSettings,
   updatedAt: Date,
-): Result<World, WorldValidationError> {
-  return createWorld({
+): World {
+  return Object.freeze({
     ...world,
-    displayName: input.displayName,
-    mode: input.mode,
-    updatedAt,
+    ...settings,
+    updatedAt: new Date(updatedAt),
   });
 }
 

@@ -3,6 +3,7 @@ import type { World, WorldKey } from "../../domain/world";
 
 export class InMemoryWorldRepository implements WorldRepository {
   readonly savedWorlds: World[] = [];
+  readonly foundKeys: WorldKey[] = [];
   private readonly worldsByKey = new Map<WorldKey, World>();
 
   constructor(worlds: readonly World[] = []) {
@@ -10,6 +11,7 @@ export class InMemoryWorldRepository implements WorldRepository {
   }
 
   async findByKey(key: WorldKey): Promise<World | null> {
+    this.foundKeys.push(key);
     return this.worldsByKey.get(key) ?? null;
   }
 
