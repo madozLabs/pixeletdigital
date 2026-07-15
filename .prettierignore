@@ -7,3 +7,4 @@ assets/
 NVIDIA Corporation/
 AGENTS.md
 package-lock.json
+src/generated/prisma/

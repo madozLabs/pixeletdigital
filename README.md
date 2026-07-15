@@ -20,6 +20,22 @@ npm run check
 npm run build
 ```
 
+## Database foundation
+
+Prisma is configured for PostgreSQL and reads `DATABASE_URL` from the server
+environment. Copy `.env.example` to an ignored local `.env` file and replace its
+placeholders before using database commands. The example contains no credentials.
+
+```sh
+npm run prisma:generate
+npm run prisma:validate
+```
+
+Local migration creation and verification require a reachable PostgreSQL instance,
+installed directly or supplied through Docker. Neither PostgreSQL nor Docker was
+available when this foundation was added, so no migration was created, executed, or
+claimed as database-tested.
+
 ## Architecture
 
 The accepted technical baseline is documented in:
