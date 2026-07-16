@@ -6,7 +6,7 @@ Status: Accepted Phase 2 security baseline; production assurance still requires 
 
 The browser, public requests, uploaded files, headers, query parameters and client-visible role state are untrusted. Authentication establishes identity; it does not grant business authorization. Every protected query and mutation enforces permission and world scope on the server, as close as practical to the use case and data query.
 
-Auth.js integrates identity and session handling. The application-owned `User` and active `RoleAssignment` records remain authoritative for Workspace access. Selecting an identity provider, MFA policy and session duration is deferred until approved operational inputs exist.
+Auth.js integrates identity and session handling. The application-owned `User` and active `RoleAssignment` records remain authoritative for Workspace access. Workspace access is employee-only: accounts are provisioned by authorized administrators, public self-registration is disabled, and a configurable professional-email policy is enforced once the final company domain is confirmed. Authentication activity is recorded with controlled, privacy-minimized events. Selecting the exact identity/email provider, company domain, MFA policy and session duration remains deferred until approved operational inputs exist.
 
 ## 2. RBAC plus world scope
 

@@ -54,6 +54,22 @@ enum RequestOriginChannel {
   SYSTEM
 }
 
+enum AuthenticationEventType {
+  SIGN_IN_SUCCEEDED
+  SIGN_IN_FAILED
+  SIGN_IN_REJECTED
+  SIGN_OUT
+}
+
+enum AuthenticationFailureReason {
+  INVALID_CREDENTIALS
+  UNLINKED_IDENTITY
+  INACTIVE_USER
+  MISSING_ASSIGNMENT
+  PROVIDER_ERROR
+  SESSION_INVALID
+}
+
 model World {
   id              String           @id @default(cuid())
   key             String           @unique
@@ -128,4 +144,20 @@ model AuditEvent {
   @@index([targetType, targetId, occurredAt])
   @@index([worldId, occurredAt])
   @@map("audit_events")
+}
+
+model AuthenticationEvent {
+  id            String                       @id
+  occurredAt    DateTime
+  type          AuthenticationEventType
+  userId        String?
+  provider      String?
+  reason        AuthenticationFailureReason?
+  correlationId String
+  originChannel RequestOriginChannel
+
+  @@index([occurredAt])
+  @@index([userId, occurredAt])
+  @@index([type, occurredAt])
+  @@map("authentication_events")
 }

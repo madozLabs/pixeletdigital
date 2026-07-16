@@ -79,6 +79,7 @@ Lead status begins with a minimal controlled vocabulary: `NEW`, `IN_REVIEW`, `QU
 | Entity | Purpose and essential fields |
 |---|---|
 | `AuditEvent` | immutable id, occurredAt, actorId, action, target type/id, worldId when applicable, result, correlationId and allow-listed metadata. |
+| `AuthenticationEvent` | append-only employee authentication activity: controlled event type, occurredAt, optional internal user id, optional provider key, controlled reason, correlationId and origin. No password, token, IP address or raw user-agent storage. |
 | `NotificationDelivery` | optional provider-neutral delivery intent, channel, destination classification, status, attempts and last error code; created only when a channel is approved. |
 | `SchemaMigration` | Managed by Prisma migration history and deployment procedure, not application business logic. |
 
