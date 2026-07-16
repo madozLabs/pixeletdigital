@@ -9,6 +9,8 @@ export const USER_STATUSES = ["ACTIVE", "INACTIVE"] as const;
 export type UserStatus = (typeof USER_STATUSES)[number];
 export type AccessValidationCode =
   | "INVALID_ID"
+  | "INVALID_DISPLAY_NAME"
+  | "INVALID_EMAIL"
   | "INVALID_IDENTITY"
   | "INVALID_USER_STATUS"
   | "INVALID_ROLE"
@@ -23,6 +25,8 @@ export type Result<T, E> =
 
 export type User = Readonly<{
   id: string;
+  displayName?: string;
+  normalizedEmail?: string;
   status: UserStatus;
 }>;
 
@@ -49,7 +53,12 @@ export type RoleAssignment = Readonly<{
 const WORLD_KEY_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
 export function createUser(
-  input: Readonly<{ id: string; status: string }>,
+  input: Readonly<{
+    id: string;
+    displayName?: string | null;
+    normalizedEmail?: string | null;
+    status: string;
+  }>,
 ): Result<User, AccessValidationError> {
   const id = parseId(input.id);
   if (!id)
@@ -57,6 +66,34 @@ export function createUser(
       "INVALID_ID",
       "User id must be a non-empty opaque identifier.",
     );
+
+  const hasDisplayName =
+    input.displayName !== undefined && input.displayName !== null;
+  const hasEmail =
+    input.normalizedEmail !== undefined && input.normalizedEmail !== null;
+  if (hasDisplayName !== hasEmail) {
+    return failure(
+      "INVALID_EMAIL",
+      "Employee display name and email must be supplied together.",
+    );
+  }
+
+  let displayName: string | undefined;
+  let normalizedEmail: string | undefined;
+  if (hasDisplayName && hasEmail) {
+    displayName = input.displayName!.trim();
+    if (!displayName || displayName.length > 255) {
+      return failure(
+        "INVALID_DISPLAY_NAME",
+        "Display name must be a non-empty value of at most 255 characters.",
+      );
+    }
+    normalizedEmail = normalizeEmail(input.normalizedEmail!) ?? undefined;
+    if (!normalizedEmail) {
+      return failure("INVALID_EMAIL", "Email address is invalid.");
+    }
+  }
+
   if (!USER_STATUSES.includes(input.status as UserStatus)) {
     return failure(
       "INVALID_USER_STATUS",
@@ -65,8 +102,22 @@ export function createUser(
   }
   return {
     ok: true,
-    value: Object.freeze({ id, status: input.status as UserStatus }),
+    value: Object.freeze({
+      id,
+      ...(displayName ? { displayName } : {}),
+      ...(normalizedEmail ? { normalizedEmail } : {}),
+      status: input.status as UserStatus,
+    }),
   };
+}
+
+export function normalizeEmail(raw: string): string | null {
+  const value = raw.trim().toLowerCase();
+  if (value.length > 320) return null;
+  const separator = value.lastIndexOf("@");
+  if (separator <= 0 || separator === value.length - 1) return null;
+  if (value.indexOf("@") !== separator) return null;
+  return value;
 }
 
 export function createAuthAccount(

@@ -174,7 +174,12 @@ describe("buildRequestContext", () => {
 });
 
 function validUser(status: "ACTIVE" | "INACTIVE"): User {
-  const result = createUser({ id: "user_01", status });
+  const result = createUser({
+    id: "user_01",
+    displayName: "Employee One",
+    normalizedEmail: "employee@example.test",
+    status,
+  });
   if (!result.ok) throw new Error(result.error.message);
   return result.value;
 }

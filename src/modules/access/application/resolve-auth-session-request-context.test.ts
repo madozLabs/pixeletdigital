@@ -95,7 +95,12 @@ function session(id: string | undefined): Session {
 }
 
 function user(id: string, status: "ACTIVE" | "INACTIVE") {
-  const result = createUser({ id, status });
+  const result = createUser({
+    id,
+    displayName: `Employee ${id}`,
+    normalizedEmail: `${id}@example.test`,
+    status,
+  });
   if (!result.ok) throw new Error(result.error.message);
   return result.value;
 }

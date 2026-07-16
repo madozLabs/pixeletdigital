@@ -83,7 +83,7 @@ Pagination is bounded and deterministic. Search is module-local for MVP. Exports
 - Content: create draft, edit with version precondition, submit review, reject with note, schedule, publish, archive and preview.
 - Media: create upload intent, complete upload, edit metadata/rights, attach usage and archive when unused.
 - Leads: assign, change status, add note, set/complete next action and close with a typed outcome.
-- Access: invite/activate/deactivate user as approved, assign/revoke role and world scope.
+- Access: provision an employee account with its provider identity, initial role/scope and audit event in one transaction; activate/deactivate users; assign/revoke role and world scope. Provisioning requires deliberate confirmation and an active global Super Admin because it includes security administration. There is no public signup contract.
 - Worlds: update governed settings without changing unresolved facts into defaults.
 
 All commands enforce authorization server-side and return the updated projection plus version where useful. Sensitive commands require deliberate confirmation expressed as a fresh command input, not only a UI dialog.

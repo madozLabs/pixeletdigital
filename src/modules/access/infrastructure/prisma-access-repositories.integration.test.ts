@@ -46,6 +46,8 @@ describe("Prisma Access repositories", () => {
     await client.user.create({
       data: {
         id: "user_identity_01",
+        displayName: "Employee user_identity_01",
+        normalizedEmail: "user_identity_01@example.test",
         status: "ACTIVE",
         authAccounts: {
           create: {
@@ -106,8 +108,8 @@ describe("Prisma Access repositories", () => {
   it("enforces provider and provider-account uniqueness in persistence", async () => {
     await client.user.createMany({
       data: [
-        { id: "user_identity_unique_01", status: "ACTIVE" },
-        { id: "user_identity_unique_02", status: "ACTIVE" },
+        userData("user_identity_unique_01"),
+        userData("user_identity_unique_02"),
       ],
     });
     const identity = {
@@ -143,7 +145,7 @@ describe("Prisma Access repositories", () => {
       },
     });
     await client.user.create({
-      data: { id: "user_access_01", status: "ACTIVE" },
+      data: userData("user_access_01"),
     });
     await client.roleAssignment.createMany({
       data: [
@@ -179,7 +181,7 @@ describe("Prisma Access repositories", () => {
 
   it("ignores expired assignments and fails closed", async () => {
     await client.user.create({
-      data: { id: "user_access_02", status: "ACTIVE" },
+      data: userData("user_access_02"),
     });
     await client.roleAssignment.create({
       data: {
@@ -195,7 +197,7 @@ describe("Prisma Access repositories", () => {
 
   it("returns CONFLICT for persisted assignments with different roles", async () => {
     await client.user.create({
-      data: { id: "user_access_03", status: "ACTIVE" },
+      data: userData("user_access_03"),
     });
     await client.roleAssignment.createMany({
       data: [
@@ -212,7 +214,7 @@ describe("Prisma Access repositories", () => {
 
   it("preserves an inactive persisted user without loading scopes", async () => {
     await client.user.create({
-      data: { id: "user_access_04", status: "INACTIVE" },
+      data: userData("user_access_04", "INACTIVE"),
     });
 
     await expect(build("user_access_04")).resolves.toMatchObject({
@@ -230,6 +232,15 @@ function build(userId: string) {
       origin: { channel: "WORKSPACE" },
     },
   );
+}
+
+function userData(id: string, status: "ACTIVE" | "INACTIVE" = "ACTIVE") {
+  return {
+    id,
+    displayName: `Employee ${id}`,
+    normalizedEmail: `${id}@example.test`,
+    status,
+  } as const;
 }
 
 function globalAssignment(

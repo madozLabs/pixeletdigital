@@ -62,15 +62,43 @@ const until = new Date("2026-07-15T11:00:00.000Z");
 
 describe("User", () => {
   it.each(USER_STATUSES)("accepts status %s", (status) => {
-    expect(createUser({ id: " user_01 ", status })).toEqual({
+    expect(
+      createUser({
+        id: " user_01 ",
+        displayName: " Employee One ",
+        normalizedEmail: " Employee@One.Example ",
+        status,
+      }),
+    ).toEqual({
       ok: true,
-      value: { id: "user_01", status },
+      value: {
+        id: "user_01",
+        displayName: "Employee One",
+        normalizedEmail: "employee@one.example",
+        status,
+      },
     });
   });
 
   it.each([
-    [{ id: " ", status: "ACTIVE" }, "INVALID_ID"],
-    [{ id: "user_01", status: "DISABLED" }, "INVALID_USER_STATUS"],
+    [
+      {
+        id: " ",
+        displayName: "Employee",
+        normalizedEmail: "e@x.test",
+        status: "ACTIVE",
+      },
+      "INVALID_ID",
+    ],
+    [
+      {
+        id: "user_01",
+        displayName: "Employee",
+        normalizedEmail: "e@x.test",
+        status: "DISABLED",
+      },
+      "INVALID_USER_STATUS",
+    ],
   ])("rejects an invalid user %#", (input, code) => {
     expect(createUser(input)).toMatchObject({ ok: false, error: { code } });
   });

@@ -30,7 +30,14 @@ afterAll(async () => {
 
 describe("Prisma authentication activity", () => {
   it("persists a successful employee sign-in event", async () => {
-    await client.user.create({ data: { id: "user_01", status: "ACTIVE" } });
+    await client.user.create({
+      data: {
+        id: "user_01",
+        displayName: "Employee One",
+        normalizedEmail: "employee@example.test",
+        status: "ACTIVE",
+      },
+    });
     const result = await recordAuthenticationActivity(writer, {
       id: "event_01",
       occurredAt: new Date("2026-07-16T00:00:00.000Z"),

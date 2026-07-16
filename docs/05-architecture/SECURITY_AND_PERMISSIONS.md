@@ -6,7 +6,7 @@ Status: Accepted Phase 2 security baseline; production assurance still requires 
 
 The browser, public requests, uploaded files, headers, query parameters and client-visible role state are untrusted. Authentication establishes identity; it does not grant business authorization. Every protected query and mutation enforces permission and world scope on the server, as close as practical to the use case and data query.
 
-Auth.js integrates identity and session handling. The application-owned `User` and active `RoleAssignment` records remain authoritative for Workspace access. Workspace access is employee-only: accounts are provisioned by authorized administrators, public self-registration is disabled, and a configurable professional-email policy is enforced once the final company domain is confirmed. Authentication activity is recorded with controlled, privacy-minimized events. Selecting the exact identity/email provider, company domain, MFA policy and session duration remains deferred until approved operational inputs exist.
+Auth.js integrates identity and session handling. The application-owned `User` and active `RoleAssignment` records remain authoritative for Workspace access. Workspace access is employee-only: there is no public self-registration, and each account is provisioned by an active global Super Admin together with its provider identity, initial role/scope and audit event. The professional domain is supplied as configuration to the provisioning use case, matched exactly after trim/lowercase normalization, and is neither inferred nor hard-coded globally. Authentication activity is recorded with controlled, privacy-minimized events. Selecting the exact identity/email provider, company domain, MFA policy and session duration remains deferred until approved operational inputs exist.
 
 ## 2. RBAC plus world scope
 
@@ -18,7 +18,7 @@ UI hiding is usability only and never an authorization control. Global scope is 
 
 | Capability | Super Admin | Admin | World Manager | Editor | Sales | Contributor | Reader |
 |---|---|---|---|---|---|---|---|
-| Users | manage | manage except Super Admin boundary | none | none | none | none | none |
+| Users | provision/manage | lifecycle management except Super Admin boundary; cannot provision | none | none | none | none | none |
 | Roles/security | manage | read | none | none | none | none | none |
 | Global settings | manage | limited approved settings | none | none | none | none | none |
 | World settings | manage | manage | manage scoped active world | read | read | read | read |

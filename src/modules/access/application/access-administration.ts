@@ -6,10 +6,12 @@ import type {
 } from "@/shared/request-context";
 
 import {
+  createAuthAccount,
   createRoleAssignment,
   createUser,
   isAssignmentActiveAt,
   type AccessValidationCode,
+  type AuthAccount,
   type Result,
   type RoleAssignment,
   type User,
@@ -34,12 +36,134 @@ export type AccessAdministrationError =
 type Dependencies = Readonly<{
   reader: AccessAdministrationReader;
   transaction: AccessAdministrationTransaction;
+  employeePolicy: Readonly<{ allowedDomain: string }>;
 }>;
 
 type ConfirmationInput = Readonly<{
   confirmed: boolean;
   auditEventId: string;
 }>;
+
+export type CreateEmployeeInput = ConfirmationInput &
+  Readonly<{
+    userId: string;
+    displayName: string;
+    email: string;
+    authAccountId: string;
+    provider: string;
+    providerAccountId: string;
+    assignmentId: string;
+    role: string;
+    scope: unknown;
+    validFrom: Date;
+    validUntil?: Date;
+  }>;
+
+export type CreatedEmployee = Readonly<{
+  user: User;
+  authAccount: AuthAccount;
+  assignment: RoleAssignment;
+}>;
+
+export async function createEmployee(
+  dependencies: Dependencies,
+  context: RequestContext,
+  input: CreateEmployeeInput,
+): Promise<Result<CreatedEmployee, AccessAdministrationError>> {
+  const confirmation = requireConfirmation(input.confirmed);
+  if (!confirmation.ok) return confirmation;
+  const actor = requireRoleAdministrator(context);
+  if (!actor.ok) return actor;
+
+  const allowedDomain = normalizeAllowedDomain(
+    dependencies.employeePolicy.allowedDomain,
+  );
+  const normalizedEmail = input.email.trim().toLowerCase();
+  if (!allowedDomain || emailDomain(normalizedEmail) !== allowedDomain) {
+    return validationError(
+      "INVALID_EMAIL",
+      "Email must belong to the configured allowed domain.",
+    );
+  }
+  const user = createUser({
+    id: input.userId,
+    displayName: input.displayName,
+    normalizedEmail,
+    status: "ACTIVE",
+  });
+  if (!user.ok) return validationError(user.error.code, user.error.message);
+  if (!user.value.displayName || !user.value.normalizedEmail) {
+    return validationError(
+      "INVALID_EMAIL",
+      "Provisioned employees require a display name and professional email.",
+    );
+  }
+  const employeeUser = {
+    ...user.value,
+    displayName: user.value.displayName,
+    normalizedEmail: user.value.normalizedEmail,
+  } as const;
+  const authAccount = createAuthAccount({
+    id: input.authAccountId,
+    userId: user.value.id,
+    provider: input.provider,
+    providerAccountId: input.providerAccountId,
+  });
+  if (!authAccount.ok)
+    return validationError(authAccount.error.code, authAccount.error.message);
+  const assignment = createRoleAssignment({
+    id: input.assignmentId,
+    userId: user.value.id,
+    role: input.role,
+    scope: input.scope,
+    validFrom: input.validFrom,
+    ...(input.validUntil === undefined ? {} : { validUntil: input.validUntil }),
+  });
+  if (!assignment.ok)
+    return validationError(assignment.error.code, assignment.error.message);
+
+  const auditEvent = createAuditEvent(
+    context,
+    input.auditEventId,
+    context.clock.now(),
+    {
+      action: "ACCESS_USER_CREATED",
+      targetType: "USER",
+      targetId: user.value.id,
+      worldKey: worldKeyFromScope(assignment.value.scope),
+    },
+  );
+  if (!auditEvent.ok) return auditEvent;
+  const committed = await dependencies.transaction.commit({
+    preconditions: [
+      {
+        type: "EMPLOYEE_IDENTIFIERS_AVAILABLE",
+        userId: employeeUser.id,
+        normalizedEmail: employeeUser.normalizedEmail,
+        authAccountId: authAccount.value.id,
+        provider: authAccount.value.provider,
+        providerAccountId: authAccount.value.providerAccountId,
+        assignmentId: assignment.value.id,
+      },
+    ],
+    mutation: {
+      type: "CREATE_EMPLOYEE",
+      user: employeeUser,
+      authAccount: authAccount.value,
+      assignment: assignment.value,
+    },
+    auditEvent: auditEvent.value,
+  });
+  if (!committed.ok) return committed;
+  return {
+    ok: true,
+    value: {
+      user: employeeUser,
+      authAccount: authAccount.value,
+      assignment: assignment.value,
+    },
+  };
+}
 
 export async function activateUser(
   dependencies: Dependencies,
@@ -203,7 +327,7 @@ async function setUserStatus(
     return conflict(`User is already ${status.toLowerCase()}.`);
   }
 
-  const updated = createUser({ id: target.id, status });
+  const updated = createUser({ ...target, status });
   if (!updated.ok)
     return validationError(updated.error.code, updated.error.message);
   const auditEvent = createAuditEvent(context, input.auditEventId, now, {
@@ -342,6 +466,19 @@ function worldKeyFromScope(scope: AuthorizationScope): string | undefined {
 function normalizeOpaqueId(raw: string): string | null {
   const value = raw.trim();
   return value.length > 0 && value.length <= 128 ? value : null;
+}
+
+function normalizeAllowedDomain(raw: string): string | null {
+  const value = raw.trim().toLowerCase();
+  if (!value || value.length > 253 || value.includes("@")) return null;
+  if (!/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(value)) return null;
+  return value;
+}
+
+function emailDomain(normalizedEmail: string): string | null {
+  const separator = normalizedEmail.lastIndexOf("@");
+  if (separator <= 0 || normalizedEmail.indexOf("@") !== separator) return null;
+  return normalizedEmail.slice(separator + 1);
 }
 
 function validationError(

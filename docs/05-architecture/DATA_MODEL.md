@@ -16,7 +16,7 @@ Status: Accepted conceptual and logical Phase 2 baseline; Prisma schema follows 
 
 | Entity | Purpose and essential fields |
 |---|---|
-| `User` | Internal identity: id, name, email-normalized identifier, status, timestamps. No role inferred from email domain. |
+| `User` | Internal employee identity: id, required display name, required trim/lowercase-normalized email, status, timestamps. New accounts are provisioned as `ACTIVE`; no role is inferred from the email domain. |
 | `AuthAccount` | Auth.js provider linkage: userId, provider key, provider account id. Provider selection remains configuration. |
 | `RoleAssignment` | userId, role, optional worldId, active interval. Global scope is explicit, not represented by an arbitrary world. |
 | `World` | id, stable key, governed display name, mode (`ACTIVE`, `TEASER`, `INACTIVE`), timestamps. Initial keys identify Pixel&Digital, Kwaliti Print, Studio and Training without inventing final Studio/Training names. |
@@ -87,7 +87,7 @@ Audit events are append-only at the application level. They must not include pas
 
 ## 7. Integrity and indexes
 
-- Unique normalized internal email where the chosen identity policy requires it.
+- Unique required normalized internal email, enforced by a PostgreSQL unique constraint for case-insensitive identity after application normalization.
 - Unique Auth.js provider/provider-account pair.
 - Unique world key and unique active slug within its world and content type.
 - Foreign keys use restrictive deletion by default; archive-dependent records instead.

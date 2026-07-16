@@ -15,6 +15,7 @@ import {
 } from "../domain/access";
 
 class AccessPreconditionConflict extends Error {}
+class EmployeePersistenceConflict extends Error {}
 class AuditPersistenceFailure extends Error {}
 
 type TransactionClient = Prisma.TransactionClient;
@@ -59,7 +60,18 @@ export class PrismaAccessAdministrationStore
       await this.client.$transaction(
         async (transaction) => {
           await assertPreconditions(transaction, input.preconditions);
-          await applyMutation(transaction, input.mutation);
+          try {
+            await applyMutation(transaction, input.mutation);
+          } catch (error) {
+            if (
+              input.mutation.type === "CREATE_EMPLOYEE" &&
+              error instanceof Prisma.PrismaClientKnownRequestError &&
+              error.code === "P2002"
+            ) {
+              throw new EmployeePersistenceConflict();
+            }
+            throw error;
+          }
           await appendAuditEvent(transaction, input.auditEvent);
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
@@ -76,6 +88,36 @@ async function assertPreconditions(
   preconditions: readonly AccessAdministrationPrecondition[],
 ): Promise<void> {
   for (const precondition of preconditions) {
+    if (precondition.type === "EMPLOYEE_IDENTIFIERS_AVAILABLE") {
+      const [userCount, authCount, assignmentCount] = await Promise.all([
+        transaction.user.count({
+          where: {
+            OR: [
+              { id: precondition.userId },
+              { normalizedEmail: precondition.normalizedEmail },
+            ],
+          },
+        }),
+        transaction.authAccount.count({
+          where: {
+            OR: [
+              { id: precondition.authAccountId },
+              {
+                provider: precondition.provider,
+                providerAccountId: precondition.providerAccountId,
+              },
+            ],
+          },
+        }),
+        transaction.roleAssignment.count({
+          where: { id: precondition.assignmentId },
+        }),
+      ]);
+      if (userCount || authCount || assignmentCount) {
+        throw new AccessPreconditionConflict();
+      }
+      continue;
+    }
     if (precondition.type === "USER_STATUS_IS") {
       const count = await transaction.user.count({
         where: { id: precondition.userId, status: precondition.status },
@@ -123,6 +165,26 @@ async function applyMutation(
     await transaction.user.update({
       where: { id: mutation.user.id },
       data: { status: mutation.user.status },
+    });
+    return;
+  }
+  if (mutation.type === "CREATE_EMPLOYEE") {
+    const worldId = await resolveWorldId(
+      transaction,
+      mutation.assignment.scope,
+    );
+    await transaction.user.create({ data: mutation.user });
+    await transaction.authAccount.create({ data: mutation.authAccount });
+    await transaction.roleAssignment.create({
+      data: {
+        id: mutation.assignment.id,
+        userId: mutation.assignment.userId,
+        role: mutation.assignment.role,
+        scopeType: mutation.assignment.scope.type,
+        worldId,
+        validFrom: mutation.assignment.validFrom,
+        validUntil: mutation.assignment.validUntil ?? null,
+      },
     });
     return;
   }
@@ -201,7 +263,10 @@ async function resolveWorldId(
 }
 
 function mapCommitError(error: unknown) {
-  if (error instanceof AccessPreconditionConflict) {
+  if (
+    error instanceof AccessPreconditionConflict ||
+    error instanceof EmployeePersistenceConflict
+  ) {
     return conflictResult();
   }
   if (
@@ -229,7 +294,12 @@ function conflictResult() {
   } as const;
 }
 
-function toUser(record: { id: string; status: string }): User {
+function toUser(record: {
+  id: string;
+  displayName: string | null;
+  normalizedEmail: string | null;
+  status: string;
+}): User {
   const result = createUser(record);
   if (!result.ok) {
     throw new Error(`Persisted User is invalid: ${result.error.code}`);

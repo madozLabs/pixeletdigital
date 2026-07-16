@@ -34,6 +34,7 @@ enum AssignmentScopeType {
 }
 
 enum AuditAction {
+  ACCESS_USER_CREATED
   ACCESS_USER_ACTIVATED
   ACCESS_USER_DEACTIVATED
   ACCESS_ROLE_ASSIGNED
@@ -85,6 +86,8 @@ model World {
 
 model User {
   id              String           @id @default(cuid())
+  displayName     String?
+  normalizedEmail String?          @unique
   status          UserStatus
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt

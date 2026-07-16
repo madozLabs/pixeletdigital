@@ -14,12 +14,137 @@ import {
 import {
   activateUser,
   assignRoleScope,
+  createEmployee,
   deactivateUser,
   revokeRoleScope,
 } from "./access-administration";
 import { InMemoryAccessAdministrationStore } from "./testing/in-memory-access-administration";
 
 const now = new Date("2026-07-15T12:00:00.000Z");
+
+describe("Employee provisioning", () => {
+  it("creates an ACTIVE normalized employee, identity, role and audit atomically", async () => {
+    const store = fixture([]);
+    const result = await createEmployee(
+      dependencies(store),
+      context("SUPER_ADMIN"),
+      employeeInput(),
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      value: {
+        user: {
+          id: "employee",
+          displayName: "Employee Name",
+          normalizedEmail: "employee@company.test",
+          status: "ACTIVE",
+        },
+        authAccount: { id: "employee_auth" },
+        assignment: { id: "employee_assignment", role: "EDITOR" },
+      },
+    });
+    expect(store.auditEvents).toEqual([
+      expect.objectContaining({
+        action: "ACCESS_USER_CREATED",
+        targetType: "USER",
+        targetId: "employee",
+      }),
+    ]);
+  });
+
+  it("rejects a domain mismatch without persistence", async () => {
+    const store = fixture([]);
+    const result = await createEmployee(
+      dependencies(store),
+      context("SUPER_ADMIN"),
+      employeeInput({ email: "employee@other.test" }),
+    );
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "VALIDATION_ERROR", domainCode: "INVALID_EMAIL" },
+    });
+    expect(store.commitAttempts).toBe(0);
+  });
+
+  it("requires confirmation before any read or transaction", async () => {
+    const store = fixture([]);
+    const result = await createEmployee(
+      dependencies(store),
+      context("SUPER_ADMIN"),
+      employeeInput({ confirmed: false }),
+    );
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "VALIDATION_ERROR" },
+    });
+    expect(store.reads).toEqual([]);
+    expect(store.commitAttempts).toBe(0);
+  });
+
+  it.each(["ADMIN", "EDITOR"] as const)(
+    "forbids %s from provisioning employees",
+    async (role) => {
+      const store = fixture([]);
+      expect(
+        await createEmployee(
+          dependencies(store),
+          context(role),
+          employeeInput(),
+        ),
+      ).toMatchObject({ ok: false, error: { code: "FORBIDDEN" } });
+      expect(store.commitAttempts).toBe(0);
+    },
+  );
+
+  it("returns CONFLICT for duplicate normalized email and provider identity", async () => {
+    const duplicateEmail = fixture([user("existing")]);
+    duplicateEmail.users.set(
+      "existing",
+      createUserValue("existing", "employee@company.test"),
+    );
+    expect(
+      await createEmployee(
+        dependencies(duplicateEmail),
+        context("SUPER_ADMIN"),
+        employeeInput(),
+      ),
+    ).toMatchObject({ ok: false, error: { code: "CONFLICT" } });
+
+    const duplicateIdentity = fixture([]);
+    duplicateIdentity.authAccounts.set("existing_auth", {
+      id: "existing_auth",
+      userId: "existing",
+      provider: "provider",
+      providerAccountId: "subject",
+    });
+    expect(
+      await createEmployee(
+        dependencies(duplicateIdentity),
+        context("SUPER_ADMIN"),
+        employeeInput(),
+      ),
+    ).toMatchObject({ ok: false, error: { code: "CONFLICT" } });
+  });
+
+  it("rolls back every employee record when audit append fails", async () => {
+    const store = fixture([]);
+    store.failAuditAppend = true;
+    expect(
+      await createEmployee(
+        dependencies(store),
+        context("SUPER_ADMIN"),
+        employeeInput(),
+      ),
+    ).toMatchObject({
+      ok: false,
+      error: { code: "DEPENDENCY_UNAVAILABLE" },
+    });
+    expect(store.users.size).toBe(0);
+    expect(store.authAccounts.size).toBe(0);
+    expect(store.assignments.size).toBe(0);
+    expect(store.auditEvents).toEqual([]);
+  });
+});
 
 describe("Access administration authorization", () => {
   it.each([activateUser, deactivateUser])(
@@ -447,8 +572,15 @@ describe("Access/audit atomicity", () => {
   );
 });
 
-function dependencies(store: InMemoryAccessAdministrationStore) {
-  return { reader: store, transaction: store };
+function dependencies(
+  store: InMemoryAccessAdministrationStore,
+  allowedDomain = "company.test",
+) {
+  return {
+    reader: store,
+    transaction: store,
+    employeePolicy: { allowedDomain },
+  };
 }
 function fixture(
   users: readonly User[] = [user("target")],
@@ -457,9 +589,42 @@ function fixture(
   return new InMemoryAccessAdministrationStore(users, assignments);
 }
 function user(id: string, status: "ACTIVE" | "INACTIVE" = "ACTIVE"): User {
-  const result = createUser({ id, status });
+  const result = createUser({
+    id,
+    displayName: `Employee ${id}`,
+    normalizedEmail: `${id}@example.test`,
+    status,
+  });
   if (!result.ok) throw new Error();
   return result.value;
+}
+function createUserValue(id: string, normalizedEmail: string): User {
+  const result = createUser({
+    id,
+    displayName: `Employee ${id}`,
+    normalizedEmail,
+    status: "ACTIVE",
+  });
+  if (!result.ok) throw new Error(result.error.message);
+  return result.value;
+}
+function employeeInput(
+  overrides: Partial<{ email: string; confirmed: boolean }> = {},
+) {
+  return {
+    userId: "employee",
+    displayName: " Employee Name ",
+    email: overrides.email ?? " Employee@Company.Test ",
+    authAccountId: "employee_auth",
+    provider: "provider",
+    providerAccountId: "subject",
+    assignmentId: "employee_assignment",
+    role: "EDITOR",
+    scope: { type: "GLOBAL" },
+    validFrom: now,
+    auditEventId: "employee_audit",
+    confirmed: overrides.confirmed ?? true,
+  };
 }
 function assignment(
   overrides: Partial<{

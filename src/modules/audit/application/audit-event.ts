@@ -1,6 +1,7 @@
 import type { RequestOriginMetadata } from "@/shared/request-context";
 
 export const ACCESS_AUDIT_ACTIONS = [
+  "ACCESS_USER_CREATED",
   "ACCESS_USER_ACTIVATED",
   "ACCESS_USER_DEACTIVATED",
   "ACCESS_ROLE_ASSIGNED",

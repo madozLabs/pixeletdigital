@@ -1,6 +1,11 @@
 import type { AuditEvent } from "@/modules/audit/application/audit-event";
 
-import type { Result, RoleAssignment, User } from "../domain/access";
+import type {
+  AuthAccount,
+  Result,
+  RoleAssignment,
+  User,
+} from "../domain/access";
 
 export interface AccessAdministrationReader {
   findUserById(userId: string): Promise<User | null>;
@@ -10,9 +15,24 @@ export interface AccessAdministrationReader {
 
 export type AccessAdministrationMutation =
   | Readonly<{ type: "SET_USER_STATUS"; user: User }>
-  | Readonly<{ type: "SAVE_ASSIGNMENT"; assignment: RoleAssignment }>;
+  | Readonly<{ type: "SAVE_ASSIGNMENT"; assignment: RoleAssignment }>
+  | Readonly<{
+      type: "CREATE_EMPLOYEE";
+      user: User;
+      authAccount: AuthAccount;
+      assignment: RoleAssignment;
+    }>;
 
 export type AccessAdministrationPrecondition =
+  | Readonly<{
+      type: "EMPLOYEE_IDENTIFIERS_AVAILABLE";
+      userId: string;
+      normalizedEmail: string;
+      authAccountId: string;
+      provider: string;
+      providerAccountId: string;
+      assignmentId: string;
+    }>
   | Readonly<{
       type: "USER_STATUS_IS";
       userId: string;

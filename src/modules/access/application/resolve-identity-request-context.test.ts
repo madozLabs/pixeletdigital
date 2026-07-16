@@ -48,7 +48,12 @@ describe("resolveIdentityRequestContext", () => {
       userId: "user_01",
       ...identity,
     });
-    const userResult = createUser({ id: "user_01", status: "ACTIVE" });
+    const userResult = createUser({
+      id: "user_01",
+      displayName: "Employee One",
+      normalizedEmail: "employee@example.test",
+      status: "ACTIVE",
+    });
     const assignmentResult = createRoleAssignment({
       id: "assignment_01",
       userId: "user_01",
