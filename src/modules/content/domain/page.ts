@@ -12,7 +12,7 @@ export type PageSlug = string & { readonly __brand: "PageSlug" };
 
 export type PageDomainErrorCode =
   | "INVALID_ID"
-  | "INVALID_WORLD_ID"
+  | "INVALID_WORLD_KEY"
   | "INVALID_PAGE_TYPE"
   | "INVALID_TITLE"
   | "INVALID_SLUG"
@@ -28,7 +28,7 @@ export type Result<T, E> =
 
 export type Page = Readonly<{
   id: string;
-  worldId: string;
+  worldKey: string;
   pageType: string;
   title: string;
   slug: PageSlug;
@@ -44,7 +44,7 @@ const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export function createDraftPage(
   input: Readonly<{
     id: string;
-    worldId: string;
+    worldKey: string;
     pageType: string;
     title: string;
     slug: string;
@@ -60,8 +60,8 @@ export function createDraftPage(
     );
   }
 
-  const worldIdResult = parseWorldId(input.worldId);
-  if (!worldIdResult.ok) return worldIdResult;
+  const worldKeyResult = parseWorldKey(input.worldKey);
+  if (!worldKeyResult.ok) return worldKeyResult;
 
   const pageTypeResult = parsePageType(input.pageType);
   if (!pageTypeResult.ok) return pageTypeResult;
@@ -76,7 +76,7 @@ export function createDraftPage(
     ok: true,
     value: Object.freeze({
       id,
-      worldId: worldIdResult.value,
+      worldKey: worldKeyResult.value,
       pageType: pageTypeResult.value,
       title: titleResult.value,
       slug: slugResult.value,
@@ -208,16 +208,16 @@ export function isPageLifecycleState(
   return PAGE_LIFECYCLE_STATES.includes(value as PageLifecycleState);
 }
 
-function parseWorldId(rawWorldId: string): Result<string, PageDomainError> {
-  const worldId = rawWorldId.trim();
-  if (!worldId || worldId.length > 128) {
+function parseWorldKey(rawWorldKey: string): Result<string, PageDomainError> {
+  const worldKey = rawWorldKey.trim();
+  if (!worldKey || worldKey.length > 64) {
     return failure(
-      "INVALID_WORLD_ID",
-      "Page worldId must be a non-empty opaque identifier.",
+      "INVALID_WORLD_KEY",
+      "Page worldKey must be a non-empty world stable key.",
     );
   }
 
-  return { ok: true, value: worldId };
+  return { ok: true, value: worldKey };
 }
 
 function parsePageType(rawPageType: string): Result<string, PageDomainError> {

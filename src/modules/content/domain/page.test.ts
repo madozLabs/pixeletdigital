@@ -15,7 +15,7 @@ const later = new Date("2026-07-16T00:00:00.000Z");
 function validInput() {
   return {
     id: "page_01",
-    worldId: "world_01",
+    worldKey: "pixel-digital",
     pageType: "STANDARD",
     title: "Agence",
     slug: "agence",
@@ -53,12 +53,12 @@ describe("createDraftPage", () => {
     });
   });
 
-  it("rejects an empty worldId", () => {
-    const result = createDraftPage({ ...validInput(), worldId: "   " });
+  it("rejects an empty worldKey", () => {
+    const result = createDraftPage({ ...validInput(), worldKey: "   " });
 
     expect(result).toMatchObject({
       ok: false,
-      error: { code: "INVALID_WORLD_ID" },
+      error: { code: "INVALID_WORLD_KEY" },
     });
   });
 
