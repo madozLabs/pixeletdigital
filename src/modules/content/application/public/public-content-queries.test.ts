@@ -8,6 +8,7 @@ import {
   publishPage,
   submitPageForReview,
 } from "../../domain/page";
+import { createPageSection, type PageSection } from "../../domain/page-section";
 import {
   approveServiceAsCurrent,
   createDraftService,
@@ -15,6 +16,7 @@ import {
   submitServiceForReview,
 } from "../../domain/service";
 import { InMemoryPageRepository } from "../testing/in-memory-page-repository";
+import { InMemoryPageSectionRepository } from "../testing/in-memory-page-section-repository";
 import { InMemoryServiceRepository } from "../testing/in-memory-service-repository";
 import { getPublishedPage } from "./get-published-page";
 import { listPublishedServices } from "./list-published-services";
@@ -38,7 +40,40 @@ describe("getPublishedPage", () => {
       title: "Agence",
       slug: "agence",
       publishedAt: page.publishedAt,
+      sections: [],
     });
+  });
+
+  it("includes ordered sections for a published page", async () => {
+    const dependencies = dependenciesWithWorld();
+    const page = publishedPage();
+    await dependencies.pages.save(page);
+    await dependencies.sections.save(
+      section(page.id, { id: "section_02", order: 1, sectionType: "CTA" }),
+    );
+    await dependencies.sections.save(
+      section(page.id, { id: "section_01", order: 0, sectionType: "HERO" }),
+    );
+
+    const result = await getPublishedPage(dependencies, {
+      worldKey: "pixel-digital",
+      slug: "agence",
+    });
+
+    expect(result?.sections).toEqual([
+      {
+        sectionType: "HERO",
+        order: 0,
+        payload: { headline: "Bienvenue" },
+        payloadSchemaVersion: 1,
+      },
+      {
+        sectionType: "CTA",
+        order: 1,
+        payload: { headline: "Bienvenue" },
+        payloadSchemaVersion: 1,
+      },
+    ]);
   });
 
   it("returns null for an invalid worldKey", async () => {
@@ -55,6 +90,7 @@ describe("getPublishedPage", () => {
   it("returns null when the world does not exist", async () => {
     const dependencies = {
       pages: new InMemoryPageRepository(),
+      sections: new InMemoryPageSectionRepository(),
       worlds: new InMemoryWorldRepository(),
     };
 
@@ -165,6 +201,7 @@ function dependenciesWithWorld(
 
   return {
     pages: new InMemoryPageRepository(),
+    sections: new InMemoryPageSectionRepository(),
     services: new InMemoryServiceRepository(),
     worlds: new InMemoryWorldRepository([world.value]),
   };
@@ -186,6 +223,24 @@ function publishedPage() {
   const published = publishPage(inReview.value, now);
   if (!published.ok) throw new Error("expected publication to succeed");
   return published.value;
+}
+
+function section(
+  pageId: string,
+  overrides: Partial<{ id: string; order: number; sectionType: string }> = {},
+): PageSection {
+  const result = createPageSection({
+    id: overrides.id ?? "section_default",
+    pageId,
+    sectionType: overrides.sectionType ?? "HERO",
+    order: overrides.order ?? 0,
+    payload: { headline: "Bienvenue" },
+    payloadSchemaVersion: 1,
+    createdAt: now,
+    updatedAt: now,
+  });
+  if (!result.ok) throw new Error("expected a valid section");
+  return result.value;
 }
 
 function approvedPublishedService() {

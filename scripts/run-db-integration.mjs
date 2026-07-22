@@ -110,7 +110,7 @@ async function reservePort() {
 }
 
 async function waitForPort(port, child) {
-  const deadline = Date.now() + 15000;
+  const deadline = Date.now() + 30000;
   while (Date.now() < deadline) {
     if (child.exitCode !== null) {
       throw new Error(`PGlite server exited with code ${child.exitCode}.`);

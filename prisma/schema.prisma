@@ -196,10 +196,28 @@ model Page {
   createdAt   DateTime
   updatedAt   DateTime
 
+  sections PageSection[]
+
   @@unique([worldKey, pageType, slug])
   @@index([worldKey, lifecycle])
   @@index([worldKey, slug, lifecycle])
   @@map("pages")
+}
+
+model PageSection {
+  id                   String   @id
+  pageId               String
+  page                 Page     @relation(fields: [pageId], references: [id], onDelete: Restrict)
+  sectionType          String
+  order                Int
+  payload              Json
+  payloadSchemaVersion Int
+  version              Int
+  createdAt            DateTime
+  updatedAt            DateTime
+
+  @@index([pageId, order])
+  @@map("page_sections")
 }
 
 model Service {
