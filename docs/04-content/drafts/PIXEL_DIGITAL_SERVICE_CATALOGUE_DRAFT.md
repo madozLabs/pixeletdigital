@@ -1,66 +1,66 @@
-﻿# Pixel&Digital — Service Catalogue Draft
+# Pixel&Digital — Service Catalogue
 
-Status: Owner-stated working draft; not approved for publication
-Source: Project-owner statements in product discovery
+Status: Approved by the project owner 2026-07-22 (ODR-002); file retains its `_DRAFT` name for stable references but the catalogue itself is a closed decision
+Source: Project-owner decision, recorded in `docs/08-governance/OWNER_DECISION_REGISTER.md` section 4
 
 ## Rule
 
-The entries below record services explicitly mentioned by the owner. Names, grouping, scope, exclusions, process, pricing, geography, proof and final public wording remain to be approved.
+Every service below is created now as a governed `Service` record, administrable individually, with an independent Published/Draft toggle. A service not yet ready to publish is created Draft; publishing it later requires no new migration or development. Detailed scope, exclusions, process, pricing (quotation-only per ODR-004), evidence and final public wording per service remain to be produced as content, but the catalogue itself — the set of services that exist — is approved.
 
-## Proposed service families
+## Communication & Branding
 
-### Social Media Management
-Owner-stated channels: Facebook, TikTok, Instagram and LinkedIn.
+- Création de logo
+- Identité visuelle
+- Charte graphique
+- Supports de communication
+- Flyers
+- Affiches
+- Brochures
+- Dépliants
+- Catalogues
+- Cartes de visite
+- Présentations
+- Design publicitaire
 
-Validation still required: account scope, strategy, publishing cadence, moderation, community management, reporting, paid-media relationship, client responsibilities and exclusions.
+## Développement Web
 
-### Website Creation
-Owner-stated capability: creation of websites without dependence on WordPress themes.
+- Site vitrine
+- Site institutionnel
+- E-commerce
+- Landing pages
+- Applications web
+- Maintenance
+- Hébergement
+- Nom de domaine
+- SEO
 
-Validation still required: exact types of websites, design and development scope, hosting/domain responsibility, maintenance, content production, integrations, ecommerce, support and exclusions.
+## Marketing Digital
 
-### Digital Advertising
-Owner-stated capability: Facebook advertising.
+- Community Management
+- Gestion des réseaux sociaux
+- Création de contenus
+- Campagnes sponsorisées
+- Stratégie digitale
 
-Proposed public grouping for review: paid social advertising, initially grounded only in the confirmed Facebook/Meta statement.
+## Audiovisuel
 
-Validation still required: supported platforms, campaign objectives, media budget handling, creative production, tracking, reporting, guarantees and exclusions.
+- Photographie
+- Studio photo
+- Couverture d'événements
+- Photographie corporate
+- Photographie produit
+- Production vidéo
+- Montage vidéo
+- Motion Design
+- Publicités vidéo
+- Interviews
 
-### Graphic Design
-Owner-stated capability: graphic design.
+MVP boundary: the future Studio identity remains teaser/foundation only (ODR-008/ODR-009 still open). Pixel&Digital may state verified agency production capability under this Audiovisuel category regardless of Studio's own launch status.
 
-Validation still required: deliverable categories, branding scope, print/digital boundaries, revision policy, source-file delivery and rights.
+## Still open per service (does not block catalogue creation)
 
-### Motion Design
-Owner-stated capability: motion design.
-
-Validation still required: formats, duration, illustration/3D boundaries, sound, source assets, revisions and distribution rights.
-
-### Video Editing
-Owner-stated capability: video editing.
-
-Validation still required: accepted source formats, editing depth, colour, sound, subtitles, motion graphics, turnaround and archival policy.
-
-### Content Creation
-Owner-stated capability: content creation.
-
-Validation still required: strategy, copywriting, photography, video, design, platform adaptation, production volume and approval workflow.
-
-### Audiovisual Production
-Owner-stated capability: audiovisual production, supported by an existing photo/video studio.
-
-MVP boundary: the future Studio identity remains teaser/foundation only. Pixel&Digital may state verified agency production capability only after scope, evidence and rights are approved.
-
-## Potential cross-service positioning
-
-For owner review only: present Pixel&Digital as an integrated agency connecting strategy, content, design, digital execution, production and measurable communication. This is a positioning hypothesis, not approved final copy.
-
-## Blocking decisions
-
-- Final service names and grouping.
 - Detailed scope and exclusions for each service.
-- Markets and languages served.
-- Pricing posture.
-- Evidence and case studies.
+- Markets and languages served (ODR-006, ODR-007).
+- Evidence and case studies (ODR-014).
 - Delivery process and ownership.
-- Consultation and quotation route.
+- Consultation and quotation route (ODR-005).

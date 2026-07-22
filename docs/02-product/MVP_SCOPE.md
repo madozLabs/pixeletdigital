@@ -37,12 +37,11 @@ Required:
 Required:
 
 - visually distinct immersive landing experience;
-- a current-capability presentation limited to owner-approved launch scope;
-- Personalized Gadgets treated as the only current-stated capability unless ODR-003 explicitly changes it;
-- Banner Printing, Vinyl Printing and 3D Lettering/CNC excluded from current-capability pages and quotation routes while future-only;
-- project or product evidence only where authentic, permissioned and relevant to an approved current capability;
+- the full capability catalogue approved by ODR-003 (2026-07-22, see `docs/04-content/drafts/KWALITI_PRINT_CAPABILITY_CATALOGUE_DRAFT.md`), created now as governed records and shown publicly per-capability once each is toggled Published;
+- capabilities not yet physically available (e.g. laser cutting) stay Draft/unpublished until the owner activates them — no new development or migration required to bring one online;
+- project or product evidence only where authentic, permissioned and relevant to a published capability;
 - materials, formats or production guidance only where operationally validated;
-- quotation request adapted only to an approved current capability;
+- quotation request adapted to the capabilities currently published;
 - clear relationship to the Pixel&Digital ecosystem;
 - responsive fallback for heavy visual or 3D elements.
 
@@ -241,10 +240,9 @@ Not part of MVP:
 
 - distinct brand theme;
 - immersive public experience;
-- governed capability structure limited to approved current scope;
-- Personalized Gadgets as the sole current-stated candidate unless ODR-003 changes it;
-- no current pages or quotation routes for Banner Printing, Vinyl Printing or 3D Lettering/CNC while future-only;
-- adapted quotation flow for approved current capability only.
+- governed capability structure covering the full ODR-003-approved catalogue, each capability independently publishable;
+- capabilities not yet physically available stay Draft until the owner toggles them Published;
+- adapted quotation flow scoped to whichever capabilities are currently published.
 
 ### Slice C — Administration and leads
 
@@ -282,10 +280,11 @@ The MVP is accepted only when:
 - whether a future scope change promotes Studio from its approved MVP foundation/teaser to a full launch;
 - whether a future scope change promotes Training from its approved MVP foundation/teaser to a full launch;
 - languages required at launch;
-- whether service pricing is public, indicative or quotation-only;
 - preferred consultation booking approach;
 - launch deadline and material budget;
 - priority geographic markets;
-- legal identity and required public notices.
+- legal identity and required public notices — explicitly deferred by the owner (ODR-018), still blocks release.
 
-Until these are resolved, discovery and UX work can continue, but final scope freeze and release planning cannot be completed.
+Resolved 2026-07-22: pricing is quotation-only (ODR-004); the Pixel&Digital and Kwaliti Print catalogues are approved (ODR-002, ODR-003) — see `docs/08-governance/OWNER_DECISION_REGISTER.md`.
+
+Until the remaining items are resolved, discovery and UX work can continue, but final scope freeze and release planning cannot be completed.

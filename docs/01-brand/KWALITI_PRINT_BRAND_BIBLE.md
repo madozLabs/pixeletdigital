@@ -78,10 +78,11 @@ Required launch inputs are limited to the ODR-003-approved current capability se
 
 ## 10. Open owner decisions
 
-- Final logo assets, endorsement wording and relationship to Pixel&Digital (ODR-023). Materially progressed: three repository raster sources are traceable in `docs/01-brand/KWALITI_PRINT_LOGO_REGISTER.md`; remains open pending vector masters, usage rules and endorsement wording.
-- Approved type families, exact colour values and photography direction.
-- Confirmed launch catalogue, materials, formats and capabilities.
-- Public, indicative or quotation-only pricing policy.
+- Final vector logo masters, endorsement wording and relationship to Pixel&Digital. Three repository raster sources are authorized for interim production use (ODR-023, 2026-07-22); remains open pending vector masters, usage rules and endorsement wording.
+- Approved type families, exact colour values and photography direction. This is Kwaliti Print's own decision, separate from Pixel&Digital's approved palette/type (ODR-013) — Kwaliti Print must remain visually autonomous from the parent brand (see section 4 above).
+- Materials, formats and capability details within the approved catalogue (ODR-003, 2026-07-22 — see `docs/04-content/drafts/KWALITI_PRINT_CAPABILITY_CATALOGUE_DRAFT.md`).
 - Geographic service area, fulfilment constraints and approved commercial claims.
 - File-acceptance guidance and any legally required customer notices.
 - Budget and production method for photography, video and original 3D assets.
+
+Resolved: capability catalogue (ODR-003), pricing is quotation-only (ODR-004) — see `docs/08-governance/OWNER_DECISION_REGISTER.md` section 4.

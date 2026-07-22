@@ -1,11 +1,15 @@
 # Pixel&Digital — Brand Bible
 
-Status: Directional foundation; logo evidence partially documented and final identity inputs pending owner approval
-Parent references: `docs/00-vision/PROJECT_BIBLE.md`, `docs/01-brand/BRAND_ARCHITECTURE.md`, `docs/01-brand/PIXEL_DIGITAL_LOGO_REGISTER.md`
+Status: Positioning, tagline, colour palette and type approved 2026-07-22 (ODR-001, ODR-013); logo remains interim raster pending vector masters (ODR-012)
+Parent references: `docs/00-vision/PROJECT_BIBLE.md`, `docs/01-brand/BRAND_ARCHITECTURE.md`, `docs/01-brand/PIXEL_DIGITAL_LOGO_REGISTER.md`, `docs/08-governance/OWNER_DECISION_REGISTER.md`
 
 ## 1. Purpose
 
 Define an actionable brand direction for the parent agency and its public experience without freezing final visual assets. Pixel&Digital must feel red-led, premium, modern and precise, and must turn creative authority into commercial confidence.
+
+Official positioning: "Pixel & Digital est un studio créatif spécialisé dans la communication visuelle, le marketing digital, la création de contenus, l'audiovisuel, le développement web et les solutions d'impression à travers sa marque Kwaliti Print. Nous accompagnons les entreprises, institutions, ONG et entrepreneurs dans la création, le développement et la valorisation de leur image de marque."
+
+Official tagline: "Nous créons des marques qui attirent, convainquent et restent en mémoire."
 
 ## 2. Principles
 
@@ -19,11 +23,11 @@ Define an actionable brand direction for the parent agency and its public experi
 
 ### Visual language
 
-- Red is the dominant signature. The supplied symbol raster samples at `#E81B2C`, but this is observed raster evidence, not an approved universal brand token; authoritative colour values and the supporting palette remain undecided.
+- Red is the dominant signature. Approved palette (ODR-013, 2026-07-22): primary red `#C62828`, dark red `#8E0000`, black `#111111`, white `#FFFFFF`, light grey `#F5F5F5`. The palette may evolve later without architectural impact.
+- Approved type (ODR-013): Montserrat for headings, Inter for body text.
 - Use controlled contrast, strong editorial hierarchy, deliberate whitespace and precise alignment.
 - Prefer authentic work, people, processes and outcomes over generic stock imagery.
 - Use graphic systems that suggest connection, transformation and momentum without visual noise.
-- Typography must feel contemporary, legible and authoritative; no type family is approved yet.
 
 ### Voice and content
 
@@ -77,10 +81,11 @@ Required content inputs include a validated positioning statement, service hiera
 
 ## 10. Open owner decisions
 
-- Official positioning language and tagline.
-- Final logo assets and usage rules. Four repository source PNG assets are documented in the logo register, but remain raster-only; ODR-012 remains open pending vector/master files, formal usage rules, rights authority, clear space, minimum size, typography and authoritative colour/gradient specifications.
-- Approved type families and exact colour values.
-- Launch languages, priority geographies and service catalogue.
-- Pricing visibility and consultation-booking approach.
-- Approved client evidence, testimonials and media-production budget.
-- Legal identity, public notices, privacy terms and retention requirements.
+- Final vector logo masters and formal usage rules. Four repository source PNG assets are authorized for interim production use (ODR-012, 2026-07-22); vector/master files, rights authority, clear space, minimum size and gradient specifications remain open.
+- Launch languages and priority geographies (ODR-006, ODR-007).
+- Consultation-booking approach (ODR-005).
+- Approved client evidence, testimonials and media-production budget (ODR-014 to ODR-016).
+- Legal identity and public notices — explicitly deferred by the owner (ODR-018).
+- Final privacy-policy wording and retention values; the mechanism scope is approved (ODR-019).
+
+Resolved: official positioning and tagline (ODR-001), service catalogue (ODR-002), pricing visibility (ODR-004), colour palette and type (ODR-013) — see `docs/08-governance/OWNER_DECISION_REGISTER.md` section 4.

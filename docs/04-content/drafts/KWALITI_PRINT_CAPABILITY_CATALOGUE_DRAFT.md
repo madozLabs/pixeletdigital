@@ -1,49 +1,63 @@
-# Kwaliti Print â€” Capability Catalogue Draft
+# Kwaliti Print — Capability Catalogue
 
-Status: Owner-stated working draft; not approved for publication
-Source: Project-owner statements in product discovery
+Status: Approved by the project owner 2026-07-22 (ODR-003); file retains its `_DRAFT` name for stable references but the catalogue itself is a closed decision
+Source: Project-owner decision, recorded in `docs/08-governance/OWNER_DECISION_REGISTER.md` section 4
 
 ## Rule
 
-The entries below record capabilities explicitly mentioned by the owner. Materials, formats, dimensions, capacity, feasibility, pricing, turnaround, service area and final wording remain unconfirmed.
+Every capability below is created now as a governed `Service` record under the Kwaliti Print world, administrable individually, with an independent Published/Draft toggle. Capabilities not yet physically available (missing equipment, unconfirmed materials/formats) are created Draft and activated later purely by publishing — no new migration or development is required to bring one online. Materials, formats, dimensions, finishing options, pricing (quotation-only per ODR-004), service area and final public wording remain to be produced as content, but the catalogue itself — the set of capabilities that exist — is approved.
 
-## Owner-stated capability groups
+## Impression & Personnalisation
 
 ### Personalized Gadgets
+
 Confirmed direction: personalization of promotional or branded objects.
 
-Validation still required: supported objects, materials, techniques, minimum quantities, client-file requirements, sourcing responsibility, samples, durability and safety constraints.
+- Mugs
+- Gourdes
+- Stylos
+- Casquettes
+- Porte-clés
+- Trophées
+- Objets publicitaires
+- Gravure
 
-### Banner Printing â€” Future Capability
-Owner-stated future direction: printing on banner material.
+Validation still required: supported objects beyond this list, materials, techniques, minimum quantities, client-file requirements, sourcing responsibility, samples, durability and safety constraints.
 
-MVP rule: do not publish as currently available until equipment, materials, formats, dimensions, finishing options, process, constraints, evidence and launch status are explicitly confirmed.
+### Grand format
 
-### Vinyl Printing â€” Future Capability
-Owner-stated future direction: vinyl printing.
+- Impression grand format
+- Banderoles
+- Bâches
+- Vinyles
+- Stickers
+- Roll-up
+- Kakémonos
 
-MVP rule: do not publish as currently available until equipment, vinyl types, surfaces, finishing, lamination, cutting, installation, durability, dimensions, file preparation, evidence and launch status are explicitly confirmed.
+### Signalétique
 
-### 3D Lettering â€” Future Capability
-Owner-stated future capability: 3D lettering using a CNC cutter, described as coming soon.
+- Enseignes
+- Lettres 3D
+- Signalétique
+- Plaques professionnelles
 
-MVP rule: do not publish as currently available until equipment, materials, process, constraints, evidence and launch status are explicitly confirmed.
+### Personnalisation textile
 
-### Production and Fabrication Guidance
-Proposed grouping for review: practical guidance on materials, formats, finishing and file preparation for confirmed Kwaliti Print capabilities.
+- Personnalisation textile
 
-This grouping must not imply capabilities beyond those operationally approved.
+### Découpe
+
+- Découpe CNC
+- Découpe laser — conditional: create as Draft now; publish only if operational at launch
 
 ## Experience direction
 
 Kwaliti Print remains a distinct, predominantly white, tactile and production-oriented brand world. Product understanding and quotation access must work without 3D, sound or high-performance hardware.
 
-## Blocking decisions
+## Still open per capability (does not block catalogue creation)
 
-- Final capability catalogue and names.
-- Materials, formats, dimensions and finishing options.
-- Personalized Gadgets is the only currently stated available capability; Banner Printing, Vinyl Printing and 3D Lettering/CNC are future capabilities pending explicit launch confirmation.
-- Service area and fulfilment constraints.
-- File acceptance and customer-upload guidance.
-- Pricing posture and quotation questions.
-- Authentic examples, rights and production evidence.
+- Materials, formats, dimensions and finishing options for each capability.
+- Which capabilities are physically ready to publish at launch versus remain Draft.
+- Service area and fulfilment constraints (ODR-007).
+- File acceptance and customer-upload guidance (ODR-022).
+- Authentic examples, rights and production evidence (ODR-014, ODR-015).

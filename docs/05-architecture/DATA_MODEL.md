@@ -45,7 +45,7 @@ Initial roles are `SUPER_ADMIN`, `ADMIN`, `WORLD_MANAGER`, `EDITOR`, `SALES`, `C
 
 Canonical content lifecycle is `DRAFT`, `IN_REVIEW`, optional `SCHEDULED`, `PUBLISHED`, `ARCHIVED`. Rejection creates a review record and returns the item to `DRAFT`. `PREVIEW` is not a stored state.
 
-Service availability is distinct from lifecycle: `CANDIDATE`, `CURRENT_STATED`, `APPROVED_CURRENT`, `FUTURE_ONLY`, `WITHDRAWN`. The initial data must represent Pixel&Digital entries as `CANDIDATE`, Personalized Gadgets as `CURRENT_STATED`, and Banner Printing, Vinyl Printing and 3D Lettering/CNC as `FUTURE_ONLY`. Only an owner-governed transition may set `APPROVED_CURRENT`.
+Service availability is distinct from lifecycle: `CANDIDATE`, `CURRENT_STATED`, `APPROVED_CURRENT`, `FUTURE_ONLY`, `WITHDRAWN`. Only an owner-governed transition may set `APPROVED_CURRENT`. Following the ODR-002/ODR-003 catalogue approval (2026-07-22), every approved service and capability across both worlds is entered as `CURRENT_STATED` and then moved to `APPROVED_CURRENT` through that owner-governed transition; publication to the public site remains separately controlled by the `PUBLISHED`/`DRAFT` lifecycle, so a capability that is not yet physically available is created and approved but kept `DRAFT` until the owner activates it.
 
 ## 4. Media entities
 

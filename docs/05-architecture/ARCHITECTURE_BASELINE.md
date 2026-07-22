@@ -14,14 +14,14 @@ This is an architectural selection, not approval to publish content, purchase a 
 
 ## 2. Product constraints carried into architecture
 
-- Pixel&Digital services are candidate records, not approved launch offerings.
-- Personalized Gadgets is the sole current-stated Kwaliti Print capability. It is not automatically publication-approved.
-- Banner Printing, Vinyl Printing and 3D Lettering/CNC are future-only and cannot enter current-capability pages or quotation routes.
+- Pixel&Digital's and Kwaliti Print's full service/capability catalogues are owner-approved (ODR-002, ODR-003, 2026-07-22). Every entry is created as a governed record with an independent Published/Draft lifecycle state; a capability not yet physically available is created Draft and activated later purely by publishing it, with no new migration or development required.
+- Pricing is quotation-only; no public price is ever shown (ODR-004).
 - Studio and Training are teaser/foundation worlds only; operational modules, catalogues, schedules and registration are excluded.
 - Insights exists only if the governing owner decision includes it in the MVP.
 - Consultation exists only if the governing owner decision approves that route.
-- Unknown languages, geography, prices, legal wording, claims, metrics, evidence, retention periods and providers remain unset governed data or disabled capabilities.
-- No architectural default constitutes commercial, legal or publication approval.
+- Unknown languages, geography, legal wording, claims, metrics, evidence, retention periods and providers remain unset governed data or disabled capabilities.
+- Legal identity fields are governed configuration, left empty until supplied (ODR-018, deferred by the owner); this must not block architecture or scaffolding work.
+- No architectural default constitutes legal or publication approval beyond what is explicitly recorded in `docs/08-governance/OWNER_DECISION_REGISTER.md`.
 
 ## 3. System context
 
