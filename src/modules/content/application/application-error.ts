@@ -1,6 +1,7 @@
 import type { PageDomainErrorCode } from "../domain/page";
 import type { PageSectionDomainErrorCode } from "../domain/page-section";
 import type { ServiceDomainErrorCode } from "../domain/service";
+import type { ServiceFamilyDomainErrorCode } from "../domain/service-family";
 
 export type ContentApplicationError =
   | Readonly<{
@@ -16,7 +17,8 @@ export type ContentApplicationError =
       validationCode:
         | PageDomainErrorCode
         | ServiceDomainErrorCode
-        | PageSectionDomainErrorCode;
+        | PageSectionDomainErrorCode
+        | ServiceFamilyDomainErrorCode;
       message: string;
     }>
   | Readonly<{
