@@ -19,6 +19,7 @@ import {
   createDraftService,
   editDraftService,
   getServiceById,
+  listServicesByWorld,
   publishService,
   revokeServiceApproval,
   setServiceAvailability,
@@ -125,6 +126,33 @@ describe("getServiceById", () => {
       dependencies,
       context("READER", [{ type: "WORLD", worldKey: "other-world" }]),
       { id: service.id },
+    );
+
+    expect(result).toMatchObject({ ok: false, error: { code: "FORBIDDEN" } });
+  });
+});
+
+describe("listServicesByWorld", () => {
+  it("returns every service in the world regardless of lifecycle or status", async () => {
+    const service = draftService();
+    const dependencies = dependenciesWithService(service);
+
+    const result = await listServicesByWorld(
+      dependencies,
+      context("READER", [{ type: "WORLD", worldKey: service.worldKey }]),
+      { worldKey: service.worldKey },
+    );
+
+    expect(result).toMatchObject({ ok: true, value: [{ id: service.id }] });
+  });
+
+  it("returns FORBIDDEN when scopes do not cover the requested world", async () => {
+    const dependencies = dependenciesWithService(draftService());
+
+    const result = await listServicesByWorld(
+      dependencies,
+      context("READER", [{ type: "WORLD", worldKey: "other-world" }]),
+      { worldKey: "kwaliti-print" },
     );
 
     expect(result).toMatchObject({ ok: false, error: { code: "FORBIDDEN" } });

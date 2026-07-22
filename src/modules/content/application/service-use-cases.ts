@@ -109,6 +109,37 @@ export async function getServiceById(
   return { ok: true, value: service };
 }
 
+export type ListServicesByWorldInput = Readonly<{ worldKey: string }>;
+
+export async function listServicesByWorld(
+  dependencies: ServiceDependencies,
+  context: RequestContext,
+  input: ListServicesByWorldInput,
+): Promise<Result<readonly Service[], ContentApplicationError>> {
+  const actorResult = requireActiveActor(context);
+  if (!actorResult.ok) return actorResult;
+
+  const worldKeyResult = parseWorldKey(input.worldKey);
+  if (!worldKeyResult.ok) {
+    return {
+      ok: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        validationCode: "INVALID_WORLD_KEY",
+        message: worldKeyResult.error.message,
+      },
+    };
+  }
+
+  if (!hasWorldScope(actorResult.value, worldKeyResult.value))
+    return forbidden();
+
+  const services = await dependencies.services.listByWorld(
+    worldKeyResult.value,
+  );
+  return { ok: true, value: services };
+}
+
 export type EditDraftServiceInput = Readonly<{
   id: string;
   expectedVersion: number;

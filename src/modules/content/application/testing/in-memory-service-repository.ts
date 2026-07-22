@@ -15,6 +15,12 @@ export class InMemoryServiceRepository implements ServiceRepository {
     return this.servicesById.get(id) ?? null;
   }
 
+  async listByWorld(worldKey: string): Promise<readonly Service[]> {
+    return [...this.servicesById.values()].filter(
+      (service) => service.worldKey === worldKey,
+    );
+  }
+
   async listApprovedCurrentByWorld(
     worldKey: string,
   ): Promise<readonly Service[]> {

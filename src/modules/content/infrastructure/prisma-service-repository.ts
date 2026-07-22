@@ -14,6 +14,14 @@ export class PrismaServiceRepository implements ServiceRepository {
     return record ? toDomain(record) : null;
   }
 
+  async listByWorld(worldKey: string): Promise<readonly Service[]> {
+    const records = await this.client.service.findMany({
+      where: { worldKey },
+      orderBy: { name: "asc" },
+    });
+    return records.map(toDomain);
+  }
+
   async listApprovedCurrentByWorld(
     worldKey: string,
   ): Promise<readonly Service[]> {
