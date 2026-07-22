@@ -16,6 +16,8 @@ export type PageDomainErrorCode =
   | "INVALID_PAGE_TYPE"
   | "INVALID_TITLE"
   | "INVALID_SLUG"
+  | "INVALID_LIFECYCLE_STATE"
+  | "INVALID_VERSION"
   | "INVALID_TRANSITION";
 
 export type PageDomainError = Readonly<{
@@ -83,6 +85,71 @@ export function createDraftPage(
       lifecycle: "DRAFT",
       version: 1,
       publishedAt: null,
+      createdAt: new Date(input.createdAt),
+      updatedAt: new Date(input.updatedAt),
+    }),
+  };
+}
+
+export function restorePage(
+  input: Readonly<{
+    id: string;
+    worldKey: string;
+    pageType: string;
+    title: string;
+    slug: string;
+    lifecycle: string;
+    version: number;
+    publishedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }>,
+): Result<Page, PageDomainError> {
+  const id = input.id.trim();
+  if (!id || id.length > 128) {
+    return failure(
+      "INVALID_ID",
+      "Page id must be a non-empty opaque identifier.",
+    );
+  }
+
+  const worldKeyResult = parseWorldKey(input.worldKey);
+  if (!worldKeyResult.ok) return worldKeyResult;
+
+  const pageTypeResult = parsePageType(input.pageType);
+  if (!pageTypeResult.ok) return pageTypeResult;
+
+  const titleResult = parseTitle(input.title);
+  if (!titleResult.ok) return titleResult;
+
+  const slugResult = parseSlug(input.slug);
+  if (!slugResult.ok) return slugResult;
+
+  if (!isPageLifecycleState(input.lifecycle)) {
+    return failure(
+      "INVALID_LIFECYCLE_STATE",
+      "Page lifecycle is not part of the controlled vocabulary.",
+    );
+  }
+
+  if (!Number.isInteger(input.version) || input.version < 1) {
+    return failure(
+      "INVALID_VERSION",
+      "Page version must be a positive integer.",
+    );
+  }
+
+  return {
+    ok: true,
+    value: Object.freeze({
+      id,
+      worldKey: worldKeyResult.value,
+      pageType: pageTypeResult.value,
+      title: titleResult.value,
+      slug: slugResult.value,
+      lifecycle: input.lifecycle,
+      version: input.version,
+      publishedAt: input.publishedAt ? new Date(input.publishedAt) : null,
       createdAt: new Date(input.createdAt),
       updatedAt: new Date(input.updatedAt),
     }),

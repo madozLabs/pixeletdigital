@@ -6,6 +6,7 @@ import {
   editDraftPage,
   publishPage,
   rejectPage,
+  restorePage,
   submitPageForReview,
 } from "./page";
 
@@ -234,6 +235,61 @@ describe("page lifecycle transitions", () => {
     expect(result).toMatchObject({
       ok: false,
       error: { code: "INVALID_TRANSITION" },
+    });
+  });
+});
+
+describe("restorePage", () => {
+  it("reconstructs a page in any controlled lifecycle state", () => {
+    const result = restorePage({
+      ...validInput(),
+      lifecycle: "PUBLISHED",
+      version: 3,
+      publishedAt: later,
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: { lifecycle: "PUBLISHED", version: 3, publishedAt: later },
+    });
+  });
+
+  it("round-trips a page through its lifecycle transitions", () => {
+    const inReview = submitPageForReview(draftPage(), later);
+    if (!inReview.ok) throw new Error("expected submission to succeed");
+    const published = publishPage(inReview.value, later);
+    if (!published.ok) throw new Error("expected publication to succeed");
+
+    const restored = restorePage(published.value);
+
+    expect(restored).toEqual({ ok: true, value: published.value });
+  });
+
+  it("rejects a lifecycle outside the controlled vocabulary", () => {
+    const result = restorePage({
+      ...validInput(),
+      lifecycle: "DELETED",
+      version: 1,
+      publishedAt: null,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "INVALID_LIFECYCLE_STATE" },
+    });
+  });
+
+  it.each([0, -1, 1.5])("rejects an invalid version %s", (version) => {
+    const result = restorePage({
+      ...validInput(),
+      lifecycle: "DRAFT",
+      version,
+      publishedAt: null,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "INVALID_VERSION" },
     });
   });
 });
