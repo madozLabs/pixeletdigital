@@ -98,6 +98,7 @@ model World {
   auditEvents     AuditEvent[]
   pages           Page[]
   services        Service[]
+  serviceFamilies ServiceFamily[]
 
   @@map("worlds")
 }
@@ -225,6 +226,7 @@ model Service {
   worldKey           String
   world              World                     @relation(fields: [worldKey], references: [key], onDelete: Restrict)
   familyId           String?
+  family             ServiceFamily?            @relation(fields: [familyId], references: [id], onDelete: Restrict)
   name               String
   description        String
   availabilityStatus ServiceAvailabilityStatus
@@ -237,5 +239,24 @@ model Service {
   @@index([worldKey, lifecycle])
   @@index([worldKey, availabilityStatus])
   @@index([worldKey, lifecycle, availabilityStatus])
+  @@index([familyId])
   @@map("services")
+}
+
+model ServiceFamily {
+  id          String                @id
+  worldKey    String
+  world       World                 @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  label       String
+  order       Int
+  lifecycle   ContentLifecycleState
+  version     Int
+  publishedAt DateTime?
+  createdAt   DateTime
+  updatedAt   DateTime
+  services    Service[]
+
+  @@index([worldKey, order])
+  @@index([worldKey, lifecycle])
+  @@map("service_families")
 }
