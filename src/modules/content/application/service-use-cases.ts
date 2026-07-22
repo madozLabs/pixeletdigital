@@ -37,6 +37,7 @@ export type CreateDraftServiceInput = Readonly<{
   worldKey: string;
   familyId?: string | null;
   name: string;
+  slug: string;
   description: string;
   availabilityStatus: string;
 }>;
@@ -81,6 +82,7 @@ export async function createDraftService(
     worldKey: world.key,
     familyId: input.familyId,
     name: input.name,
+    slug: input.slug,
     description: input.description,
     availabilityStatus: input.availabilityStatus,
     createdAt: now,
@@ -144,6 +146,7 @@ export type EditDraftServiceInput = Readonly<{
   id: string;
   expectedVersion: number;
   name: string;
+  slug: string;
   description: string;
 }>;
 
@@ -160,7 +163,7 @@ export async function editDraftService(
     (service, now) =>
       editDraftServiceDomain(
         service,
-        { name: input.name, description: input.description },
+        { name: input.name, slug: input.slug, description: input.description },
         now,
       ),
   );

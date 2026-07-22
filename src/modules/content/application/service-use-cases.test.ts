@@ -171,6 +171,7 @@ describe("editDraftService", () => {
         id: service.id,
         expectedVersion: service.version,
         name: "Gadgets personnalisés",
+        slug: "gadgets-personnalises",
         description: "Nouvelle description.",
       },
     );
@@ -192,6 +193,7 @@ describe("editDraftService", () => {
         id: service.id,
         expectedVersion: service.version + 1,
         name: "X",
+        slug: "x",
         description: "Y",
       },
     );
@@ -354,6 +356,7 @@ function validCreateInput() {
     id: "service_01",
     worldKey: "kwaliti-print",
     name: "Personalized Gadgets",
+    slug: "personalized-gadgets",
     description: "Custom-printed promotional gadgets.",
     availabilityStatus: "CURRENT_STATED",
   };
@@ -364,6 +367,7 @@ function draftService(): Service {
     id: "service_01",
     worldKey: "kwaliti-print",
     name: "Personalized Gadgets",
+    slug: "personalized-gadgets",
     description: "Custom-printed promotional gadgets.",
     availabilityStatus: "CURRENT_STATED",
     createdAt,

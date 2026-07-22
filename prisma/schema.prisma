@@ -229,6 +229,7 @@ model Service {
   familyId           String?
   family             ServiceFamily?            @relation(fields: [familyId], references: [id], onDelete: Restrict)
   name               String
+  slug               String
   description        String
   availabilityStatus ServiceAvailabilityStatus
   lifecycle          ContentLifecycleState
@@ -237,9 +238,11 @@ model Service {
   createdAt          DateTime
   updatedAt          DateTime
 
+  @@unique([worldKey, slug])
   @@index([worldKey, lifecycle])
   @@index([worldKey, availabilityStatus])
   @@index([worldKey, lifecycle, availabilityStatus])
+  @@index([worldKey, slug, lifecycle])
   @@index([familyId])
   @@map("services")
 }

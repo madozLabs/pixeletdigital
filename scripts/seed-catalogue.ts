@@ -295,6 +295,7 @@ async function ensureService(
     worldKey,
     familyId,
     name: seed.name,
+    slug: slugify(seed.name),
     description: PLACEHOLDER_DESCRIPTION,
     availabilityStatus: seed.availabilityStatus,
   });

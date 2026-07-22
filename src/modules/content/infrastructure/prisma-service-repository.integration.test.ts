@@ -105,6 +105,39 @@ describe("PrismaServiceRepository", () => {
 
     expect(found.map((service) => service.id)).toEqual([published.value.id]);
   });
+
+  it("finds a published, approved-current service by world and slug", async () => {
+    const service = draftService({ id: "service_test_07" });
+    const approved = approveServiceAsCurrent(service, service.updatedAt);
+    if (!approved.ok) throw new Error("expected approval to succeed");
+    const inReview = submitServiceForReview(
+      approved.value,
+      approved.value.updatedAt,
+    );
+    if (!inReview.ok) throw new Error("expected submission to succeed");
+    const published = publishService(inReview.value, inReview.value.updatedAt);
+    if (!published.ok) throw new Error("expected publication to succeed");
+    await repository.save(published.value);
+
+    const found = await repository.findPublishedByWorldAndSlug(
+      "content-services-test-world",
+      "service-test-07",
+    );
+
+    expect(found).toEqual(published.value);
+  });
+
+  it("does not find a draft service by world and slug", async () => {
+    const service = draftService({ id: "service_test_08" });
+    await repository.save(service);
+
+    const found = await repository.findPublishedByWorldAndSlug(
+      "content-services-test-world",
+      "service-test-08",
+    );
+
+    expect(found).toBeNull();
+  });
 });
 
 function validWorld() {
@@ -125,10 +158,12 @@ function draftService(
   overrides: Partial<{ id: string; worldKey: string }> = {},
 ): Service {
   const now = new Date("2026-07-15T00:00:00.000Z");
+  const id = overrides.id ?? "service_test_default";
   const result = createDraftService({
-    id: overrides.id ?? "service_test_default",
+    id,
     worldKey: overrides.worldKey ?? "content-services-test-world",
     name: "Personalized Gadgets",
+    slug: id.replace(/_/g, "-"),
     description: "Custom-printed promotional gadgets.",
     availabilityStatus: "CURRENT_STATED",
     createdAt: now,

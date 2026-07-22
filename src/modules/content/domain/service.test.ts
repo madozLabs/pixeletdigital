@@ -20,6 +20,7 @@ function validInput() {
     id: "service_01",
     worldKey: "kwaliti-print",
     name: "Personalized Gadgets",
+    slug: "personalized-gadgets",
     description: "Custom-printed promotional gadgets.",
     availabilityStatus: "CURRENT_STATED",
     createdAt: now,
@@ -87,13 +88,31 @@ describe("createDraftService", () => {
       error: { code: "INVALID_DESCRIPTION" },
     });
   });
+
+  it.each([
+    "Personalized Gadgets",
+    "-gadgets",
+    "gadgets-",
+    "gadgets publicitaires",
+  ])("rejects an invalid slug %s", (slug) => {
+    const result = createDraftService({ ...validInput(), slug });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "INVALID_SLUG" },
+    });
+  });
 });
 
 describe("editDraftService", () => {
   it("updates name and description and bumps the version", () => {
     const result = editDraftService(
       draftService(),
-      { name: "Gadgets personnalisés", description: "Nouveaux gadgets." },
+      {
+        name: "Gadgets personnalisés",
+        slug: "gadgets-personnalises",
+        description: "Nouveaux gadgets.",
+      },
       later,
     );
 
@@ -109,7 +128,7 @@ describe("editDraftService", () => {
 
     const result = editDraftService(
       submitted.value,
-      { name: "X", description: "Y" },
+      { name: "X", slug: "x", description: "Y" },
       later,
     );
 

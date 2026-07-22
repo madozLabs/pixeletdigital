@@ -12,31 +12,31 @@ export type PublishedServiceProjection = Readonly<{
   publishedAt: Date;
 }>;
 
-export async function listPublishedServices(
+export async function getPublishedService(
   dependencies: Readonly<{
     services: ServiceRepository;
     worlds: WorldRepository;
   }>,
-  input: Readonly<{ worldKey: string }>,
-): Promise<readonly PublishedServiceProjection[]> {
+  input: Readonly<{ worldKey: string; slug: string }>,
+): Promise<PublishedServiceProjection | null> {
   const worldKeyResult = parseWorldKey(input.worldKey);
-  if (!worldKeyResult.ok) return [];
+  if (!worldKeyResult.ok) return null;
 
   const world = await dependencies.worlds.findByKey(worldKeyResult.value);
-  if (!world || world.mode !== "ACTIVE") return [];
+  if (!world || world.mode !== "ACTIVE") return null;
 
-  const services = await dependencies.services.listApprovedCurrentByWorld(
+  const service = await dependencies.services.findPublishedByWorldAndSlug(
     world.key,
+    input.slug,
   );
+  if (!service || !service.publishedAt) return null;
 
-  return services
-    .filter((service) => service.publishedAt !== null)
-    .map((service) => ({
-      worldKey: service.worldKey,
-      familyId: service.familyId,
-      name: service.name,
-      slug: service.slug,
-      description: service.description,
-      publishedAt: service.publishedAt as Date,
-    }));
+  return {
+    worldKey: service.worldKey,
+    familyId: service.familyId,
+    name: service.name,
+    slug: service.slug,
+    description: service.description,
+    publishedAt: service.publishedAt,
+  };
 }

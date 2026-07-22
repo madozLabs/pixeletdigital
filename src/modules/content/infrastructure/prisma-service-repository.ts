@@ -35,6 +35,21 @@ export class PrismaServiceRepository implements ServiceRepository {
     return records.map(toDomain);
   }
 
+  async findPublishedByWorldAndSlug(
+    worldKey: string,
+    slug: string,
+  ): Promise<Service | null> {
+    const record = await this.client.service.findFirst({
+      where: {
+        worldKey,
+        slug,
+        lifecycle: "PUBLISHED",
+        availabilityStatus: "APPROVED_CURRENT",
+      },
+    });
+    return record ? toDomain(record) : null;
+  }
+
   async save(service: Service): Promise<void> {
     await this.client.service.upsert({
       where: { id: service.id },
@@ -43,6 +58,7 @@ export class PrismaServiceRepository implements ServiceRepository {
         worldKey: service.worldKey,
         familyId: service.familyId,
         name: service.name,
+        slug: service.slug,
         description: service.description,
         availabilityStatus: service.availabilityStatus,
         lifecycle: service.lifecycle,
@@ -54,6 +70,7 @@ export class PrismaServiceRepository implements ServiceRepository {
       update: {
         familyId: service.familyId,
         name: service.name,
+        slug: service.slug,
         description: service.description,
         availabilityStatus: service.availabilityStatus,
         lifecycle: service.lifecycle,

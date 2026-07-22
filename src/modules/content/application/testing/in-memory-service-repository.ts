@@ -32,6 +32,23 @@ export class InMemoryServiceRepository implements ServiceRepository {
     );
   }
 
+  async findPublishedByWorldAndSlug(
+    worldKey: string,
+    slug: string,
+  ): Promise<Service | null> {
+    for (const service of this.servicesById.values()) {
+      if (
+        service.worldKey === worldKey &&
+        service.slug === slug &&
+        service.lifecycle === "PUBLISHED" &&
+        service.availabilityStatus === "APPROVED_CURRENT"
+      ) {
+        return service;
+      }
+    }
+    return null;
+  }
+
   async save(service: Service): Promise<void> {
     this.savedServices.push(service);
     this.servicesById.set(service.id, service);

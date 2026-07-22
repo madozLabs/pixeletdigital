@@ -35,11 +35,13 @@ const EDITABLE_AVAILABILITY_STATUSES: readonly ServiceAvailabilityStatus[] = [
 ];
 
 export type ServiceLifecycleState = ContentLifecycleState;
+export type ServiceSlug = string & { readonly __brand: "ServiceSlug" };
 
 export type ServiceDomainErrorCode =
   | "INVALID_ID"
   | "INVALID_WORLD_KEY"
   | "INVALID_NAME"
+  | "INVALID_SLUG"
   | "INVALID_DESCRIPTION"
   | "INVALID_AVAILABILITY_STATUS"
   | "INVALID_LIFECYCLE_STATE"
@@ -56,6 +58,7 @@ export type Service = Readonly<{
   worldKey: string;
   familyId: string | null;
   name: string;
+  slug: ServiceSlug;
   description: string;
   availabilityStatus: ServiceAvailabilityStatus;
   lifecycle: ServiceLifecycleState;
@@ -66,6 +69,7 @@ export type Service = Readonly<{
 }>;
 
 const ENTITY_LABEL = "service";
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export function createDraftService(
   input: Readonly<{
@@ -73,6 +77,7 @@ export function createDraftService(
     worldKey: string;
     familyId?: string | null;
     name: string;
+    slug: string;
     description: string;
     availabilityStatus: string;
     createdAt: Date;
@@ -92,6 +97,9 @@ export function createDraftService(
 
   const nameResult = parseName(input.name);
   if (!nameResult.ok) return nameResult;
+
+  const slugResult = parseSlug(input.slug);
+  if (!slugResult.ok) return slugResult;
 
   const descriptionResult = parseDescription(input.description);
   if (!descriptionResult.ok) return descriptionResult;
@@ -113,6 +121,7 @@ export function createDraftService(
       worldKey: worldKeyResult.value,
       familyId: input.familyId?.trim() || null,
       name: nameResult.value,
+      slug: slugResult.value,
       description: descriptionResult.value,
       availabilityStatus: input.availabilityStatus,
       lifecycle: "DRAFT",
@@ -130,6 +139,7 @@ export function restoreService(
     worldKey: string;
     familyId: string | null;
     name: string;
+    slug: string;
     description: string;
     availabilityStatus: string;
     lifecycle: string;
@@ -152,6 +162,9 @@ export function restoreService(
 
   const nameResult = parseName(input.name);
   if (!nameResult.ok) return nameResult;
+
+  const slugResult = parseSlug(input.slug);
+  if (!slugResult.ok) return slugResult;
 
   const descriptionResult = parseDescription(input.description);
   if (!descriptionResult.ok) return descriptionResult;
@@ -184,6 +197,7 @@ export function restoreService(
       worldKey: worldKeyResult.value,
       familyId: input.familyId?.trim() || null,
       name: nameResult.value,
+      slug: slugResult.value,
       description: descriptionResult.value,
       availabilityStatus: input.availabilityStatus,
       lifecycle: input.lifecycle,
@@ -197,7 +211,7 @@ export function restoreService(
 
 export function editDraftService(
   service: Service,
-  changes: Readonly<{ name: string; description: string }>,
+  changes: Readonly<{ name: string; slug: string; description: string }>,
   updatedAt: Date,
 ): Result<Service, ServiceDomainError> {
   if (service.lifecycle !== "DRAFT") {
@@ -210,6 +224,9 @@ export function editDraftService(
   const nameResult = parseName(changes.name);
   if (!nameResult.ok) return nameResult;
 
+  const slugResult = parseSlug(changes.slug);
+  if (!slugResult.ok) return slugResult;
+
   const descriptionResult = parseDescription(changes.description);
   if (!descriptionResult.ok) return descriptionResult;
 
@@ -218,6 +235,7 @@ export function editDraftService(
     value: Object.freeze({
       ...service,
       name: nameResult.value,
+      slug: slugResult.value,
       description: descriptionResult.value,
       version: service.version + 1,
       updatedAt: new Date(updatedAt),
@@ -362,6 +380,18 @@ function parseName(rawName: string): Result<string, ServiceDomainError> {
   }
 
   return { ok: true, value: name };
+}
+
+function parseSlug(rawSlug: string): Result<ServiceSlug, ServiceDomainError> {
+  const slug = rawSlug.trim();
+  if (slug.length < 1 || slug.length > 160 || !SLUG_PATTERN.test(slug)) {
+    return failure(
+      "INVALID_SLUG",
+      "Service slug must use lowercase letters, digits, and internal hyphens.",
+    );
+  }
+
+  return { ok: true, value: slug as ServiceSlug };
 }
 
 function parseDescription(
