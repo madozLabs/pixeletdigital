@@ -23,7 +23,7 @@ import {
 } from "./content-authorization";
 import type { PageRepository } from "./page-repository";
 
-export type ContentDependencies = Readonly<{
+export type PageDependencies = Readonly<{
   pages: PageRepository;
   worlds: WorldRepository;
 }>;
@@ -37,7 +37,7 @@ export type CreateDraftPageInput = Readonly<{
 }>;
 
 export async function createDraftPage(
-  dependencies: ContentDependencies,
+  dependencies: PageDependencies,
   context: RequestContext,
   input: CreateDraftPageInput,
 ): Promise<Result<Page, ContentApplicationError>> {
@@ -89,7 +89,7 @@ export async function createDraftPage(
 export type GetPageByIdInput = Readonly<{ id: string }>;
 
 export async function getPageById(
-  dependencies: ContentDependencies,
+  dependencies: PageDependencies,
   context: RequestContext,
   input: GetPageByIdInput,
 ): Promise<Result<Page, ContentApplicationError>> {
@@ -111,7 +111,7 @@ export type EditDraftPageInput = Readonly<{
 }>;
 
 export async function editDraftPage(
-  dependencies: ContentDependencies,
+  dependencies: PageDependencies,
   context: RequestContext,
   input: EditDraftPageInput,
 ): Promise<Result<Page, ContentApplicationError>> {
@@ -131,7 +131,7 @@ export type SubmitPageForReviewInput = Readonly<{
 }>;
 
 export async function submitPageForReview(
-  dependencies: ContentDependencies,
+  dependencies: PageDependencies,
   context: RequestContext,
   input: SubmitPageForReviewInput,
 ): Promise<Result<Page, ContentApplicationError>> {
@@ -150,7 +150,7 @@ export type RejectPageInput = Readonly<{
 }>;
 
 export async function rejectPage(
-  dependencies: ContentDependencies,
+  dependencies: PageDependencies,
   context: RequestContext,
   input: RejectPageInput,
 ): Promise<Result<Page, ContentApplicationError>> {
@@ -169,7 +169,7 @@ export type PublishPageInput = Readonly<{
 }>;
 
 export async function publishPage(
-  dependencies: ContentDependencies,
+  dependencies: PageDependencies,
   context: RequestContext,
   input: PublishPageInput,
 ): Promise<Result<Page, ContentApplicationError>> {
@@ -188,7 +188,7 @@ export type ArchivePageInput = Readonly<{
 }>;
 
 export async function archivePage(
-  dependencies: ContentDependencies,
+  dependencies: PageDependencies,
   context: RequestContext,
   input: ArchivePageInput,
 ): Promise<Result<Page, ContentApplicationError>> {
@@ -202,7 +202,7 @@ export async function archivePage(
 }
 
 async function withMutablePage(
-  dependencies: ContentDependencies,
+  dependencies: PageDependencies,
   context: RequestContext,
   input: Readonly<{ id: string; expectedVersion: number }>,
   isAuthorizedRole: (actor: NonNullable<RequestContext["actor"]>) => boolean,
