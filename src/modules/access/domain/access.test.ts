@@ -55,6 +55,41 @@ describe("AuthAccount", () => {
       value: { providerAccountId: " subject with spaces " },
     });
   });
+
+  it("accepts a credentials account with a password hash", () => {
+    expect(
+      createAuthAccount({
+        id: "account_01",
+        userId: "user_01",
+        provider: "credentials",
+        providerAccountId: "user@example.com",
+        passwordHash: "scrypt$hash",
+      }),
+    ).toMatchObject({ ok: true, value: { passwordHash: "scrypt$hash" } });
+  });
+
+  it("rejects a credentials account without a password hash", () => {
+    expect(
+      createAuthAccount({
+        id: "account_01",
+        userId: "user_01",
+        provider: "credentials",
+        providerAccountId: "user@example.com",
+      }),
+    ).toMatchObject({ ok: false, error: { code: "INVALID_PASSWORD_HASH" } });
+  });
+
+  it("rejects a non-credentials account carrying a password hash", () => {
+    expect(
+      createAuthAccount({
+        id: "account_01",
+        userId: "user_01",
+        provider: "configured-provider",
+        providerAccountId: "external-subject-01",
+        passwordHash: "scrypt$hash",
+      }),
+    ).toMatchObject({ ok: false, error: { code: "INVALID_PASSWORD_HASH" } });
+  });
 });
 
 const from = new Date("2026-07-15T10:00:00.000Z");

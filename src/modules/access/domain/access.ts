@@ -12,6 +12,7 @@ export type AccessValidationCode =
   | "INVALID_DISPLAY_NAME"
   | "INVALID_EMAIL"
   | "INVALID_IDENTITY"
+  | "INVALID_PASSWORD_HASH"
   | "INVALID_USER_STATUS"
   | "INVALID_ROLE"
   | "INVALID_SCOPE"
@@ -30,6 +31,8 @@ export type User = Readonly<{
   status: UserStatus;
 }>;
 
+export const CREDENTIALS_PROVIDER = "credentials";
+
 export type AuthenticatedIdentity = Readonly<{
   provider: string;
   providerAccountId: string;
@@ -39,6 +42,7 @@ export type AuthAccount = AuthenticatedIdentity &
   Readonly<{
     id: string;
     userId: string;
+    passwordHash?: string;
   }>;
 
 export type RoleAssignment = Readonly<{
@@ -126,6 +130,7 @@ export function createAuthAccount(
     userId: string;
     provider: string;
     providerAccountId: string;
+    passwordHash?: string | null;
   }>,
 ): Result<AuthAccount, AccessValidationError> {
   const id = parseId(input.id);
@@ -144,9 +149,33 @@ export function createAuthAccount(
       "Provider and provider account id must be non-empty identifiers.",
     );
   }
+
+  const hasPasswordHash =
+    input.passwordHash !== undefined && input.passwordHash !== null;
+  const passwordHash = hasPasswordHash ? input.passwordHash!.trim() : undefined;
+  const isCredentialsProvider = provider === CREDENTIALS_PROVIDER;
+  if (isCredentialsProvider && (!passwordHash || passwordHash.length > 255)) {
+    return failure(
+      "INVALID_PASSWORD_HASH",
+      "The credentials provider requires a non-empty password hash.",
+    );
+  }
+  if (!isCredentialsProvider && passwordHash) {
+    return failure(
+      "INVALID_PASSWORD_HASH",
+      "Only the credentials provider may carry a password hash.",
+    );
+  }
+
   return {
     ok: true,
-    value: Object.freeze({ id, userId, provider, providerAccountId }),
+    value: Object.freeze({
+      id,
+      userId,
+      provider,
+      providerAccountId,
+      ...(passwordHash ? { passwordHash } : {}),
+    }),
   };
 }
 
