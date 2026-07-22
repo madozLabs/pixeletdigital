@@ -71,6 +71,14 @@ enum AuthenticationFailureReason {
   SESSION_INVALID
 }
 
+enum PageLifecycleState {
+  DRAFT
+  IN_REVIEW
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
 model World {
   id              String           @id @default(cuid())
   key             String           @unique
@@ -80,6 +88,7 @@ model World {
   updatedAt       DateTime         @updatedAt
   roleAssignments RoleAssignment[]
   auditEvents     AuditEvent[]
+  pages           Page[]
 
   @@map("worlds")
 }
@@ -163,4 +172,22 @@ model AuthenticationEvent {
   @@index([userId, occurredAt])
   @@index([type, occurredAt])
   @@map("authentication_events")
+}
+
+model Page {
+  id          String             @id
+  worldKey    String
+  world       World              @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  pageType    String
+  title       String
+  slug        String
+  lifecycle   PageLifecycleState
+  version     Int
+  publishedAt DateTime?
+  createdAt   DateTime
+  updatedAt   DateTime
+
+  @@unique([worldKey, pageType, slug])
+  @@index([worldKey, lifecycle])
+  @@map("pages")
 }
