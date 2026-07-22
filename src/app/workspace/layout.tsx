@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { getWorkspaceRequestContext } from "./get-workspace-context";
+
+export const metadata: Metadata = {
+  title: "Workspace",
+  robots: { index: false, follow: false },
+};
 
 export default async function WorkspaceLayout({
   children,

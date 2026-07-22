@@ -29,10 +29,10 @@ export async function generateMetadata({
 }: PageParams): Promise<Metadata> {
   const { slug } = await params;
   const service = await loadService(slug);
-  if (!service) return { title: "Service — Pixel&Digital" };
+  if (!service) return { title: "Service" };
 
   return {
-    title: `${service.name} — Pixel&Digital`,
+    title: service.name,
     description: service.description,
   };
 }

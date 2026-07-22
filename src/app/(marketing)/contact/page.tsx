@@ -10,7 +10,9 @@ import { ContactForm } from "./contact-form";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Contact — Pixel&Digital",
+  title: "Contact",
+  description:
+    "Parlez-nous de votre projet. Nous revenons vers vous après examen de votre demande.",
 };
 
 type PageProps = Readonly<{

@@ -11,9 +11,21 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "Pixel&Digital",
+  title: {
+    template: "%s — Pixel&Digital",
+    default: "Pixel&Digital",
+  },
   description:
     "Studio créatif spécialisé dans la communication visuelle, le marketing digital, la création de contenus, l'audiovisuel, le développement web et l'impression.",
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    siteName: "Pixel&Digital",
+    locale: "fr_FR",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
