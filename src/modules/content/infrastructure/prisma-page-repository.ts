@@ -14,6 +14,16 @@ export class PrismaPageRepository implements PageRepository {
     return record ? toDomain(record) : null;
   }
 
+  async findPublishedByWorldAndSlug(
+    worldKey: string,
+    slug: string,
+  ): Promise<Page | null> {
+    const record = await this.client.page.findFirst({
+      where: { worldKey, slug, lifecycle: "PUBLISHED" },
+    });
+    return record ? toDomain(record) : null;
+  }
+
   async save(page: Page): Promise<void> {
     await this.client.page.upsert({
       where: { id: page.id },

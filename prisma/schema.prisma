@@ -198,6 +198,7 @@ model Page {
 
   @@unique([worldKey, pageType, slug])
   @@index([worldKey, lifecycle])
+  @@index([worldKey, slug, lifecycle])
   @@map("pages")
 }
 
@@ -217,5 +218,6 @@ model Service {
 
   @@index([worldKey, lifecycle])
   @@index([worldKey, availabilityStatus])
+  @@index([worldKey, lifecycle, availabilityStatus])
   @@map("services")
 }

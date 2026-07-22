@@ -8,6 +8,8 @@ import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-wo
 import {
   approveServiceAsCurrent,
   createDraftService,
+  publishService,
+  submitServiceForReview,
   type Service,
 } from "../domain/service";
 import { PrismaServiceRepository } from "./prisma-service-repository";
@@ -76,6 +78,32 @@ describe("PrismaServiceRepository", () => {
     });
 
     await expect(repository.save(orphan)).rejects.toThrow();
+  });
+
+  it("lists only published, approved-current services for a world", async () => {
+    const approved = draftService({ id: "service_test_05" });
+    const approvedResult = approveServiceAsCurrent(
+      approved,
+      approved.updatedAt,
+    );
+    if (!approvedResult.ok) throw new Error("expected approval to succeed");
+    const inReview = submitServiceForReview(
+      approvedResult.value,
+      approvedResult.value.updatedAt,
+    );
+    if (!inReview.ok) throw new Error("expected submission to succeed");
+    const published = publishService(inReview.value, inReview.value.updatedAt);
+    if (!published.ok) throw new Error("expected publication to succeed");
+    await repository.save(published.value);
+
+    const candidate = draftService({ id: "service_test_06" });
+    await repository.save(candidate);
+
+    const found = await repository.listApprovedCurrentByWorld(
+      "content-services-test-world",
+    );
+
+    expect(found.map((service) => service.id)).toEqual([published.value.id]);
   });
 });
 

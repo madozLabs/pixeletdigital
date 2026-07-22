@@ -14,6 +14,19 @@ export class PrismaServiceRepository implements ServiceRepository {
     return record ? toDomain(record) : null;
   }
 
+  async listApprovedCurrentByWorld(
+    worldKey: string,
+  ): Promise<readonly Service[]> {
+    const records = await this.client.service.findMany({
+      where: {
+        worldKey,
+        lifecycle: "PUBLISHED",
+        availabilityStatus: "APPROVED_CURRENT",
+      },
+    });
+    return records.map(toDomain);
+  }
+
   async save(service: Service): Promise<void> {
     await this.client.service.upsert({
       where: { id: service.id },

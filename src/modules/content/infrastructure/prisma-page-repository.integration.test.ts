@@ -78,6 +78,34 @@ describe("PrismaPageRepository", () => {
 
     await expect(repository.save(orphan)).rejects.toThrow();
   });
+
+  it("finds a published page by world and slug", async () => {
+    const page = draftPage({ id: "page_test_06", slug: "published-lookup" });
+    const inReview = submitPageForReview(page, page.updatedAt);
+    if (!inReview.ok) throw new Error("expected submission to succeed");
+    const published = publishPage(inReview.value, inReview.value.updatedAt);
+    if (!published.ok) throw new Error("expected publication to succeed");
+    await repository.save(published.value);
+
+    const found = await repository.findPublishedByWorldAndSlug(
+      "content-pages-test-world",
+      "published-lookup",
+    );
+
+    expect(found).toEqual(published.value);
+  });
+
+  it("does not find a draft page by world and slug", async () => {
+    const page = draftPage({ id: "page_test_07", slug: "draft-lookup" });
+    await repository.save(page);
+
+    const found = await repository.findPublishedByWorldAndSlug(
+      "content-pages-test-world",
+      "draft-lookup",
+    );
+
+    expect(found).toBeNull();
+  });
 });
 
 function validWorld() {

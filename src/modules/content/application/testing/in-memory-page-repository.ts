@@ -15,6 +15,22 @@ export class InMemoryPageRepository implements PageRepository {
     return this.pagesById.get(id) ?? null;
   }
 
+  async findPublishedByWorldAndSlug(
+    worldKey: string,
+    slug: string,
+  ): Promise<Page | null> {
+    for (const page of this.pagesById.values()) {
+      if (
+        page.worldKey === worldKey &&
+        page.slug === slug &&
+        page.lifecycle === "PUBLISHED"
+      ) {
+        return page;
+      }
+    }
+    return null;
+  }
+
   async save(page: Page): Promise<void> {
     this.savedPages.push(page);
     this.pagesById.set(page.id, page);
