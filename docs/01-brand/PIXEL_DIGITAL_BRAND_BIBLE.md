@@ -23,8 +23,9 @@ Official tagline: "Nous créons des marques qui attirent, convainquent et resten
 
 ### Visual language
 
-- Red is the dominant signature. Approved palette (ODR-013, 2026-07-22): primary red `#C62828`, dark red `#8E0000`, black `#111111`, white `#FFFFFF`, light grey `#F5F5F5`. The palette may evolve later without architectural impact.
-- Approved type (ODR-013): Montserrat for headings, Inter for body text.
+- Red is the dominant signature. Approved palette (ODR-013, 2026-07-22): primary red `#E71E2D`, secondary dark red `#981D2A`, white `#FFFFFF`, black `#000000`. The palette may evolve later without architectural impact.
+- Approved type (ODR-013): Outfit, as the single official typeface across headings, subheadings, body text, buttons and UI.
+- Implementation direction: store colours and type as design tokens (with Kwaliti Print's own token set) rather than hard-coded component values, so the two brands stay swappable themes. See ODR-024 in `docs/08-governance/OWNER_DECISION_REGISTER.md`.
 - Use controlled contrast, strong editorial hierarchy, deliberate whitespace and precise alignment.
 - Prefer authentic work, people, processes and outcomes over generic stock imagery.
 - Use graphic systems that suggest connection, transformation and momentum without visual noise.

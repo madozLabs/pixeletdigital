@@ -24,7 +24,7 @@ Record the approved answer, rationale, approver and review date when a decision 
 | ODR-010 | Approve Training final name, identity and teaser wording | Navigation and teaser asset/copy | Final brand/content approval | Provisional descriptor only; foundation/teaser scope | Project owner | Open | Blocks stated gate |
 | ODR-011 | Approve any future Training promotion to a full launch | Roadmap, scope, content and operations | New owner-approved scope change | Remain teaser/foundation only | Project owner | Open | Blocks stated gate |
 | ODR-012 | Approve final logos and usage rules | Identity assets and cross-world orientation | Visual design and asset production | Preserve the four repository source Pixel&Digital PNG files as raster-only inputs; do not infer missing variants, rules or rights | Project owner | Approved | Closed 2026-07-22 for interim use: current raster PNGs authorized for production use now; architecture must allow swapping in vector masters (SVG/AI/PDF) later without code changes. Rights authority and misuse rules remain unresolved and are not required to block interim use |
-| ODR-013 | Approve exact colours and type families | Brand system, contrast testing and production | Visual design and accessibility approval | Preserve directional red/white intent only; no exact values/fonts | Project owner | Approved | Closed 2026-07-22; see section 4 for Pixel&Digital palette/type. Kwaliti Print's own palette/type remain a separate open question (its brand bible requires visual autonomy from Pixel&Digital) |
+| ODR-013 | Approve exact colours and type families | Brand system, contrast testing and production | Visual design and accessibility approval | Preserve directional red/white intent only; no exact values/fonts | Project owner | Approved | Closed 2026-07-22, corrected same day; see section 4 for Pixel&Digital palette/type |
 | ODR-014 | Approve clients, case studies, metrics, testimonials and attribution | Credibility, rights, case-study content and claims | Content approval and release | Publish only verified, permissioned evidence | Project owner | Open | Blocks stated gate |
 | ODR-015 | Approve media subjects, rights and production direction | Photography, video, 3D, team and work media | Asset production and release | Audit existing rights; commission nothing unapproved | Project owner | Open | Blocks stated gate |
 | ODR-016 | Approve media-production budget | Asset ambition, prioritisation and schedule | Production commitment and release planning | Plan essential/static-first packages without assuming spend | Project owner | Open | Blocks stated gate |
@@ -35,6 +35,7 @@ Record the approved answer, rationale, approver and review date when a decision 
 | ODR-021 | Decide whether Insights has sufficient governed content for MVP | Navigation, editorial workload and conversion paths | Scope freeze and content inventory | Exclude unless approved content is sufficient | Project owner | Open | Blocks stated gate |
 | ODR-022 | Approve file-acceptance guidance for Kwaliti Print requests | Mobile forms, privacy, customer instructions and operations | Final quotation journey and release | Do not promise accepted formats or handling | Project owner | Open | Blocks stated gate |
 | ODR-023 | Approve Kwaliti Print final logo assets, endorsement wording and relationship to Pixel&Digital | Identity assets, launch collateral and cross-world orientation | Final brand/content approval | Preserve the three repository Kwaliti Print PNG files as raster-only inputs; do not infer missing variants, rules or rights | Project owner | Approved | Closed 2026-07-22 for interim use: current raster PNGs authorized for production use now; architecture must allow swapping in vector masters later without code changes. Endorsement wording and rights authority remain unresolved and are not required to block interim use |
+| ODR-024 | Approve Kwaliti Print colour palette and type | Brand system, theming, contrast testing and production | Visual design and accessibility approval | Preserve directional CMYK-striped intent only; no exact values/fonts | Project owner | Approved | Closed 2026-07-22; see section 4. Confirms the colours already sampled from the repository logo rasters in `docs/01-brand/KWALITI_PRINT_LOGO_REGISTER.md` |
 
 ## 3. Decision quality gate
 
@@ -70,17 +71,36 @@ Approved by: Project owner. Date: 2026-07-22.
 
 ### ODR-013: Pixel&Digital colour palette and type
 
+Superseded same day by an owner correction; this is the authoritative version.
+
 | Token | Value |
 |---|---|
-| Primary red | `#C62828` |
-| Dark red | `#8E0000` |
-| Black | `#111111` |
+| Primary red | `#E71E2D` |
+| Secondary (dark) red | `#981D2A` |
 | White | `#FFFFFF` |
-| Light grey | `#F5F5F5` |
+| Black | `#000000` |
 
-Typography: headings in Montserrat, body text in Inter.
+Typography: Outfit, as the single official typeface for headings, subheadings, body text, buttons and UI.
 
-This palette/type may evolve later without architectural impact (colours and fonts are presentation-layer tokens, not structural). This decision covers Pixel&Digital only; Kwaliti Print's own colour/type system remains open (see `docs/01-brand/KWALITI_PRINT_BRAND_BIBLE.md` section 10) since it must remain visually autonomous from the parent brand.
+This palette/type may evolve later without architectural impact (colours and fonts are presentation-layer tokens, not structural). This decision covers Pixel&Digital only. See ODR-024 for Kwaliti Print's own colour/type, approved separately since it must remain visually autonomous from the parent brand.
+
+Approved by: Project owner. Date: 2026-07-22.
+
+### ODR-024: Kwaliti Print colour palette and type
+
+| Token | Value |
+|---|---|
+| Cyan | `#2CA0DA` |
+| Magenta | `#E5078A` |
+| Yellow | `#FBE20A` |
+| White | `#FFFFFF` |
+| Black | `#000000` |
+
+These four values match the colours already sampled directly from the repository logo raster files during ODR-023 evidence-gathering (`docs/01-brand/KWALITI_PRINT_LOGO_REGISTER.md` section 3) — the owner's decision confirms them as official tokens rather than raster observations.
+
+Typography: the "kwaliti" wordmark uses Gilroy; the "K" pictogram/monogram uses Baloo 2. For the website interface specifically (menus, paragraphs, forms, continuous reading), use Gilroy as the primary UI typeface — Baloo 2 is reserved for the logo/monogram and is not suited to continuous reading.
+
+Implementation direction (binding for the presentation layer, not yet built): keep Pixel&Digital and Kwaliti Print as two separate design-token themes (colours, typography, spacing, radii, buttons, icons, components per theme), so a future standalone Kwaliti Print site only needs to swap the active theme rather than rewrite components. Store these as design tokens, not values hard-coded into components.
 
 Approved by: Project owner. Date: 2026-07-22.
 

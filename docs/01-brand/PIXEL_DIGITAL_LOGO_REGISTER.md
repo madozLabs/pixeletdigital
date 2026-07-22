@@ -1,6 +1,6 @@
 # Pixel&Digital — Logo Register
 
-Status: Four repository raster sources registered; owner decision remains open
+Status: Four repository raster sources registered and approved for interim use (ODR-012); colour palette approved (ODR-013); vector masters and usage rules remain open
 Parent references: `docs/01-brand/PIXEL_DIGITAL_BRAND_BIBLE.md`, `docs/01-brand/ASSET_PRODUCTION_PLAN.md`, `docs/08-governance/OWNER_DECISION_REGISTER.md`
 
 ## 1. Purpose
@@ -22,9 +22,9 @@ These four files are now traceable repository assets. They remain raster-only an
 
 ## 3. Observed colour evidence
 
-The opaque red observed in `pixel-digital-symbol-red-transparent.png` samples as RGB 232, 27, 44 / `#E81B2C`.
+The opaque red observed in `pixel-digital-symbol-red-transparent.png` samples as RGB 232, 27, 44 / `#E81B2C`. This raster sample is close to but distinct from the officially approved primary red `#E71E2D` (ODR-013, 2026-07-22, see `docs/08-governance/OWNER_DECISION_REGISTER.md` section 4) — the difference is expected raster/anti-aliasing drift, not a conflicting decision. `#E71E2D` is the authoritative token; the raster sample remains only historical evidence of what the current PNGs contain.
 
-This is a raster observation only. It is not yet an approved universal brand token, print specification, colour-space conversion or authoritative master value. No gradient stops, direction, interpolation or official gradient values are approved.
+No gradient stops, direction, interpolation or official gradient values are approved.
 
 ## 4. Evidence boundary
 
@@ -45,4 +45,4 @@ The following remain missing or unconfirmed:
 
 ## 6. Decision status and release gate
 
-Owner decision ODR-012 is materially progressed because four repository raster sources, dimensions, transparency behavior, file sizes and SHA-256 hashes are now documented. It remains `Open` and continues to block final visual-design and production approval pending vector/master files, formal usage rules, rights authority, clear-space rules, minimum-size rules, typography specifications and authoritative colour/gradient specifications.
+ODR-012 was approved 2026-07-22 for interim production use of the four repository raster sources; vector/master files, formal usage rules, rights authority, clear-space rules and minimum-size rules remain open but no longer block interim use. Colour and typography are separately resolved by ODR-013 (see section 3 above and `docs/01-brand/PIXEL_DIGITAL_BRAND_BIBLE.md`).

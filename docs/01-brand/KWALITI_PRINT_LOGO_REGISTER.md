@@ -1,6 +1,6 @@
 # Kwaliti Print — Logo Register
 
-Status: Three repository raster sources registered; owner decision remains open
+Status: Three repository raster sources registered and approved for interim use (ODR-023); colour palette approved (ODR-024); vector masters and usage rules remain open
 Parent references: `docs/01-brand/KWALITI_PRINT_BRAND_BIBLE.md`, `docs/01-brand/BRAND_ARCHITECTURE.md`, `docs/08-governance/OWNER_DECISION_REGISTER.md`
 
 ## 1. Purpose
@@ -30,7 +30,7 @@ Sampled directly from the `K` symbol stripes, identical across all three files:
 | Yellow | 251, 226, 10 | `#FBE20A` |
 | Key (black/white) | 0, 0, 0 (black variant) / 255, 255, 255 (white variant) | `#000000` / `#FFFFFF` |
 
-The four-colour stripe treatment reads as a CMYK reference, consistent with a print-production brand. This is a raster observation only. It is not yet an approved universal brand token, print specification, colour-space conversion or authoritative master value.
+The four-colour stripe treatment reads as a CMYK reference, consistent with a print-production brand. Confirmed as the official Kwaliti Print palette by ODR-024 (2026-07-22, see `docs/08-governance/OWNER_DECISION_REGISTER.md` section 4) — these four values are now approved brand tokens, not just raster observations. Print specification and colour-space conversion for physical production remain undecided.
 
 ## 4. Evidence boundary
 
@@ -52,4 +52,4 @@ The following remain missing or unconfirmed:
 
 ## 6. Decision status and release gate
 
-Owner decision ODR-023 is materially progressed because three repository raster sources, dimensions, transparency behavior, file sizes and SHA-256 hashes are now documented. It remains `Open` and continues to block final visual-design and production approval pending vector/master files, formal usage rules, rights authority, clear-space rules, minimum-size rules, typography specifications and endorsement wording describing the relationship to Pixel&Digital.
+ODR-023 was approved 2026-07-22 for interim production use of the three repository raster sources; vector/master files, formal usage rules, rights authority, clear-space rules, minimum-size rules and endorsement wording describing the relationship to Pixel&Digital remain open but no longer block interim use. Colour and typography are separately resolved by ODR-024 (see section 3 above and `docs/01-brand/KWALITI_PRINT_BRAND_BIBLE.md`).

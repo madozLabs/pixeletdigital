@@ -1,11 +1,11 @@
 # Kwaliti Print — Brand Bible
 
-Status: Directional foundation; final identity inputs pending owner approval
-Parent references: `docs/00-vision/PROJECT_BIBLE.md`, `docs/01-brand/BRAND_ARCHITECTURE.md`, `docs/01-brand/KWALITI_PRINT_LOGO_REGISTER.md`
+Status: Colour palette and type approved 2026-07-22 (ODR-024); capability catalogue approved 2026-07-22 (ODR-003); logo remains interim raster pending vector masters (ODR-023)
+Parent references: `docs/00-vision/PROJECT_BIBLE.md`, `docs/01-brand/BRAND_ARCHITECTURE.md`, `docs/01-brand/KWALITI_PRINT_LOGO_REGISTER.md`, `docs/08-governance/OWNER_DECISION_REGISTER.md`
 
 ## 1. Purpose
 
-Define Kwaliti Print as a distinct, predominantly white, tactile and industrial production brand within the Pixel&Digital ecosystem. The experience must explain only the current capability scope approved under ODR-003. Personalized Gadgets is the sole current-stated candidate; Banner Printing, Vinyl Printing and 3D Lettering/CNC remain future-only. Materials, fabrication precision and quotation paths appear only where operationally validated for an approved current capability.
+Define Kwaliti Print as a distinct, predominantly white, tactile and industrial production brand within the Pixel&Digital ecosystem. The experience covers the full capability catalogue approved under ODR-003 (see `docs/04-content/drafts/KWALITI_PRINT_CAPABILITY_CATALOGUE_DRAFT.md`); capabilities not yet physically available are created but kept unpublished until the owner activates them. Materials, fabrication precision and quotation paths appear only where operationally validated for a published capability.
 
 ## 2. Principles
 
@@ -19,11 +19,11 @@ Define Kwaliti Print as a distinct, predominantly white, tactile and industrial 
 
 ### Visual language
 
-- White is the predominant field; exact whites, neutrals and accents remain undecided.
+- White is the predominant field. Approved palette (ODR-024, 2026-07-22): cyan `#2CA0DA`, magenta `#E5078A`, yellow `#FBE20A`, white `#FFFFFF`, black `#000000` — the CMYK-referencing accent set already visible in the logo, used as accents against the white field, not as a full-bleed treatment.
+- Approved type (ODR-024): Gilroy as the primary UI typeface (menus, paragraphs, forms, continuous reading). Baloo 2 is reserved for the "K" pictogram/monogram only and must not be used for interface or body text.
 - Use technical grids, measurement cues and disciplined composition only where they improve understanding.
 - Prioritize authentic close-ups of surfaces, edges, inks, finishes, machinery and completed objects.
 - Show scale or context whenever a crop could misrepresent a product.
-- Typography must be robust, clear and functional; no type family is approved yet.
 
 ### Voice and content
 
@@ -79,10 +79,9 @@ Required launch inputs are limited to the ODR-003-approved current capability se
 ## 10. Open owner decisions
 
 - Final vector logo masters, endorsement wording and relationship to Pixel&Digital. Three repository raster sources are authorized for interim production use (ODR-023, 2026-07-22); remains open pending vector masters, usage rules and endorsement wording.
-- Approved type families, exact colour values and photography direction. This is Kwaliti Print's own decision, separate from Pixel&Digital's approved palette/type (ODR-013) — Kwaliti Print must remain visually autonomous from the parent brand (see section 4 above).
-- Materials, formats and capability details within the approved catalogue (ODR-003, 2026-07-22 — see `docs/04-content/drafts/KWALITI_PRINT_CAPABILITY_CATALOGUE_DRAFT.md`).
+- Photography direction.
 - Geographic service area, fulfilment constraints and approved commercial claims.
 - File-acceptance guidance and any legally required customer notices.
 - Budget and production method for photography, video and original 3D assets.
 
-Resolved: capability catalogue (ODR-003), pricing is quotation-only (ODR-004) — see `docs/08-governance/OWNER_DECISION_REGISTER.md` section 4.
+Resolved: capability catalogue (ODR-003), pricing is quotation-only (ODR-004), colour palette and type (ODR-024) — see `docs/08-governance/OWNER_DECISION_REGISTER.md` section 4.
