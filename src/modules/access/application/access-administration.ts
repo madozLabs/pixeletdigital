@@ -6,6 +6,7 @@ import type {
 } from "@/shared/request-context";
 
 import {
+  CREDENTIALS_PROVIDER,
   createAuthAccount,
   createRoleAssignment,
   createUser,
@@ -21,6 +22,7 @@ import type {
   AccessAdministrationReader,
   AccessAdministrationTransaction,
 } from "./access-administration-ports";
+import type { PasswordHasher } from "./password-hasher";
 
 export type AccessAdministrationError =
   | Readonly<{ code: "UNAUTHENTICATED"; message: string }>
@@ -37,6 +39,7 @@ type Dependencies = Readonly<{
   reader: AccessAdministrationReader;
   transaction: AccessAdministrationTransaction;
   employeePolicy: Readonly<{ allowedDomain: string }>;
+  passwordHasher?: PasswordHasher;
 }>;
 
 type ConfirmationInput = Readonly<{
@@ -52,6 +55,7 @@ export type CreateEmployeeInput = ConfirmationInput &
     authAccountId: string;
     provider: string;
     providerAccountId: string;
+    password?: string;
     assignmentId: string;
     role: string;
     scope: unknown;
@@ -103,11 +107,24 @@ export async function createEmployee(
     displayName: user.value.displayName,
     normalizedEmail: user.value.normalizedEmail,
   } as const;
+
+  let passwordHash: string | undefined;
+  if (input.provider === CREDENTIALS_PROVIDER) {
+    if (!input.password || !dependencies.passwordHasher) {
+      return validationError(
+        "INVALID_PASSWORD_HASH",
+        "The credentials provider requires a password and a configured password hasher.",
+      );
+    }
+    passwordHash = await dependencies.passwordHasher.hash(input.password);
+  }
+
   const authAccount = createAuthAccount({
     id: input.authAccountId,
     userId: user.value.id,
     provider: input.provider,
     providerAccountId: input.providerAccountId,
+    passwordHash,
   });
   if (!authAccount.ok)
     return validationError(authAccount.error.code, authAccount.error.message);
