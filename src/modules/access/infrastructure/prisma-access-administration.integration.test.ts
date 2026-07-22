@@ -7,6 +7,7 @@ import type { RequestContext } from "@/shared/request-context";
 
 import { createRoleAssignment, createUser } from "../domain/access";
 import { createEmployee } from "../application/access-administration";
+import { ScryptPasswordHasher } from "./scrypt-password-hasher";
 import { PrismaAccessAdministrationStore } from "./prisma-access-administration";
 
 const now = new Date("2026-07-15T12:00:00.000Z");
@@ -59,6 +60,42 @@ describe("Prisma Access administration transaction", () => {
       action: "ACCESS_USER_CREATED",
       targetType: "USER",
     });
+  });
+
+  it("provisions a credentials employee with a persisted, verifiable password hash", async () => {
+    const passwordHasher = new ScryptPasswordHasher();
+    const result = await createEmployee(
+      {
+        reader: store,
+        transaction: store,
+        employeePolicy: { allowedDomain: "company.test" },
+        passwordHasher,
+      },
+      superAdminContext(),
+      {
+        ...employeeInput(),
+        provider: "credentials",
+        providerAccountId: "employee@company.test",
+        password: "correct horse battery staple",
+      },
+    );
+    expect(result).toMatchObject({ ok: true });
+
+    const persisted = await client.authAccount.findUnique({
+      where: {
+        provider_providerAccountId: {
+          provider: "credentials",
+          providerAccountId: "employee@company.test",
+        },
+      },
+    });
+    expect(persisted?.passwordHash).toEqual(expect.any(String));
+    await expect(
+      passwordHasher.verify(
+        "correct horse battery staple",
+        persisted!.passwordHash!,
+      ),
+    ).resolves.toBe(true);
   });
 
   it("enforces normalized email uniqueness case-insensitively", async () => {

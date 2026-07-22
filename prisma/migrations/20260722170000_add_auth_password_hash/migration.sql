@@ -1,0 +1,2 @@
+ALTER TABLE "auth_accounts"
+  ADD COLUMN "passwordHash" TEXT;
