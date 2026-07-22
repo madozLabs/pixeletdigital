@@ -5,7 +5,10 @@ import {
   reject,
   submitForReview,
   type ContentLifecycleState,
+  type Result,
 } from "./content-lifecycle";
+
+export type { Result } from "./content-lifecycle";
 
 export const SERVICE_AVAILABILITY_STATUSES = [
   "CANDIDATE",
@@ -47,9 +50,6 @@ export type ServiceDomainError = Readonly<{
   code: ServiceDomainErrorCode;
   message: string;
 }>;
-
-export type Result<T, E> =
-  Readonly<{ ok: true; value: T }> | Readonly<{ ok: false; error: E }>;
 
 export type Service = Readonly<{
   id: string;

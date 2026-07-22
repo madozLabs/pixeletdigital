@@ -1,4 +1,5 @@
 import type { PageDomainErrorCode } from "../domain/page";
+import type { ServiceDomainErrorCode } from "../domain/service";
 
 export type ContentApplicationError =
   | Readonly<{
@@ -11,7 +12,7 @@ export type ContentApplicationError =
     }>
   | Readonly<{
       code: "VALIDATION_ERROR";
-      validationCode: PageDomainErrorCode;
+      validationCode: PageDomainErrorCode | ServiceDomainErrorCode;
       message: string;
     }>
   | Readonly<{

@@ -4,21 +4,23 @@ import type {
   RequestContext,
 } from "@/shared/request-context";
 
-import type { Result } from "../domain/page";
+import type { Result } from "../domain/content-lifecycle";
 import type { ContentApplicationError } from "./application-error";
 
-const PAGE_MUTATE_ROLES: readonly ApprovedRole[] = [
+const CONTENT_MUTATE_ROLES: readonly ApprovedRole[] = [
   "SUPER_ADMIN",
   "ADMIN",
   "WORLD_MANAGER",
   "EDITOR",
 ];
 
-const PAGE_REVIEW_ROLES: readonly ApprovedRole[] = [
+const CONTENT_REVIEW_ROLES: readonly ApprovedRole[] = [
   "SUPER_ADMIN",
   "ADMIN",
   "WORLD_MANAGER",
 ];
+
+const SERVICE_APPROVAL_ROLES: readonly ApprovedRole[] = ["SUPER_ADMIN"];
 
 export function requireActiveActor(
   context: RequestContext,
@@ -44,12 +46,16 @@ export function hasWorldScope(actor: RequestActor, worldKey: string): boolean {
   );
 }
 
-export function mayMutatePages(actor: RequestActor): boolean {
-  return actor.role !== null && PAGE_MUTATE_ROLES.includes(actor.role);
+export function mayMutateContent(actor: RequestActor): boolean {
+  return actor.role !== null && CONTENT_MUTATE_ROLES.includes(actor.role);
 }
 
-export function mayReviewPages(actor: RequestActor): boolean {
-  return actor.role !== null && PAGE_REVIEW_ROLES.includes(actor.role);
+export function mayReviewContent(actor: RequestActor): boolean {
+  return actor.role !== null && CONTENT_REVIEW_ROLES.includes(actor.role);
+}
+
+export function mayApproveServiceAvailability(actor: RequestActor): boolean {
+  return actor.role !== null && SERVICE_APPROVAL_ROLES.includes(actor.role);
 }
 
 export function forbidden(): Result<never, ContentApplicationError> {

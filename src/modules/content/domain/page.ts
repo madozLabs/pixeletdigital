@@ -5,8 +5,10 @@ import {
   reject,
   submitForReview,
   type ContentLifecycleState,
+  type Result,
 } from "./content-lifecycle";
 
+export type { Result } from "./content-lifecycle";
 export type PageLifecycleState = ContentLifecycleState;
 export type PageSlug = string & { readonly __brand: "PageSlug" };
 
@@ -24,9 +26,6 @@ export type PageDomainError = Readonly<{
   code: PageDomainErrorCode;
   message: string;
 }>;
-
-export type Result<T, E> =
-  Readonly<{ ok: true; value: T }> | Readonly<{ ok: false; error: E }>;
 
 export type Page = Readonly<{
   id: string;

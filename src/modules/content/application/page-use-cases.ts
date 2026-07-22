@@ -17,10 +17,10 @@ import type { ContentApplicationError } from "./application-error";
 import {
   forbidden,
   hasWorldScope,
-  mayMutatePages,
-  mayReviewPages,
+  mayMutateContent,
+  mayReviewContent,
   requireActiveActor,
-} from "./page-authorization";
+} from "./content-authorization";
 import type { PageRepository } from "./page-repository";
 
 export type ContentDependencies = Readonly<{
@@ -57,7 +57,7 @@ export async function createDraftPage(
     };
   }
 
-  if (!mayMutatePages(actor) || !hasWorldScope(actor, worldKeyResult.value)) {
+  if (!mayMutateContent(actor) || !hasWorldScope(actor, worldKeyResult.value)) {
     return forbidden();
   }
 
@@ -119,7 +119,7 @@ export async function editDraftPage(
     dependencies,
     context,
     input,
-    mayMutatePages,
+    mayMutateContent,
     (page, now) =>
       editDraftPageDomain(page, { title: input.title, slug: input.slug }, now),
   );
@@ -139,7 +139,7 @@ export async function submitPageForReview(
     dependencies,
     context,
     input,
-    mayMutatePages,
+    mayMutateContent,
     (page, now) => submitPageForReviewDomain(page, now),
   );
 }
@@ -158,7 +158,7 @@ export async function rejectPage(
     dependencies,
     context,
     input,
-    mayReviewPages,
+    mayReviewContent,
     (page, now) => rejectPageDomain(page, now),
   );
 }
@@ -177,7 +177,7 @@ export async function publishPage(
     dependencies,
     context,
     input,
-    mayReviewPages,
+    mayReviewContent,
     (page, now) => publishPageDomain(page, now),
   );
 }
@@ -196,7 +196,7 @@ export async function archivePage(
     dependencies,
     context,
     input,
-    mayReviewPages,
+    mayReviewContent,
     (page, now) => archivePageDomain(page, now),
   );
 }

@@ -8,6 +8,9 @@ export const CONTENT_LIFECYCLE_STATES = [
 
 export type ContentLifecycleState = (typeof CONTENT_LIFECYCLE_STATES)[number];
 
+export type Result<T, E> =
+  Readonly<{ ok: true; value: T }> | Readonly<{ ok: false; error: E }>;
+
 export type ContentTransitionError = Readonly<{
   code: "INVALID_TRANSITION";
   message: string;
