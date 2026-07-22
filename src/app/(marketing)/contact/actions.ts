@@ -93,6 +93,14 @@ export async function submitContactAction(
     };
   }
 
+  if (result.error.code !== "VALIDATION_ERROR") {
+    return {
+      status: "error",
+      message: "Votre demande n'a pas pu être envoyée. Merci de réessayer.",
+      fieldErrors: {},
+    };
+  }
+
   const fieldError =
     FIELD_ERROR_BY_VALIDATION_CODE[result.error.validationCode];
   return {

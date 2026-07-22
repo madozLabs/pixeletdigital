@@ -24,6 +24,12 @@ export class InMemoryEnquiryRepository implements EnquiryRepository {
     ).length;
   }
 
+  async listByWorld(worldKey: string): Promise<readonly Enquiry[]> {
+    return this.savedEnquiries
+      .filter((enquiry) => enquiry.worldKey === worldKey)
+      .sort((a, b) => b.submittedAt.getTime() - a.submittedAt.getTime());
+  }
+
   async save(enquiry: Enquiry, consent: ConsentRecord): Promise<void> {
     this.savedEnquiries.push(enquiry);
     this.savedConsents.push(consent);

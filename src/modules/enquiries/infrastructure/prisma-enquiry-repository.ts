@@ -27,36 +27,52 @@ export class PrismaEnquiryRepository implements EnquiryRepository {
     });
   }
 
+  async listByWorld(worldKey: string): Promise<readonly Enquiry[]> {
+    const records = await this.client.enquiry.findMany({
+      where: { worldKey },
+      orderBy: { submittedAt: "desc" },
+    });
+    return records.map(toDomain);
+  }
+
+  // Deliberately not wrapped in $transaction(async (tx) => {...}): under
+  // this Prisma 7 query-compiler engine + the PGlite driver adapter used
+  // for local dev/test, an interactive transaction that creates two
+  // different models reproducibly corrupts the second create's bound
+  // parameters (it receives the first create's data instead) once the
+  // same PrismaClient has run ~5 prior transactions of that shape in one
+  // process -- confirmed independent of table, field values and world.
+  // Two plain sequential creates do not exhibit this. Worst case on a
+  // crash between the two writes is an Enquiry without its ConsentRecord,
+  // which is recoverable by manual review, not a security issue.
   async save(enquiry: Enquiry, consent: ConsentRecord): Promise<void> {
-    await this.client.$transaction([
-      this.client.enquiry.create({
-        data: {
-          id: enquiry.id,
-          type: enquiry.type,
-          worldKey: enquiry.worldKey,
-          serviceId: enquiry.serviceId,
-          name: enquiry.name,
-          email: enquiry.email,
-          phone: enquiry.phone,
-          message: enquiry.message,
-          sourcePage: enquiry.sourcePage,
-          idempotencyKey: enquiry.idempotencyKey,
-          abuseStatus: enquiry.abuseStatus,
-          submittedAt: enquiry.submittedAt,
-        },
-      }),
-      this.client.consentRecord.create({
-        data: {
-          id: consent.id,
-          enquiryId: consent.enquiryId,
-          purposeKey: consent.purposeKey,
-          version: consent.version,
-          response: consent.response,
-          source: consent.source,
-          capturedAt: consent.capturedAt,
-        },
-      }),
-    ]);
+    await this.client.enquiry.create({
+      data: {
+        id: enquiry.id,
+        type: enquiry.type,
+        worldKey: enquiry.worldKey,
+        serviceId: enquiry.serviceId,
+        name: enquiry.name,
+        email: enquiry.email,
+        phone: enquiry.phone,
+        message: enquiry.message,
+        sourcePage: enquiry.sourcePage,
+        idempotencyKey: enquiry.idempotencyKey,
+        abuseStatus: enquiry.abuseStatus,
+        submittedAt: enquiry.submittedAt,
+      },
+    });
+    await this.client.consentRecord.create({
+      data: {
+        id: consent.id,
+        enquiryId: consent.enquiryId,
+        purposeKey: consent.purposeKey,
+        version: consent.version,
+        response: consent.response,
+        source: consent.source,
+        capturedAt: consent.capturedAt,
+      },
+    });
   }
 }
 

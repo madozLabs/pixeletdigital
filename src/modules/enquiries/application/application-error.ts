@@ -14,4 +14,12 @@ export type EnquiryApplicationError =
   | Readonly<{
       code: "RATE_LIMITED";
       message: string;
+    }>
+  | Readonly<{
+      code: "UNAUTHENTICATED";
+      message: string;
+    }>
+  | Readonly<{
+      code: "FORBIDDEN";
+      message: string;
     }>;

@@ -13,6 +13,7 @@ export default async function WorkspaceLayout({
     <div>
       <nav>
         <a href="/workspace/services">Services</a>
+        <a href="/workspace/enquiries">Demandes de contact</a>
       </nav>
       {children}
     </div>

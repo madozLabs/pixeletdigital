@@ -8,5 +8,6 @@ export interface EnquiryRepository {
     email: string,
     since: Date,
   ): Promise<number>;
+  listByWorld(worldKey: string): Promise<readonly Enquiry[]>;
   save(enquiry: Enquiry, consent: ConsentRecord): Promise<void>;
 }

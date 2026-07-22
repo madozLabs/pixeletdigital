@@ -114,6 +114,30 @@ describe("PrismaEnquiryRepository", () => {
       repository.save(orphan, draftConsent(orphan.id, "consent_test_05")),
     ).rejects.toThrow();
   });
+
+  it("lists enquiries for a world ordered by most recent first", async () => {
+    const worldKey = "content-enquiries-test-world";
+
+    const earlier = draftEnquiry({
+      id: "enquiry_test_06",
+      idempotencyKey: "idem_test_06",
+      worldKey,
+      submittedAt: new Date("2026-07-22T09:00:00.000Z"),
+    });
+    const later = draftEnquiry({
+      id: "enquiry_test_07",
+      idempotencyKey: "idem_test_07",
+      worldKey,
+      submittedAt: new Date("2026-07-22T10:00:00.000Z"),
+    });
+    await repository.save(earlier, draftConsent(earlier.id, "consent_test_06"));
+    await repository.save(later, draftConsent(later.id, "consent_test_07"));
+
+    const found = await repository.listByWorld(worldKey);
+    const ids = found.map((enquiry) => enquiry.id);
+
+    expect(ids.indexOf(later.id)).toBeLessThan(ids.indexOf(earlier.id));
+  });
 });
 
 function validWorld() {
