@@ -59,9 +59,12 @@ export default async function HomePage() {
                 key={service.name}
                 delay={Math.min(index * 0.05, 0.4)}
               >
-                <article className="service-card">
+                <Link
+                  href={`/services/${service.slug}`}
+                  className="service-card"
+                >
                   <h3>{service.name}</h3>
-                </article>
+                </Link>
               </Reveal>
             ))}
           </ul>

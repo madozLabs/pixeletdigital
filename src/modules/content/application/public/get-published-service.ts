@@ -2,15 +2,7 @@ import { parseWorldKey } from "@/modules/worlds/domain/world";
 import type { WorldRepository } from "@/modules/worlds/application/world-repository";
 
 import type { ServiceRepository } from "../service-repository";
-
-export type PublishedServiceProjection = Readonly<{
-  worldKey: string;
-  familyId: string | null;
-  name: string;
-  slug: string;
-  description: string;
-  publishedAt: Date;
-}>;
+import type { PublishedServiceProjection } from "./list-published-services";
 
 export async function getPublishedService(
   dependencies: Readonly<{

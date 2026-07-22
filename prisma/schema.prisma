@@ -87,6 +87,15 @@ enum ServiceAvailabilityStatus {
   WITHDRAWN
 }
 
+enum EnquiryType {
+  GENERAL
+}
+
+enum EnquiryAbuseStatus {
+  ACCEPTED
+  FLAGGED
+}
+
 model World {
   id              String           @id @default(cuid())
   key             String           @unique
@@ -99,6 +108,7 @@ model World {
   pages           Page[]
   services        Service[]
   serviceFamilies ServiceFamily[]
+  enquiries       Enquiry[]
 
   @@map("worlds")
 }
@@ -237,6 +247,7 @@ model Service {
   publishedAt        DateTime?
   createdAt          DateTime
   updatedAt          DateTime
+  enquiries          Enquiry[]
 
   @@unique([worldKey, slug])
   @@index([worldKey, lifecycle])
@@ -245,6 +256,42 @@ model Service {
   @@index([worldKey, slug, lifecycle])
   @@index([familyId])
   @@map("services")
+}
+
+model Enquiry {
+  id             String              @id
+  type           EnquiryType
+  worldKey       String
+  world          World               @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  serviceId      String?
+  service        Service?            @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  name           String
+  email          String
+  phone          String?
+  message        String
+  sourcePage     String
+  idempotencyKey String              @unique
+  abuseStatus    EnquiryAbuseStatus
+  submittedAt    DateTime
+
+  consent ConsentRecord?
+
+  @@index([worldKey, email, submittedAt])
+  @@index([worldKey, submittedAt])
+  @@map("enquiries")
+}
+
+model ConsentRecord {
+  id         String   @id
+  enquiryId  String   @unique
+  enquiry    Enquiry  @relation(fields: [enquiryId], references: [id], onDelete: Restrict)
+  purposeKey String
+  version    Int
+  response   Boolean
+  source     String
+  capturedAt DateTime
+
+  @@map("consent_records")
 }
 
 model ServiceFamily {
