@@ -34,6 +34,7 @@ Record the approved answer, rationale, approver and review date when a decision 
 | ODR-020 | Decide analytics scope/provider constraints | Conversion evidence, consent and privacy review | Architecture/release planning after Phase 1 | Define meaningful events only; select no provider | Project owner | Open | Blocks stated gate |
 | ODR-021 | Decide whether Insights has sufficient governed content for MVP | Navigation, editorial workload and conversion paths | Scope freeze and content inventory | Exclude unless approved content is sufficient | Project owner | Open | Blocks stated gate |
 | ODR-022 | Approve file-acceptance guidance for Kwaliti Print requests | Mobile forms, privacy, customer instructions and operations | Final quotation journey and release | Do not promise accepted formats or handling | Project owner | Open | Blocks stated gate |
+| ODR-023 | Approve Kwaliti Print final logo assets, endorsement wording and relationship to Pixel&Digital | Identity assets, launch collateral and cross-world orientation | Final brand/content approval | Preserve the three repository Kwaliti Print PNG files as raster-only inputs; do not infer missing variants, rules or rights | Project owner | Open | Partially progressed; three raster sources traceable in `docs/01-brand/KWALITI_PRINT_LOGO_REGISTER.md`; still blocks stated gate pending vector/master files, formal usage rules, rights authority, clear space, minimum size, typography and endorsement wording |
 
 ## 3. Decision quality gate
 

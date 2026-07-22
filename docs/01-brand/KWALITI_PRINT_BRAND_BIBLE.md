@@ -1,7 +1,7 @@
 # Kwaliti Print — Brand Bible
 
 Status: Directional foundation; final identity inputs pending owner approval
-Parent references: `docs/00-vision/PROJECT_BIBLE.md`, `docs/01-brand/BRAND_ARCHITECTURE.md`
+Parent references: `docs/00-vision/PROJECT_BIBLE.md`, `docs/01-brand/BRAND_ARCHITECTURE.md`, `docs/01-brand/KWALITI_PRINT_LOGO_REGISTER.md`
 
 ## 1. Purpose
 
@@ -78,7 +78,7 @@ Required launch inputs are limited to the ODR-003-approved current capability se
 
 ## 10. Open owner decisions
 
-- Final logo assets, endorsement wording and relationship to Pixel&Digital.
+- Final logo assets, endorsement wording and relationship to Pixel&Digital (ODR-023). Materially progressed: three repository raster sources are traceable in `docs/01-brand/KWALITI_PRINT_LOGO_REGISTER.md`; remains open pending vector masters, usage rules and endorsement wording.
 - Approved type families, exact colour values and photography direction.
 - Confirmed launch catalogue, materials, formats and capabilities.
 - Public, indicative or quotation-only pricing policy.
