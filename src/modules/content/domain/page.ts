@@ -1,13 +1,13 @@
-export const PAGE_LIFECYCLE_STATES = [
-  "DRAFT",
-  "IN_REVIEW",
-  "SCHEDULED",
-  "PUBLISHED",
-  "ARCHIVED",
-] as const;
+import {
+  archive,
+  isContentLifecycleState,
+  publish,
+  reject,
+  submitForReview,
+  type ContentLifecycleState,
+} from "./content-lifecycle";
 
-export type PageLifecycleState = (typeof PAGE_LIFECYCLE_STATES)[number];
-
+export type PageLifecycleState = ContentLifecycleState;
 export type PageSlug = string & { readonly __brand: "PageSlug" };
 
 export type PageDomainErrorCode =
@@ -42,6 +42,7 @@ export type Page = Readonly<{
 }>;
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const ENTITY_LABEL = "page";
 
 export function createDraftPage(
   input: Readonly<{
@@ -125,7 +126,7 @@ export function restorePage(
   const slugResult = parseSlug(input.slug);
   if (!slugResult.ok) return slugResult;
 
-  if (!isPageLifecycleState(input.lifecycle)) {
+  if (!isContentLifecycleState(input.lifecycle)) {
     return failure(
       "INVALID_LIFECYCLE_STATE",
       "Page lifecycle is not part of the controlled vocabulary.",
@@ -162,7 +163,8 @@ export function editDraftPage(
   updatedAt: Date,
 ): Result<Page, PageDomainError> {
   if (page.lifecycle !== "DRAFT") {
-    return transitionError(
+    return failure(
+      "INVALID_TRANSITION",
       `Only a draft page can be edited directly, but lifecycle is ${page.lifecycle}.`,
     );
   }
@@ -189,90 +191,34 @@ export function submitPageForReview(
   page: Page,
   updatedAt: Date,
 ): Result<Page, PageDomainError> {
-  if (page.lifecycle !== "DRAFT") {
-    return transitionError(
-      `Only a draft page can be submitted for review, but lifecycle is ${page.lifecycle}.`,
-    );
-  }
-
-  return {
-    ok: true,
-    value: Object.freeze({
-      ...page,
-      lifecycle: "IN_REVIEW",
-      version: page.version + 1,
-      updatedAt: new Date(updatedAt),
-    }),
-  };
+  return submitForReview(page, updatedAt, ENTITY_LABEL);
 }
 
 export function rejectPage(
   page: Page,
   updatedAt: Date,
 ): Result<Page, PageDomainError> {
-  if (page.lifecycle !== "IN_REVIEW") {
-    return transitionError(
-      `Only a page in review can be rejected, but lifecycle is ${page.lifecycle}.`,
-    );
-  }
-
-  return {
-    ok: true,
-    value: Object.freeze({
-      ...page,
-      lifecycle: "DRAFT",
-      version: page.version + 1,
-      updatedAt: new Date(updatedAt),
-    }),
-  };
+  return reject(page, updatedAt, ENTITY_LABEL);
 }
 
 export function publishPage(
   page: Page,
   publishedAt: Date,
 ): Result<Page, PageDomainError> {
-  if (page.lifecycle !== "IN_REVIEW") {
-    return transitionError(
-      `Only a page in review can be published, but lifecycle is ${page.lifecycle}.`,
-    );
-  }
-
-  const timestamp = new Date(publishedAt);
-  return {
-    ok: true,
-    value: Object.freeze({
-      ...page,
-      lifecycle: "PUBLISHED",
-      version: page.version + 1,
-      publishedAt: timestamp,
-      updatedAt: timestamp,
-    }),
-  };
+  return publish(page, publishedAt, ENTITY_LABEL);
 }
 
 export function archivePage(
   page: Page,
   updatedAt: Date,
 ): Result<Page, PageDomainError> {
-  if (page.lifecycle === "ARCHIVED") {
-    return transitionError("Page is already archived.");
-  }
-
-  return {
-    ok: true,
-    value: Object.freeze({
-      ...page,
-      lifecycle: "ARCHIVED",
-      version: page.version + 1,
-      updatedAt: new Date(updatedAt),
-    }),
-  };
+  return archive(page, updatedAt, ENTITY_LABEL);
 }
 
 export function isPageLifecycleState(
   value: string,
 ): value is PageLifecycleState {
-  return PAGE_LIFECYCLE_STATES.includes(value as PageLifecycleState);
+  return isContentLifecycleState(value);
 }
 
 function parseWorldKey(rawWorldKey: string): Result<string, PageDomainError> {
@@ -321,10 +267,6 @@ function parseSlug(rawSlug: string): Result<PageSlug, PageDomainError> {
   }
 
   return { ok: true, value: slug as PageSlug };
-}
-
-function transitionError(message: string): Result<never, PageDomainError> {
-  return failure("INVALID_TRANSITION", message);
 }
 
 function failure(
