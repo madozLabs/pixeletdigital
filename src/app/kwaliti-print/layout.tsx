@@ -8,7 +8,11 @@ import { KwalitiHeader } from "./_components/kwaliti-header";
 export const metadata: Metadata = {
   title: {
     template: "%s — Kwaliti Print",
-    default: "Kwaliti Print",
+    // `absolute`, not `default`: a plain `default` string is still a
+    // fallback VALUE that the root layout's own template then wraps
+    // again ("Kwaliti Print — Pixel&Digital") -- confirmed live. Only
+    // `absolute` fully escapes every ancestor template.
+    absolute: "Kwaliti Print",
   },
 };
 
