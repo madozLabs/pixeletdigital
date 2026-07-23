@@ -8,6 +8,7 @@ import { ThemeToggle } from "./theme-toggle";
 
 const NAV_ITEMS = [
   { href: "/workspace/services", label: "Services" },
+  { href: "/workspace/editorial", label: "Calendrier éditorial" },
   { href: "/workspace/enquiries", label: "Demandes de contact" },
 ] as const;
 

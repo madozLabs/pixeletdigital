@@ -96,6 +96,12 @@ enum EnquiryAbuseStatus {
   FLAGGED
 }
 
+enum EditorialItemStatus {
+  PLANNED
+  DONE
+  CANCELLED
+}
+
 model World {
   id              String           @id @default(cuid())
   key             String           @unique
@@ -109,6 +115,7 @@ model World {
   services        Service[]
   serviceFamilies ServiceFamily[]
   enquiries       Enquiry[]
+  editorialItems  EditorialItem[]
 
   @@map("worlds")
 }
@@ -310,4 +317,25 @@ model ServiceFamily {
   @@index([worldKey, order])
   @@index([worldKey, lifecycle])
   @@map("service_families")
+}
+
+model EditorialItem {
+  id           String              @id
+  worldKey     String
+  world        World               @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  clientLabel  String
+  channel      String
+  title        String
+  scheduledFor DateTime
+  status       EditorialItemStatus
+  proofUrl     String?
+  notes        String?
+  realizedAt   DateTime?
+  version      Int
+  createdAt    DateTime
+  updatedAt    DateTime
+
+  @@index([worldKey, scheduledFor])
+  @@index([worldKey, status])
+  @@map("editorial_items")
 }
