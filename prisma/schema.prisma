@@ -102,6 +102,28 @@ enum EditorialItemStatus {
   CANCELLED
 }
 
+enum ClientStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum CatalogueItemKind {
+  SERVICE
+  PRODUCT
+}
+
+enum CatalogueItemStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  CANCELLED
+}
+
 model World {
   id              String           @id @default(cuid())
   key             String           @unique
@@ -116,6 +138,9 @@ model World {
   serviceFamilies ServiceFamily[]
   enquiries       Enquiry[]
   editorialItems  EditorialItem[]
+  clients         Client[]
+  catalogueItems  CatalogueItem[]
+  invoices        Invoice[]
 
   @@map("worlds")
 }
@@ -338,4 +363,70 @@ model EditorialItem {
   @@index([worldKey, scheduledFor])
   @@index([worldKey, status])
   @@map("editorial_items")
+}
+
+model Client {
+  id        String       @id
+  worldKey  String
+  world     World        @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  status    ClientStatus
+  version   Int
+  createdAt DateTime
+  updatedAt DateTime
+  invoices  Invoice[]
+
+  @@index([worldKey, status])
+  @@map("clients")
+}
+
+model CatalogueItem {
+  id             String              @id
+  worldKey       String
+  world          World               @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  label          String
+  kind           CatalogueItemKind
+  unitPriceCents Int
+  status         CatalogueItemStatus
+  version        Int
+  createdAt      DateTime
+  updatedAt      DateTime
+
+  @@index([worldKey, status])
+  @@map("catalogue_items")
+}
+
+model Invoice {
+  id        String        @id
+  worldKey  String
+  world     World         @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  clientId  String
+  client    Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  number    String
+  status    InvoiceStatus
+  issuedAt  DateTime
+  version   Int
+  createdAt DateTime
+  updatedAt DateTime
+  lines     InvoiceLine[]
+
+  @@unique([worldKey, number])
+  @@index([worldKey, status])
+  @@map("invoices")
+}
+
+model InvoiceLine {
+  id             String  @id
+  invoiceId      String
+  invoice        Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  label          String
+  quantity       Int
+  unitPriceCents Int
+  order          Int
+
+  @@index([invoiceId, order])
+  @@map("invoice_lines")
 }

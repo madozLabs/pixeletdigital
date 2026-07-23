@@ -12,6 +12,12 @@ const NAV_ITEMS = [
   { href: "/workspace/enquiries", label: "Demandes de contact" },
 ] as const;
 
+const BILLING_NAV_ITEM = {
+  href: "/workspace/billing",
+  label: "Facturation",
+} as const;
+const BILLING_ROLES = ["SUPER_ADMIN", "ADMIN", "WORLD_MANAGER"] as const;
+
 const WORLDS = [
   { key: "pixel-digital", label: "Pixel&Digital" },
   { key: "kwaliti-print", label: "Kwaliti Print" },
@@ -35,6 +41,10 @@ export function AdminShell({
   const router = useRouter();
   const searchParams = useSearchParams();
   const worldKey = searchParams.get("world") ?? WORLDS[0].key;
+  const navItems =
+    role && BILLING_ROLES.includes(role as (typeof BILLING_ROLES)[number])
+      ? [...NAV_ITEMS, BILLING_NAV_ITEM]
+      : NAV_ITEMS;
 
   function handleWorldChange(event: React.ChangeEvent<HTMLSelectElement>) {
     const params = new URLSearchParams(searchParams);
@@ -66,7 +76,7 @@ export function AdminShell({
         </select>
 
         <nav className="admin-nav" aria-label="Navigation Workspace">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <Link
               key={item.href}
               href={`${item.href}?world=${worldKey}`}
