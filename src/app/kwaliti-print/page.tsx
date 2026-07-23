@@ -11,7 +11,6 @@ import { Reveal } from "@/app/_components/reveal";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Kwaliti Print",
   description:
     "Notre unité de personnalisation et d'impression : capacités actuelles et demande de devis.",
 };

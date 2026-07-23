@@ -10,7 +10,7 @@ import { ContactForm } from "@/app/(marketing)/contact/contact-form";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Demander un devis — Kwaliti Print",
+  title: "Demander un devis",
   description:
     "Parlez-nous de votre projet de personnalisation ou d'impression.",
 };

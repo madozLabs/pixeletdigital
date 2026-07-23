@@ -1,8 +1,16 @@
+import type { Metadata } from "next";
 import { Baloo_2, Manrope } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { KwalitiFooter } from "./_components/kwaliti-footer";
 import { KwalitiHeader } from "./_components/kwaliti-header";
+
+export const metadata: Metadata = {
+  title: {
+    template: "%s — Kwaliti Print",
+    default: "Kwaliti Print",
+  },
+};
 
 const manrope = Manrope({
   subsets: ["latin"],
