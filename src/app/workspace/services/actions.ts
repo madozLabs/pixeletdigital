@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import {
+  archiveService,
   publishService,
   rejectService,
   submitServiceForReview,
@@ -68,6 +69,21 @@ export async function rejectServiceAction(formData: FormData): Promise<void> {
   );
   if (!result.ok) {
     console.error("rejectService failed", result.error);
+  }
+  revalidatePath("/workspace/services");
+}
+
+export async function archiveServiceAction(formData: FormData): Promise<void> {
+  const context = await getWorkspaceRequestContext();
+  if (!context) return;
+
+  const result = await archiveService(
+    dependencies(),
+    context,
+    transitionInput(formData),
+  );
+  if (!result.ok) {
+    console.error("archiveService failed", result.error);
   }
   revalidatePath("/workspace/services");
 }

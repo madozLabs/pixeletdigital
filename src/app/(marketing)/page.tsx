@@ -1,12 +1,16 @@
 import Link from "next/link";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
+import { listPublishedServiceFamilies } from "@/modules/content/application/public/list-published-service-families";
 import { listPublishedServices } from "@/modules/content/application/public/list-published-services";
+import { PrismaServiceFamilyRepository } from "@/modules/content/infrastructure/prisma-service-family-repository";
 import { PrismaServiceRepository } from "@/modules/content/infrastructure/prisma-service-repository";
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
 
 import { KineticHeading } from "@/app/_components/kinetic-heading";
 import { Reveal } from "@/app/_components/reveal";
+
+import { groupServicesByFamily } from "@/app/_lib/group-services-by-family";
 
 const TAGLINE =
   "Nous créons des marques qui attirent, convainquent et restent en mémoire.";
@@ -14,13 +18,16 @@ const TAGLINE =
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const services = await listPublishedServices(
-    {
-      services: new PrismaServiceRepository(prisma),
-      worlds: new PrismaWorldRepository(prisma),
-    },
-    { worldKey: "pixel-digital" },
-  );
+  const deps = {
+    services: new PrismaServiceRepository(prisma),
+    families: new PrismaServiceFamilyRepository(prisma),
+    worlds: new PrismaWorldRepository(prisma),
+  };
+  const [services, families] = await Promise.all([
+    listPublishedServices(deps, { worldKey: "pixel-digital" }),
+    listPublishedServiceFamilies(deps, { worldKey: "pixel-digital" }),
+  ]);
+  const groups = groupServicesByFamily(services, families);
 
   return (
     <main id="main-content">
@@ -59,22 +66,31 @@ export default async function HomePage() {
             </p>
           </Reveal>
         ) : (
-          <ul className="service-grid">
-            {services.map((service, index) => (
-              <Reveal
-                as="li"
-                key={service.name}
-                delay={Math.min(index * 0.05, 0.4)}
-              >
-                <Link
-                  href={`/services/${service.slug}`}
-                  className="service-card"
-                >
-                  <h3>{service.name}</h3>
-                </Link>
-              </Reveal>
+          <div className="service-groups">
+            {groups.map((group) => (
+              <div key={group.label} className="service-group">
+                <Reveal>
+                  <h3 className="service-group__title">{group.label}</h3>
+                </Reveal>
+                <ul className="service-grid">
+                  {group.services.map((service, index) => (
+                    <Reveal
+                      as="li"
+                      key={service.slug}
+                      delay={Math.min(index * 0.05, 0.4)}
+                    >
+                      <Link
+                        href={`/services/${service.slug}`}
+                        className="service-card"
+                      >
+                        <h3>{service.name}</h3>
+                      </Link>
+                    </Reveal>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </section>
 

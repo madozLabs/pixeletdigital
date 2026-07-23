@@ -27,6 +27,16 @@ export class PrismaServiceFamilyRepository implements ServiceFamilyRepository {
     return records.map(toDomain);
   }
 
+  async listPublishedByWorld(
+    worldKey: string,
+  ): Promise<readonly ServiceFamily[]> {
+    const records = await this.client.serviceFamily.findMany({
+      where: { worldKey, lifecycle: "PUBLISHED" },
+      orderBy: { order: "asc" },
+    });
+    return records.map(toDomain);
+  }
+
   async save(family: ServiceFamily): Promise<void> {
     await this.client.serviceFamily.upsert({
       where: { id: family.id },

@@ -8,6 +8,8 @@ import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-wo
 import { createDraftService } from "../domain/service";
 import {
   createDraftServiceFamily,
+  publishServiceFamily,
+  submitServiceFamilyForReview,
   type ServiceFamily,
 } from "../domain/service-family";
 import { PrismaServiceFamilyRepository } from "./prisma-service-family-repository";
@@ -107,6 +109,31 @@ describe("PrismaServiceFamilyRepository", () => {
     if (!orphanServiceResult.ok)
       throw new Error(orphanServiceResult.error.message);
     await expect(services.save(orphanServiceResult.value)).rejects.toThrow();
+  });
+
+  it("lists only published families for a world", async () => {
+    const draft = validFamily({ id: "family_test_06", order: 0 });
+    await repository.save(draft);
+
+    const toPublish = validFamily({ id: "family_test_07", order: 1 });
+    const inReview = submitServiceFamilyForReview(
+      toPublish,
+      toPublish.updatedAt,
+    );
+    if (!inReview.ok) throw new Error("expected submission to succeed");
+    const published = publishServiceFamily(
+      inReview.value,
+      inReview.value.updatedAt,
+    );
+    if (!published.ok) throw new Error("expected publication to succeed");
+    await repository.save(published.value);
+
+    const found = await repository.listPublishedByWorld(
+      "service-families-test-world",
+    );
+
+    expect(found.map((f) => f.id)).toContain("family_test_07");
+    expect(found.map((f) => f.id)).not.toContain("family_test_06");
   });
 });
 

@@ -19,6 +19,17 @@ export class InMemoryServiceFamilyRepository implements ServiceFamilyRepository 
       .sort((a, b) => a.order - b.order);
   }
 
+  async listPublishedByWorld(
+    worldKey: string,
+  ): Promise<readonly ServiceFamily[]> {
+    return [...this.familiesById.values()]
+      .filter(
+        (family) =>
+          family.worldKey === worldKey && family.lifecycle === "PUBLISHED",
+      )
+      .sort((a, b) => a.order - b.order);
+  }
+
   async save(family: ServiceFamily): Promise<void> {
     this.savedFamilies.push(family);
     this.familiesById.set(family.id, family);

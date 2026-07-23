@@ -15,10 +15,17 @@ import {
   publishService,
   submitServiceForReview,
 } from "../../domain/service";
+import {
+  createDraftServiceFamily,
+  publishServiceFamily,
+  submitServiceFamilyForReview,
+} from "../../domain/service-family";
 import { InMemoryPageRepository } from "../testing/in-memory-page-repository";
 import { InMemoryPageSectionRepository } from "../testing/in-memory-page-section-repository";
+import { InMemoryServiceFamilyRepository } from "../testing/in-memory-service-family-repository";
 import { InMemoryServiceRepository } from "../testing/in-memory-service-repository";
 import { getPublishedPage } from "./get-published-page";
+import { listPublishedServiceFamilies } from "./list-published-service-families";
 import { listPublishedServices } from "./list-published-services";
 
 const now = new Date("2026-07-15T00:00:00.000Z");
@@ -187,6 +194,34 @@ describe("listPublishedServices", () => {
   );
 });
 
+describe("listPublishedServiceFamilies", () => {
+  it("returns only published families, ordered", async () => {
+    const dependencies = dependenciesWithWorld();
+    await dependencies.families.save(
+      publishedFamily({ id: "family_02", order: 1 }),
+    );
+    await dependencies.families.save(
+      publishedFamily({ id: "family_01", order: 0 }),
+    );
+
+    const result = await listPublishedServiceFamilies(dependencies, {
+      worldKey: "pixel-digital",
+    });
+
+    expect(result.map((f) => f.id)).toEqual(["family_01", "family_02"]);
+  });
+
+  it("returns an empty list for an invalid worldKey", async () => {
+    const dependencies = dependenciesWithWorld();
+
+    const result = await listPublishedServiceFamilies(dependencies, {
+      worldKey: "Invalid Key",
+    });
+
+    expect(result).toEqual([]);
+  });
+});
+
 function dependenciesWithWorld(
   overrides: Partial<{ mode: "ACTIVE" | "TEASER" | "INACTIVE" }> = {},
 ) {
@@ -204,8 +239,28 @@ function dependenciesWithWorld(
     pages: new InMemoryPageRepository(),
     sections: new InMemoryPageSectionRepository(),
     services: new InMemoryServiceRepository(),
+    families: new InMemoryServiceFamilyRepository(),
     worlds: new InMemoryWorldRepository([world.value]),
   };
+}
+
+function publishedFamily(
+  overrides: Partial<{ id: string; order: number }> = {},
+) {
+  const draft = createDraftServiceFamily({
+    id: overrides.id ?? "family_01",
+    worldKey: "pixel-digital",
+    label: "Communication & Branding",
+    order: overrides.order ?? 0,
+    createdAt: now,
+    updatedAt: now,
+  });
+  if (!draft.ok) throw new Error("expected a valid draft family");
+  const inReview = submitServiceFamilyForReview(draft.value, now);
+  if (!inReview.ok) throw new Error("expected submission to succeed");
+  const published = publishServiceFamily(inReview.value, now);
+  if (!published.ok) throw new Error("expected publication to succeed");
+  return published.value;
 }
 
 function publishedPage() {

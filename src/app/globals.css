@@ -530,6 +530,21 @@ a.world-switcher__item:focus-visible {
   color: var(--ink-faint);
 }
 
+.service-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.service-group__title {
+  font-size: var(--step-1);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  margin-bottom: var(--space-2);
+}
+
 .service-grid,
 .teaser-grid {
   list-style: none;
@@ -1012,6 +1027,52 @@ a.world-switcher__item:focus-visible {
 
 .admin-empty {
   color: var(--ink-faint);
+}
+
+.admin-table__note {
+  color: var(--ink-faint);
+  font-size: 0.9em;
+}
+
+.admin-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: var(--space-2);
+}
+
+.admin-tabs__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  text-decoration: none;
+  color: var(--ink-soft);
+  font-size: var(--step-1);
+  padding: 0.5em 0.9em;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+}
+
+.admin-tabs__item:hover,
+.admin-tabs__item:focus-visible {
+  color: var(--ink);
+  border-color: var(--hairline);
+}
+
+.admin-tabs__item--active {
+  color: var(--ink);
+  background: var(--hairline);
+  font-weight: 600;
+}
+
+.admin-tabs__count {
+  font-size: 0.8em;
+  color: var(--ink-faint);
+}
+
+.admin-tabs__item--active .admin-tabs__count {
+  color: inherit;
 }
 
 @media (max-width: 60rem) {

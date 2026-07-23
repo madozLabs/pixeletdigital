@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
+import { listPublishedServiceFamilies } from "@/modules/content/application/public/list-published-service-families";
 import { listPublishedServices } from "@/modules/content/application/public/list-published-services";
+import { PrismaServiceFamilyRepository } from "@/modules/content/infrastructure/prisma-service-family-repository";
 import { PrismaServiceRepository } from "@/modules/content/infrastructure/prisma-service-repository";
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
 
 import { Reveal } from "@/app/_components/reveal";
+import { groupServicesByFamily } from "@/app/_lib/group-services-by-family";
 
 export const dynamic = "force-dynamic";
 
@@ -16,13 +19,16 @@ export const metadata: Metadata = {
 };
 
 export default async function KwalitiPrintHomePage() {
-  const capabilities = await listPublishedServices(
-    {
-      services: new PrismaServiceRepository(prisma),
-      worlds: new PrismaWorldRepository(prisma),
-    },
-    { worldKey: "kwaliti-print" },
-  );
+  const deps = {
+    services: new PrismaServiceRepository(prisma),
+    families: new PrismaServiceFamilyRepository(prisma),
+    worlds: new PrismaWorldRepository(prisma),
+  };
+  const [capabilities, families] = await Promise.all([
+    listPublishedServices(deps, { worldKey: "kwaliti-print" }),
+    listPublishedServiceFamilies(deps, { worldKey: "kwaliti-print" }),
+  ]);
+  const groups = groupServicesByFamily(capabilities, families);
 
   return (
     <main id="main-content">
@@ -74,29 +80,41 @@ export default async function KwalitiPrintHomePage() {
             </p>
           </Reveal>
         ) : (
-          <div className="capability-grid">
-            {capabilities.map((capability, index) => (
-              <Reveal key={capability.slug} delay={Math.min(index * 0.05, 0.4)}>
-                <article className="capability-card">
-                  <div className="media-slot" aria-hidden="true">
-                    Photographie à venir
-                  </div>
-                  <div className="capability-card__body">
-                    <h3 className="capability-card__title">
-                      {capability.name}
-                    </h3>
-                    <p className="capability-card__description">
-                      {capability.description}
-                    </p>
-                    <Link
-                      href={`/kwaliti-print/devis?service=${encodeURIComponent(capability.slug)}`}
-                      className="button button--kwaliti"
+          <div className="service-groups">
+            {groups.map((group) => (
+              <div key={group.label} className="service-group">
+                <Reveal>
+                  <h3 className="service-group__title">{group.label}</h3>
+                </Reveal>
+                <div className="capability-grid">
+                  {group.services.map((capability, index) => (
+                    <Reveal
+                      key={capability.slug}
+                      delay={Math.min(index * 0.05, 0.4)}
                     >
-                      Demander un devis
-                    </Link>
-                  </div>
-                </article>
-              </Reveal>
+                      <article className="capability-card">
+                        <div className="media-slot" aria-hidden="true">
+                          Photographie à venir
+                        </div>
+                        <div className="capability-card__body">
+                          <h3 className="capability-card__title">
+                            {capability.name}
+                          </h3>
+                          <p className="capability-card__description">
+                            {capability.description}
+                          </p>
+                          <Link
+                            href={`/kwaliti-print/devis?service=${encodeURIComponent(capability.slug)}`}
+                            className="button button--kwaliti"
+                          >
+                            Demander un devis
+                          </Link>
+                        </div>
+                      </article>
+                    </Reveal>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         )}
