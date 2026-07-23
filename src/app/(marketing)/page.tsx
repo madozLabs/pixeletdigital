@@ -23,7 +23,7 @@ export default async function HomePage() {
   );
 
   return (
-    <main>
+    <main id="main-content">
       <section className="hero">
         <KineticHeading text={TAGLINE} className="hero__title" />
         <Reveal delay={0.5}>

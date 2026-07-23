@@ -6,7 +6,7 @@
 
   --ink: var(--color-black);
   --ink-soft: rgb(0 0 0 / 62%);
-  --ink-faint: rgb(0 0 0 / 38%);
+  --ink-faint: rgb(0 0 0 / 56%);
   --surface: var(--color-white);
   --surface-inverted: var(--color-black);
   --ink-inverted: var(--color-white);
@@ -38,7 +38,7 @@
   :root {
     --ink: var(--color-white);
     --ink-soft: rgb(255 255 255 / 66%);
-    --ink-faint: rgb(255 255 255 / 40%);
+    --ink-faint: rgb(255 255 255 / 50%);
     --surface: var(--color-black);
     --surface-inverted: var(--color-white);
     --ink-inverted: var(--color-black);
@@ -92,6 +92,23 @@ a {
 }
 
 /* Marketing site */
+
+.skip-link {
+  position: absolute;
+  top: -999px;
+  left: 0.5rem;
+  z-index: 100;
+  padding: 0.75em 1.25em;
+  background: var(--color-red);
+  color: var(--color-white);
+  border-radius: 0.35rem;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.skip-link:focus-visible {
+  top: 0.5rem;
+}
 
 .site-header {
   position: sticky;

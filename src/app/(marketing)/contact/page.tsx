@@ -25,7 +25,7 @@ export default async function ContactPage({ searchParams }: PageProps) {
   const sourcePage = service ? `/contact?service=${service.slug}` : "/contact";
 
   return (
-    <main className="section">
+    <main id="main-content" className="section">
       <h1 className="section__title">Nous contacter</h1>
       <p className="section__lede">
         Parlez-nous de votre projet. Nous revenons vers vous après examen de

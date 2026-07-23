@@ -43,7 +43,7 @@ export default async function ServiceDetailPage({ params }: PageParams) {
   if (!service) notFound();
 
   return (
-    <main>
+    <main id="main-content">
       <section className="service-hero">
         <Reveal>
           <Link href="/#capacites" className="service-hero__back">
