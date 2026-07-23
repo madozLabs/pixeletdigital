@@ -34,34 +34,40 @@ export default async function LoginPage({
   }
 
   return (
-    <main>
-      <h1>Connexion Workspace</h1>
-      {error ? <p role="alert">Email ou mot de passe incorrect.</p> : null}
-      <form action={login}>
-        <p>
-          <label htmlFor="email">Email</label>
-          <br />
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            autoComplete="email"
-          />
-        </p>
-        <p>
-          <label htmlFor="password">Mot de passe</label>
-          <br />
-          <input
-            id="password"
-            name="password"
-            type="password"
-            required
-            autoComplete="current-password"
-          />
-        </p>
-        <button type="submit">Se connecter</button>
-      </form>
+    <main className="login-page">
+      <div className="login-card">
+        <h1 className="login-card__title">Connexion Workspace</h1>
+        {error ? (
+          <p className="login-card__error" role="alert">
+            Email ou mot de passe incorrect.
+          </p>
+        ) : null}
+        <form action={login} className="contact-form">
+          <label className="login-card__field">
+            <span>Email</span>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              autoComplete="email"
+            />
+          </label>
+          <label className="login-card__field">
+            <span>Mot de passe</span>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              required
+              autoComplete="current-password"
+            />
+          </label>
+          <button type="submit" className="button button--primary">
+            Se connecter
+          </button>
+        </form>
+      </div>
     </main>
   );
 }
