@@ -56,11 +56,12 @@ export async function submitContactAction(
   formData: FormData,
 ): Promise<ContactFormState> {
   const serviceSlug = text(formData, "serviceSlug").trim() || null;
+  const worldKey = text(formData, "worldKey").trim() || "pixel-digital";
 
   const result = await submitGeneralContact(dependencies(), {
     id: crypto.randomUUID(),
     consentRecordId: crypto.randomUUID(),
-    worldKey: "pixel-digital",
+    worldKey,
     serviceSlug,
     name: text(formData, "name"),
     email: text(formData, "email"),

@@ -5,8 +5,8 @@ import { listPublishedServices } from "@/modules/content/application/public/list
 import { PrismaServiceRepository } from "@/modules/content/infrastructure/prisma-service-repository";
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
 
-import { KineticHeading } from "./_components/kinetic-heading";
-import { Reveal } from "./_components/reveal";
+import { KineticHeading } from "@/app/_components/kinetic-heading";
+import { Reveal } from "@/app/_components/reveal";
 
 const TAGLINE =
   "Nous créons des marques qui attirent, convainquent et restent en mémoire.";
@@ -25,19 +25,26 @@ export default async function HomePage() {
   return (
     <main id="main-content">
       <section className="hero">
-        <KineticHeading text={TAGLINE} className="hero__title" />
-        <Reveal delay={0.5}>
-          <p className="hero__lede">
-            Studio créatif spécialisé dans la communication visuelle, le
-            marketing digital, la création de contenus, l&rsquo;audiovisuel, le
-            développement web et les solutions d&rsquo;impression à travers
-            notre marque Kwaliti Print.
-          </p>
-        </Reveal>
-        <Reveal delay={0.65}>
-          <Link href="/contact" className="button button--primary">
-            Discuter de votre projet
-          </Link>
+        <div className="hero__content">
+          <KineticHeading text={TAGLINE} className="hero__title" />
+          <Reveal delay={0.5}>
+            <p className="hero__lede">
+              Studio créatif spécialisé dans la communication visuelle, le
+              marketing digital, la création de contenus, l&rsquo;audiovisuel,
+              le développement web et les solutions d&rsquo;impression à travers
+              notre marque Kwaliti Print.
+            </p>
+          </Reveal>
+          <Reveal delay={0.65}>
+            <Link href="/contact" className="button button--primary">
+              Discuter de votre projet
+            </Link>
+          </Reveal>
+        </div>
+        <Reveal delay={0.3}>
+          <div className="media-slot" aria-hidden="true">
+            Photographie à venir
+          </div>
         </Reveal>
       </section>
 
@@ -71,6 +78,28 @@ export default async function HomePage() {
         )}
       </section>
 
+      <section className="section">
+        <Reveal>
+          <h2 className="section__title">Preuves &amp; résultats</h2>
+        </Reveal>
+        <Reveal delay={0.1}>
+          <p className="section__lede">
+            Études de cas et résultats mesurables en cours de constitution.
+          </p>
+        </Reveal>
+        <div className="proof-grid">
+          {[0, 1, 2].map((index) => (
+            <Reveal key={index} delay={0.1 + index * 0.05}>
+              <div className="proof-card">
+                <div className="media-slot" aria-hidden="true">
+                  Étude de cas à venir
+                </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
       <section id="preuve" className="section section--inverted">
         <Reveal>
           <h2 className="section__title">Une équipe, une capacité intégrée</h2>
@@ -82,25 +111,30 @@ export default async function HomePage() {
             production.
           </p>
         </Reveal>
-        <Reveal delay={0.2}>
-          <p className="section__note">
-            Études de cas et résultats mesurables en cours de constitution.
-          </p>
-        </Reveal>
       </section>
 
-      <section id="kwaliti-print" className="section section--kwaliti">
+      <section
+        id="kwaliti-print"
+        className="section section--kwaliti kwaliti-panel"
+      >
         <Reveal>
-          <h2 className="section__title">Kwaliti Print</h2>
+          <div className="media-slot" aria-hidden="true">
+            Photographie matière/produit à venir
+          </div>
         </Reveal>
         <Reveal delay={0.1}>
-          <p className="section__lede">
-            Notre unité de personnalisation et d&rsquo;impression, pensée comme
-            un univers distinct, tactile et orienté production.
-          </p>
-        </Reveal>
-        <Reveal delay={0.2}>
-          <p className="section__note">Univers dédié bientôt disponible.</p>
+          <div className="kwaliti-panel__content">
+            <h2 className="section__title kwaliti-panel__title">
+              Kwaliti Print
+            </h2>
+            <p className="section__lede">
+              Notre unité de personnalisation et d&rsquo;impression, pensée
+              comme un univers distinct, tactile et orienté production.
+            </p>
+            <Link href="/kwaliti-print" className="button button--kwaliti">
+              Découvrir Kwaliti Print
+            </Link>
+          </div>
         </Reveal>
       </section>
 

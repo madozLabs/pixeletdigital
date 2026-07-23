@@ -8,9 +8,14 @@ import { submitContactAction, type ContactFormState } from "./actions";
 const initialState: ContactFormState = { status: "idle" };
 
 export function ContactForm({
+  worldKey = "pixel-digital",
   serviceSlug,
   sourcePage,
-}: Readonly<{ serviceSlug: string | null; sourcePage: string }>) {
+}: Readonly<{
+  worldKey?: string;
+  serviceSlug: string | null;
+  sourcePage: string;
+}>) {
   const [state, formAction] = useActionState(submitContactAction, initialState);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const fieldErrors = state.status === "error" ? state.fieldErrors : {};
@@ -28,6 +33,7 @@ export function ContactForm({
 
   return (
     <form action={formAction} className="contact-form" noValidate>
+      <input type="hidden" name="worldKey" value={worldKey} />
       {serviceSlug ? (
         <input type="hidden" name="serviceSlug" value={serviceSlug} />
       ) : null}

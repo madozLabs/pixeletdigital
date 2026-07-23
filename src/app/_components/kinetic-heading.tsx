@@ -38,7 +38,7 @@ export function KineticHeading({
             }}
           >
             {word}
-            {index < words.length - 1 ? " " : ""}
+            {index < words.length - 1 ? " " : ""}
           </motion.span>
         </span>
       ))}

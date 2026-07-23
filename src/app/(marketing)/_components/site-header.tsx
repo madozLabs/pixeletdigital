@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { WorldSwitcher } from "./world-switcher";
+
 export function SiteHeader() {
   return (
     <header className="site-header">
@@ -9,7 +11,7 @@ export function SiteHeader() {
       <nav className="site-header__nav" aria-label="Navigation principale">
         <Link href="/#capacites">Ce que nous faisons</Link>
         <Link href="/#preuve">Méthode</Link>
-        <Link href="/#kwaliti-print">Kwaliti Print</Link>
+        <WorldSwitcher />
         <Link href="/contact" className="site-header__cta">
           Nous contacter
         </Link>

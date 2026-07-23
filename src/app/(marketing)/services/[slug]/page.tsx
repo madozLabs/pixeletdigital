@@ -7,8 +7,8 @@ import { getPublishedService } from "@/modules/content/application/public/get-pu
 import { PrismaServiceRepository } from "@/modules/content/infrastructure/prisma-service-repository";
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
 
-import { KineticHeading } from "../../_components/kinetic-heading";
-import { Reveal } from "../../_components/reveal";
+import { KineticHeading } from "@/app/_components/kinetic-heading";
+import { Reveal } from "@/app/_components/reveal";
 
 export const dynamic = "force-dynamic";
 
