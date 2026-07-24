@@ -8,12 +8,14 @@ import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-wo
 
 import { getWorkspaceRequestContext } from "../../../../get-workspace-context";
 import { PrintButton } from "../../../_components/print-button";
-import { formatEuros } from "../../../_lib/money";
+import { formatXof } from "../../../_lib/money";
 
 const INVOICE_STATUS_LABEL: Readonly<Record<string, string>> = {
   DRAFT: "Brouillon",
   SENT: "Envoyée",
+  PARTIALLY_PAID: "Partiellement payée",
   PAID: "Payée",
+  OVERDUE: "En retard",
   CANCELLED: "Annulée",
 };
 
@@ -56,6 +58,11 @@ export default async function InvoicePrintPage({
           <p className="invoice-print__meta">
             Statut : {INVOICE_STATUS_LABEL[invoice.status] ?? invoice.status}
           </p>
+          {invoice.dueAt ? (
+            <p className="invoice-print__meta">
+              Échéance : {invoice.dueAt.toLocaleDateString("fr-FR")}
+            </p>
+          ) : null}
         </div>
         <div>
           <p className="invoice-print__label">Client</p>
@@ -79,15 +86,15 @@ export default async function InvoicePrintPage({
             <tr key={line.id}>
               <td>{line.label}</td>
               <td>{line.quantity}</td>
-              <td>{formatEuros(line.unitPriceCents)}</td>
-              <td>{formatEuros(line.totalCents)}</td>
+              <td>{formatXof(line.unitPriceCents)}</td>
+              <td>{formatXof(line.totalCents)}</td>
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr>
             <td colSpan={3}>Total</td>
-            <td>{formatEuros(invoice.totalCents)}</td>
+            <td>{formatXof(invoice.totalCents)}</td>
           </tr>
         </tfoot>
       </table>

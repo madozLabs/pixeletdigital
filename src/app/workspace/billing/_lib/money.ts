@@ -7,7 +7,3 @@ const FORMATTER = new Intl.NumberFormat("fr-FR", {
 export function formatXof(cents: number): string {
   return FORMATTER.format(Math.round(cents / 100));
 }
-
-export function formatEuros(cents: number): string {
-  return formatXof(cents);
-}
