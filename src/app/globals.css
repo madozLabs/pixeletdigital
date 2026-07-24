@@ -3436,3 +3436,494 @@ a.world-switcher__item:focus-visible {
     min-height: auto;
   }
 }
+
+/* =====================================================================
+   Workspace visual refresh — layered card UI inspired by the Jampack
+   admin reference (gray canvas, white elevated cards, soft accents).
+   Appended last so these override the earlier flat admin styles.
+   ===================================================================== */
+
+:root {
+  --wk-bg: #f4f5f8;
+  --wk-card: #ffffff;
+  --wk-border: rgb(18 22 33 / 9%);
+  --wk-shadow: 0 1px 2px rgb(18 22 33 / 5%), 0 2px 8px rgb(18 22 33 / 4%);
+  --wk-shadow-lift: 0 8px 22px rgb(18 22 33 / 12%);
+  --wk-radius: 0.75rem;
+  --accent-soft: color-mix(in srgb, var(--accent) 11%, var(--wk-card));
+}
+
+[data-theme="dark"] {
+  --wk-bg: #0f1013;
+  --wk-card: #17181d;
+  --wk-border: rgb(255 255 255 / 9%);
+  --wk-shadow: 0 1px 2px rgb(0 0 0 / 45%);
+  --wk-shadow-lift: 0 10px 24px rgb(0 0 0 / 55%);
+}
+
+/* --- Shell & sidebar ------------------------------------------------ */
+
+.admin-shell {
+  background: var(--wk-bg);
+}
+
+.admin-sidebar {
+  background: var(--wk-card);
+  border-right: 1px solid var(--wk-border);
+  gap: var(--space-3);
+}
+
+@media (min-width: 60.0625rem) {
+  .admin-sidebar {
+    width: 16.5rem;
+    overflow-y: auto;
+    padding: var(--space-3) 1.25rem;
+  }
+}
+
+.admin-sidebar__world,
+.theme-toggle {
+  border-radius: 0.55rem;
+  border-color: var(--wk-border);
+  background: var(--wk-bg);
+}
+
+.admin-nav {
+  gap: 1.15rem;
+}
+
+.admin-nav__item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5em 0.7em;
+  border-radius: 0.55rem;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.admin-nav__icon {
+  display: inline-flex;
+  color: var(--ink-faint);
+  transition: color var(--duration-fast);
+}
+
+.admin-nav__item:hover,
+.admin-nav__item:focus-visible {
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  color: var(--ink);
+}
+
+.admin-nav__item--active,
+.admin-nav__item--active:hover,
+.admin-nav__item--active:focus-visible {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.admin-nav__item--active .admin-nav__icon {
+  color: var(--accent);
+}
+
+.admin-nav__group-label {
+  font-size: 0.66rem;
+  padding: 0 0.7em 0.2em;
+}
+
+.admin-sidebar__user {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* --- Content canvas ------------------------------------------------- */
+
+.admin-content {
+  padding: var(--space-3) var(--space-4) var(--space-5);
+}
+
+.admin-content__lede {
+  color: var(--ink-faint);
+}
+
+.admin-metric {
+  background: var(--wk-card);
+  border: 1px solid var(--wk-border);
+  box-shadow: var(--wk-shadow);
+  border-radius: var(--radius-pill);
+  padding: 0.5em 1.1em;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* --- Cards everywhere ----------------------------------------------- */
+
+.admin-form-card,
+.dashboard-panel,
+.dashboard-metric-card,
+.client-card,
+.project-card,
+.billing-card,
+.admin-user-card,
+.organization-department,
+.organization-team-card,
+.editorial-form,
+.admin-table-wrap,
+.cms-create-card,
+.cms-list-panel,
+.cms-section-card {
+  background: var(--wk-card);
+  border: 1px solid var(--wk-border);
+  border-radius: var(--wk-radius);
+  box-shadow: var(--wk-shadow);
+}
+
+.admin-form-card,
+.dashboard-panel,
+.cms-create-card,
+.cms-list-panel,
+.cms-section-card {
+  padding: 1.25rem;
+}
+
+/* Kanban: soft columns, elevated white cards */
+.task-column,
+.editorial-board__day {
+  background: color-mix(in srgb, var(--ink) 4%, var(--wk-bg));
+  border: 1px solid var(--wk-border);
+  border-radius: var(--wk-radius);
+  box-shadow: none;
+}
+
+.task-column__header {
+  border-bottom: none;
+  padding-bottom: 0.25rem;
+}
+
+.task-column__header span {
+  background: var(--wk-card);
+  border-radius: var(--radius-pill);
+  min-width: 1.6rem;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-faint);
+  padding: 0.1em 0.5em;
+}
+
+.task-card,
+.editorial-card {
+  background: var(--wk-card);
+  border: 1px solid var(--wk-border);
+  border-radius: 0.65rem;
+  box-shadow: var(--wk-shadow);
+}
+
+.task-card--dragging {
+  box-shadow: var(--wk-shadow-lift);
+}
+
+/* --- Metric cards ---------------------------------------------------- */
+
+.dashboard-metric-card {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1.05rem 1.2rem;
+  text-decoration: none;
+  color: var(--ink);
+  transition:
+    box-shadow var(--duration-fast) var(--ease-editorial),
+    transform var(--duration-fast) var(--ease-editorial);
+}
+
+.dashboard-metric-card:hover {
+  box-shadow: var(--wk-shadow-lift);
+  transform: translateY(-2px);
+}
+
+.dashboard-metric-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.dashboard-metric-card__body span {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashboard-metric-card__body strong {
+  font-size: 1.4rem;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.metric-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.7rem;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.metric-icon--danger {
+  background: color-mix(in srgb, #e5484d 14%, var(--wk-card));
+  color: #d13438;
+}
+
+.metric-icon--warning {
+  background: color-mix(in srgb, #ff9100 16%, var(--wk-card));
+  color: #b36200;
+}
+
+.metric-icon--info {
+  background: color-mix(in srgb, #298dff 14%, var(--wk-card));
+  color: #1a6fd4;
+}
+
+.metric-icon--violet {
+  background: color-mix(in srgb, #7429f8 12%, var(--wk-card));
+  color: #6423d6;
+}
+
+.metric-icon--accent {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.metric-icon--success {
+  background: color-mix(in srgb, #00a67e 14%, var(--wk-card));
+  color: #00805f;
+}
+
+[data-theme="dark"] .metric-icon--danger {
+  color: #ff8589;
+}
+[data-theme="dark"] .metric-icon--warning {
+  color: #ffb45e;
+}
+[data-theme="dark"] .metric-icon--info {
+  color: #7db8ff;
+}
+[data-theme="dark"] .metric-icon--violet {
+  color: #b18aff;
+}
+[data-theme="dark"] .metric-icon--success {
+  color: #4cd7ae;
+}
+
+/* --- Panels ---------------------------------------------------------- */
+
+.dashboard-panel h2 {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-panel li {
+  border-top: 1px solid var(--wk-border);
+}
+
+/* --- Buttons --------------------------------------------------------- */
+
+.admin-table__action {
+  background: var(--wk-card);
+  border: 1px solid var(--wk-border);
+  border-radius: 0.5rem;
+  padding: 0.45em 0.9em;
+  font-weight: 500;
+  box-shadow: 0 1px 1px rgb(18 22 33 / 4%);
+  transition:
+    border-color var(--duration-fast),
+    color var(--duration-fast),
+    box-shadow var(--duration-fast);
+}
+
+.admin-table__action:hover,
+.admin-table__action:focus-visible {
+  background: var(--wk-card);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--wk-border));
+  color: var(--accent);
+  box-shadow: var(--wk-shadow);
+}
+
+/* Primary create actions inside form cards */
+.admin-form-card > button[type="submit"],
+.admin-form-card > form > button[type="submit"],
+.editorial-form > button[type="submit"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--color-white);
+  font-weight: 600;
+  padding: 0.55em 1.2em;
+  justify-self: start;
+}
+
+.admin-form-card > button[type="submit"]:hover,
+.admin-form-card > form > button[type="submit"]:hover,
+.editorial-form > button[type="submit"]:hover {
+  background: var(--accent-dark);
+  border-color: var(--accent-dark);
+  color: var(--color-white);
+}
+
+/* --- Form controls --------------------------------------------------- */
+
+.admin-content
+  input:not([type="checkbox"]):not([type="hidden"]):not([type="file"]),
+.admin-content select,
+.admin-content textarea {
+  font: inherit;
+  font-size: var(--step-1);
+  color: var(--ink);
+  background: var(--wk-card);
+  border: 1px solid var(--wk-border);
+  border-radius: 0.5rem;
+  padding: 0.5em 0.7em;
+}
+
+.admin-content input:focus-visible,
+.admin-content select:focus-visible,
+.admin-content textarea:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+
+/* --- Tables ---------------------------------------------------------- */
+
+.admin-table th {
+  background: color-mix(in srgb, var(--ink) 3%, var(--wk-card));
+  border-color: var(--wk-border);
+}
+
+.admin-table td {
+  border-color: var(--wk-border);
+}
+
+.admin-table tbody tr:hover {
+  background: color-mix(in srgb, var(--ink) 3%, var(--wk-card));
+}
+
+/* --- Status badges: soft tinted pills -------------------------------- */
+
+.status-badge {
+  border: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.32em 0.8em;
+  background: color-mix(in srgb, var(--ink) 8%, var(--wk-card));
+  color: var(--ink-soft);
+}
+
+.status-badge--positive,
+.status-badge--active,
+.status-badge--published,
+.status-badge--approved,
+.status-badge--completed,
+.status-badge--paid,
+.status-badge--done {
+  background: color-mix(in srgb, #00a67e 15%, var(--wk-card));
+  color: #007a5c;
+}
+
+.status-badge--warning,
+.status-badge--internal_review,
+.status-badge--client_review,
+.status-badge--on_hold,
+.status-badge--partially_paid,
+.status-badge--flagged {
+  background: color-mix(in srgb, #ff9100 17%, var(--wk-card));
+  color: #a35800;
+}
+
+.status-badge--scheduled,
+.status-badge--sent,
+.status-badge--planned {
+  background: color-mix(in srgb, #298dff 14%, var(--wk-card));
+  color: #1a6fd4;
+}
+
+.status-badge--cancelled,
+.status-badge--overdue,
+.status-badge--blocked,
+.status-badge--inactive {
+  background: color-mix(in srgb, #e5484d 13%, var(--wk-card));
+  color: #c22f34;
+}
+
+.status-badge--neutral,
+.status-badge--draft,
+.status-badge--archived {
+  background: color-mix(in srgb, var(--ink) 8%, var(--wk-card));
+  color: var(--ink-soft);
+}
+
+[data-theme="dark"] .status-badge--positive,
+[data-theme="dark"] .status-badge--active,
+[data-theme="dark"] .status-badge--published,
+[data-theme="dark"] .status-badge--approved,
+[data-theme="dark"] .status-badge--completed,
+[data-theme="dark"] .status-badge--paid,
+[data-theme="dark"] .status-badge--done {
+  color: #4cd7ae;
+}
+
+[data-theme="dark"] .status-badge--warning,
+[data-theme="dark"] .status-badge--internal_review,
+[data-theme="dark"] .status-badge--client_review,
+[data-theme="dark"] .status-badge--on_hold,
+[data-theme="dark"] .status-badge--partially_paid,
+[data-theme="dark"] .status-badge--flagged {
+  color: #ffb45e;
+}
+
+[data-theme="dark"] .status-badge--scheduled,
+[data-theme="dark"] .status-badge--sent,
+[data-theme="dark"] .status-badge--planned {
+  color: #7db8ff;
+}
+
+[data-theme="dark"] .status-badge--cancelled,
+[data-theme="dark"] .status-badge--overdue,
+[data-theme="dark"] .status-badge--blocked,
+[data-theme="dark"] .status-badge--inactive {
+  color: #ff8589;
+}
+
+/* --- Misc polish ------------------------------------------------------ */
+
+.admin-tabs {
+  border-bottom-color: var(--wk-border);
+}
+
+.admin-tabs__item--active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.priority-pill--low {
+  background: color-mix(in srgb, var(--ink) 8%, var(--wk-card));
+}
+
+.editorial-card__proof-input,
+.editorial-form input,
+.editorial-form select {
+  background: var(--wk-card);
+}
+
+.project-progress {
+  background: color-mix(in srgb, var(--ink) 9%, var(--wk-card));
+}

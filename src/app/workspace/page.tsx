@@ -1,5 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
+import {
+  AlarmClock,
+  BadgeCheck,
+  Banknote,
+  CalendarClock,
+  OctagonAlert,
+  Wallet,
+} from "lucide-react";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import { getWorkspaceRequestContext } from "./get-workspace-context";
@@ -116,21 +125,29 @@ export default async function WorkspaceDashboardPage({
           label="Projets en retard"
           value={lateProjects.length}
           href="/workspace/projects"
+          tone="danger"
+          icon={<AlarmClock size={20} />}
         />
         <Metric
           label="Tâches bloquées"
           value={blockedTasks.length}
           href="/workspace/tasks"
+          tone="warning"
+          icon={<OctagonAlert size={20} />}
         />
         <Metric
           label="À valider"
           value={editorialItems.length}
           href="/workspace/editorial"
+          tone="info"
+          icon={<BadgeCheck size={20} />}
         />
         <Metric
           label="Échéances à 7 jours"
           value={dueSoonTasks.length}
           href="/workspace/tasks"
+          tone="violet"
+          icon={<CalendarClock size={20} />}
         />
         {canSeeBilling ? (
           <>
@@ -138,11 +155,15 @@ export default async function WorkspaceDashboardPage({
               label="Facturé en attente"
               value={formatXof(sentAmount)}
               href="/workspace/billing"
+              tone="accent"
+              icon={<Banknote size={20} />}
             />
             <Metric
               label="Encaissé"
               value={formatXof(paidAmount)}
               href="/workspace/billing"
+              tone="success"
+              icon={<Wallet size={20} />}
             />
           </>
         ) : null}
@@ -190,11 +211,22 @@ function Metric({
   label,
   value,
   href,
-}: Readonly<{ label: string; value: string | number; href: string }>) {
+  tone,
+  icon,
+}: Readonly<{
+  label: string;
+  value: string | number;
+  href: string;
+  tone: "danger" | "warning" | "info" | "violet" | "accent" | "success";
+  icon: ReactNode;
+}>) {
   return (
     <Link href={href} className="dashboard-metric-card">
-      <span>{label}</span>
-      <strong>{value}</strong>
+      <span className={`metric-icon metric-icon--${tone}`}>{icon}</span>
+      <span className="dashboard-metric-card__body">
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </span>
     </Link>
   );
 }

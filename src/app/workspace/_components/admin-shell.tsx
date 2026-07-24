@@ -3,10 +3,24 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
+import {
+  CalendarDays,
+  FolderKanban,
+  Globe,
+  Inbox,
+  LayoutDashboard,
+  Layers,
+  Network,
+  ReceiptText,
+  SquareKanban,
+  UserCog,
+  Users,
+} from "lucide-react";
 
+import { Avatar } from "./avatar";
 import { ThemeToggle } from "./theme-toggle";
 
-type NavItem = Readonly<{ href: string; label: string }>;
+type NavItem = Readonly<{ href: string; label: string; icon: ReactNode }>;
 type NavGroup = Readonly<{ label: string; items: readonly NavItem[] }>;
 
 const BILLING_ROLES = ["SUPER_ADMIN", "ADMIN", "WORLD_MANAGER"] as const;
@@ -26,6 +40,8 @@ const ROLE_LABEL: Readonly<Record<string, string>> = {
   READER: "Lecteur",
 };
 
+const ICON_SIZE = 17;
+
 function buildNavGroups(role: string | null): readonly NavGroup[] {
   const isSuperAdmin = role === "SUPER_ADMIN";
   const canBill = Boolean(
@@ -33,30 +49,73 @@ function buildNavGroups(role: string | null): readonly NavGroup[] {
   );
 
   const groups: NavGroup[] = [
-    { label: "", items: [{ href: "/workspace", label: "Tableau de bord" }] },
+    {
+      label: "",
+      items: [
+        {
+          href: "/workspace",
+          label: "Tableau de bord",
+          icon: <LayoutDashboard size={ICON_SIZE} />,
+        },
+      ],
+    },
     {
       label: "Clients & facturation",
       items: [
-        { href: "/workspace/clients", label: "Clients" },
+        {
+          href: "/workspace/clients",
+          label: "Clients",
+          icon: <Users size={ICON_SIZE} />,
+        },
         ...(canBill
-          ? [{ href: "/workspace/billing", label: "Facturation" }]
+          ? [
+              {
+                href: "/workspace/billing",
+                label: "Facturation",
+                icon: <ReceiptText size={ICON_SIZE} />,
+              },
+            ]
           : []),
       ],
     },
     {
       label: "Production",
       items: [
-        { href: "/workspace/projects", label: "Projets" },
-        { href: "/workspace/tasks", label: "Tâches" },
-        { href: "/workspace/editorial", label: "Calendrier éditorial" },
+        {
+          href: "/workspace/projects",
+          label: "Projets",
+          icon: <FolderKanban size={ICON_SIZE} />,
+        },
+        {
+          href: "/workspace/tasks",
+          label: "Tâches",
+          icon: <SquareKanban size={ICON_SIZE} />,
+        },
+        {
+          href: "/workspace/editorial",
+          label: "Calendrier éditorial",
+          icon: <CalendarDays size={ICON_SIZE} />,
+        },
       ],
     },
     {
       label: "Site & contact",
       items: [
-        { href: "/workspace/services", label: "Services" },
-        { href: "/workspace/site-content", label: "Site & contenus" },
-        { href: "/workspace/enquiries", label: "Demandes de contact" },
+        {
+          href: "/workspace/services",
+          label: "Services",
+          icon: <Layers size={ICON_SIZE} />,
+        },
+        {
+          href: "/workspace/site-content",
+          label: "Site & contenus",
+          icon: <Globe size={ICON_SIZE} />,
+        },
+        {
+          href: "/workspace/enquiries",
+          label: "Demandes de contact",
+          icon: <Inbox size={ICON_SIZE} />,
+        },
       ],
     },
   ];
@@ -65,8 +124,16 @@ function buildNavGroups(role: string | null): readonly NavGroup[] {
     groups.push({
       label: "Administration",
       items: [
-        { href: "/workspace/access", label: "Utilisateurs et accès" },
-        { href: "/workspace/organization", label: "Organisation" },
+        {
+          href: "/workspace/access",
+          label: "Utilisateurs et accès",
+          icon: <UserCog size={ICON_SIZE} />,
+        },
+        {
+          href: "/workspace/organization",
+          label: "Organisation",
+          icon: <Network size={ICON_SIZE} />,
+        },
       ],
     });
   }
@@ -83,6 +150,7 @@ export function AdminShell({
   const searchParams = useSearchParams();
   const worldKey = searchParams.get("world") ?? WORLDS[0].key;
   const navGroups = buildNavGroups(role);
+  const roleLabel = role ? (ROLE_LABEL[role] ?? role) : null;
 
   function handleWorldChange(event: React.ChangeEvent<HTMLSelectElement>) {
     const params = new URLSearchParams(searchParams);
@@ -129,6 +197,7 @@ export function AdminShell({
                       : "admin-nav__item"
                   }
                 >
+                  <span className="admin-nav__icon">{item.icon}</span>
                   {item.label}
                 </Link>
               ))}
@@ -137,7 +206,12 @@ export function AdminShell({
         </nav>
 
         <div className="admin-sidebar__footer">
-          {role ? <span>{ROLE_LABEL[role] ?? role}</span> : null}
+          {roleLabel ? (
+            <span className="admin-sidebar__user">
+              <Avatar name={roleLabel} size="sm" />
+              <span>{roleLabel}</span>
+            </span>
+          ) : null}
           <ThemeToggle />
         </div>
       </aside>
