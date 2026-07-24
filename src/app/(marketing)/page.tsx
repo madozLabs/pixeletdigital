@@ -7,15 +7,15 @@ import { PrismaServiceFamilyRepository } from "@/modules/content/infrastructure/
 import { PrismaServiceRepository } from "@/modules/content/infrastructure/prisma-service-repository";
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
 
-import { KineticHeading } from "@/app/_components/kinetic-heading";
 import { Reveal } from "@/app/_components/reveal";
-
 import { groupServicesByFamily } from "@/app/_lib/group-services-by-family";
 
-const TAGLINE =
-  "Nous créons des marques qui attirent, convainquent et restent en mémoire.";
-
 export const dynamic = "force-dynamic";
+
+const MANIFESTO = [
+  "Les likes paient rarement les factures.",
+  "Les bonnes stratégies, si.",
+];
 
 export default async function HomePage() {
   const deps = {
@@ -23,164 +23,168 @@ export default async function HomePage() {
     families: new PrismaServiceFamilyRepository(prisma),
     worlds: new PrismaWorldRepository(prisma),
   };
+
   const [services, families] = await Promise.all([
-    listPublishedServices(deps, { worldKey: "pixel-digital" }),
-    listPublishedServiceFamilies(deps, { worldKey: "pixel-digital" }),
+    listPublishedServices(deps, { worldKey: "pixel-digital" }).catch(() => []),
+    listPublishedServiceFamilies(deps, { worldKey: "pixel-digital" }).catch(
+      () => [],
+    ),
   ]);
+
   const groups = groupServicesByFamily(services, families);
 
   return (
-    <main id="main-content">
-      <section className="hero">
-        <div className="hero__content">
-          <KineticHeading text={TAGLINE} className="hero__title" />
-          <Reveal delay={0.5}>
-            <p className="hero__lede">
-              Studio créatif spécialisé dans la communication visuelle, le
-              marketing digital, la création de contenus, l&rsquo;audiovisuel,
-              le développement web et les solutions d&rsquo;impression à travers
-              notre marque Kwaliti Print.
-            </p>
-          </Reveal>
-          <Reveal delay={0.65}>
-            <Link href="/contact" className="button button--primary">
-              Discuter de votre projet
-            </Link>
+    <main id="main-content" className="public-home">
+      <section className="home-hero">
+        <div className="home-hero__eyebrow">Agence créative & digitale</div>
+        <div className="home-hero__grid">
+          <div className="home-hero__copy">
+            <Reveal>
+              <h1 className="home-hero__title">
+                Avec nous,
+                <span>vous allez</span>
+                <strong>prendre terrain.</strong>
+              </h1>
+            </Reveal>
+            <Reveal delay={0.15}>
+              <p className="home-hero__lede">
+                Nous construisons des marques visibles, crédibles et difficiles
+                à oublier de la stratégie à l’exécution.
+              </p>
+            </Reveal>
+            <Reveal delay={0.25}>
+              <div className="home-hero__actions">
+                <Link href="/contact" className="button button--primary">
+                  Lancer un projet
+                </Link>
+                <Link href="#capacites" className="home-hero__secondary-link">
+                  Voir nos expertises
+                </Link>
+              </div>
+            </Reveal>
+          </div>
+
+          <Reveal delay={0.1}>
+            <div className="home-hero__visual" aria-hidden="true">
+              <div className="home-hero__orb home-hero__orb--red" />
+              <div className="home-hero__orb home-hero__orb--black" />
+              <div className="home-hero__stamp">P&D</div>
+              <div className="home-hero__caption">
+                Stratégie · Identité · Contenu · Digital · Production
+              </div>
+            </div>
           </Reveal>
         </div>
-        <Reveal delay={0.3}>
-          <div className="media-slot" aria-hidden="true">
-            Photographie à venir
-          </div>
+        <div className="home-hero__ticker" aria-hidden="true">
+          <span>STRAT&Eacute;GIE</span>
+          <span>IDENTIT&Eacute;</span>
+          <span>CONTENU</span>
+          <span>DIGITAL</span>
+          <span>PRODUCTION</span>
+        </div>
+      </section>
+
+      <section className="home-manifesto">
+        <Reveal>
+          <p className="home-manifesto__label">
+            Notre façon de voir les choses
+          </p>
+          <h2 className="home-manifesto__title">
+            {MANIFESTO.map((line) => (
+              <span key={line}>{line}</span>
+            ))}
+          </h2>
         </Reveal>
       </section>
 
-      <section id="capacites" className="section">
-        <Reveal>
-          <h2 className="section__title">Ce que nous faisons</h2>
-        </Reveal>
-        {services.length === 0 ? (
-          <Reveal delay={0.1}>
-            <p className="section__empty">
-              Notre catalogue de services est en cours de publication.
+      <section id="capacites" className="home-services">
+        <div className="home-section-head">
+          <Reveal>
+            <p className="home-section-head__kicker">
+              Ce qu&rsquo;on sait faire
             </p>
           </Reveal>
+          <Reveal delay={0.08}>
+            <h2 className="home-section-head__title">
+              Une seule équipe pour faire avancer toute la marque.
+            </h2>
+          </Reveal>
+        </div>
+
+        {services.length === 0 ? (
+          <p className="section__empty">Notre catalogue arrive bientôt.</p>
         ) : (
-          <div className="service-groups">
-            {groups.map((group) => (
-              <div key={group.label} className="service-group">
-                <Reveal>
-                  <h3 className="service-group__title">{group.label}</h3>
-                </Reveal>
-                <ul className="service-grid">
-                  {group.services.map((service, index) => (
-                    <Reveal
-                      as="li"
-                      key={service.slug}
-                      delay={Math.min(index * 0.05, 0.4)}
-                    >
-                      <Link
-                        href={`/services/${service.slug}`}
-                        className="service-card"
-                      >
-                        <h3>{service.name}</h3>
-                      </Link>
-                    </Reveal>
-                  ))}
-                </ul>
-              </div>
+          <div className="home-services__list">
+            {groups.map((group, groupIndex) => (
+              <Reveal key={group.label} delay={groupIndex * 0.05}>
+                <article className="home-service-row">
+                  <div className="home-service-row__index">
+                    0{groupIndex + 1}
+                  </div>
+                  <div>
+                    <h3>{group.label}</h3>
+                    <div className="home-service-row__links">
+                      {group.services.map((service) => (
+                        <Link
+                          key={service.slug}
+                          href={`/services/${service.slug}`}
+                        >
+                          {service.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </article>
+              </Reveal>
             ))}
           </div>
         )}
       </section>
 
-      <section className="section">
-        <Reveal>
-          <h2 className="section__title">Preuves &amp; résultats</h2>
-        </Reveal>
-        <Reveal delay={0.1}>
-          <p className="section__lede">
-            Études de cas et résultats mesurables en cours de constitution.
-          </p>
-        </Reveal>
-        <div className="proof-grid">
-          {[0, 1, 2].map((index) => (
-            <Reveal key={index} delay={0.1 + index * 0.05}>
-              <div className="proof-card">
-                <div className="media-slot" aria-hidden="true">
-                  Étude de cas à venir
+      <section id="preuve" className="home-method">
+        <div className="home-method__intro">
+          <p>Une méthode simple</p>
+          <h2>On pense juste. On crée fort. On exécute proprement.</h2>
+        </div>
+        <div className="home-method__steps">
+          {["Comprendre", "Positionner", "Créer", "Déployer"].map(
+            (step, index) => (
+              <Reveal key={step} delay={index * 0.08}>
+                <div className="home-method__step">
+                  <span>0{index + 1}</span>
+                  <strong>{step}</strong>
                 </div>
-              </div>
-            </Reveal>
-          ))}
+              </Reveal>
+            ),
+          )}
         </div>
       </section>
 
-      <section id="preuve" className="section section--inverted">
+      <section className="home-kwaliti">
+        <div className="home-kwaliti__visual" aria-hidden="true">
+          <span>K</span>
+          <span>P</span>
+        </div>
+        <div className="home-kwaliti__content">
+          <p>Notre bras production</p>
+          <h2>
+            Kwaliti Print transforme vos idées en objets qu&rsquo;on remarque.
+          </h2>
+          <Link href="/kwaliti-print" className="button button--kwaliti">
+            Découvrir Kwaliti Print
+          </Link>
+        </div>
+      </section>
+
+      <section className="home-closing">
         <Reveal>
-          <h2 className="section__title">Une équipe, une capacité intégrée</h2>
-        </Reveal>
-        <Reveal delay={0.1}>
-          <p className="section__lede">
-            Stratégie, création, technologie et production avancent ensemble,
-            sous une même responsabilité, du premier brief à la mise en
-            production.
+          <p>
+            &Ecirc;tre partout ne sert à rien si personne ne se souvient de
+            vous.
           </p>
-        </Reveal>
-      </section>
-
-      <section
-        id="kwaliti-print"
-        className="section section--kwaliti kwaliti-panel"
-      >
-        <Reveal>
-          <div className="media-slot" aria-hidden="true">
-            Photographie matière/produit à venir
-          </div>
-        </Reveal>
-        <Reveal delay={0.1}>
-          <div className="kwaliti-panel__content">
-            <h2 className="section__title kwaliti-panel__title">
-              Kwaliti Print
-            </h2>
-            <p className="section__lede">
-              Notre unité de personnalisation et d&rsquo;impression, pensée
-              comme un univers distinct, tactile et orienté production.
-            </p>
-            <Link href="/kwaliti-print" className="button button--kwaliti">
-              Découvrir Kwaliti Print
-            </Link>
-          </div>
-        </Reveal>
-      </section>
-
-      <section className="section">
-        <Reveal>
-          <h2 className="section__title">Studio &amp; Formation</h2>
-        </Reveal>
-        <div className="teaser-grid">
-          <Reveal delay={0.1}>
-            <article className="teaser-card">
-              <h3>Studio audiovisuel</h3>
-              <p>Nom et identité définitifs en cours d&rsquo;arbitrage.</p>
-            </article>
-          </Reveal>
-          <Reveal delay={0.2}>
-            <article className="teaser-card">
-              <h3>Formation</h3>
-              <p>Nom et identité définitifs en cours d&rsquo;arbitrage.</p>
-            </article>
-          </Reveal>
-        </div>
-      </section>
-
-      <section className="section section--closing">
-        <Reveal>
-          <h2 className="section__title">Un projet en tête ?</h2>
-        </Reveal>
-        <Reveal delay={0.1}>
+          <h2>Faisons quelque chose qu&rsquo;on ne peut pas ignorer.</h2>
           <Link href="/contact" className="button button--primary">
-            Discuter de votre projet
+            Parler à Pixel&Digital
           </Link>
         </Reveal>
       </section>

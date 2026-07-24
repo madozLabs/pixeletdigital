@@ -11,10 +11,12 @@ export function ContactForm({
   worldKey = "pixel-digital",
   serviceSlug,
   sourcePage,
+  submitLabel = "Envoyer",
 }: Readonly<{
   worldKey?: string;
   serviceSlug: string | null;
   sourcePage: string;
+  submitLabel?: string;
 }>) {
   const [state, formAction] = useActionState(submitContactAction, initialState);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
@@ -102,17 +104,17 @@ export function ContactForm({
         </p>
       ) : null}
 
-      <SubmitButton />
+      <SubmitButton label={submitLabel} />
     </form>
   );
 }
 
-function SubmitButton() {
+function SubmitButton({ label }: Readonly<{ label: string }>) {
   const { pending } = useFormStatus();
 
   return (
     <button type="submit" className="button button--primary" disabled={pending}>
-      {pending ? "Envoi..." : "Envoyer"}
+      {pending ? "Envoi..." : label}
     </button>
   );
 }

@@ -15,132 +15,137 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   description:
-    "Notre unité de personnalisation et d'impression : capacités actuelles et demande de devis.",
+    "Impression, personnalisation et signalétique pour donner une présence physique à vos idées.",
 };
 
+const DEFAULT_CAPABILITIES = [
+  "Textile personnalisé",
+  "Signalétique",
+  "Supports événementiels",
+  "Objets publicitaires",
+];
 export default async function KwalitiPrintHomePage() {
   const deps = {
     services: new PrismaServiceRepository(prisma),
     families: new PrismaServiceFamilyRepository(prisma),
     worlds: new PrismaWorldRepository(prisma),
   };
+
   const [capabilities, families] = await Promise.all([
-    listPublishedServices(deps, { worldKey: "kwaliti-print" }),
-    listPublishedServiceFamilies(deps, { worldKey: "kwaliti-print" }),
+    listPublishedServices(deps, { worldKey: "kwaliti-print" }).catch(() => []),
+    listPublishedServiceFamilies(deps, { worldKey: "kwaliti-print" }).catch(
+      () => [],
+    ),
   ]);
   const groups = groupServicesByFamily(capabilities, families);
 
   return (
-    <main id="main-content">
-      <section className="hero">
-        <div className="hero__content">
+    <main id="main-content" className="kp-home">
+      <section className="kp-hero">
+        <div className="kp-hero__copy">
           <Reveal>
-            <span className="kwaliti-monogram">
-              <span>K</span>
-              <span>w</span>
-              <span>P</span>
-            </span>
-          </Reveal>
-          <Reveal delay={0.1}>
-            <h1 className="hero__title">
-              Personnalisation et impression, sans compromis.
-            </h1>
-          </Reveal>
-          <Reveal delay={0.2}>
-            <p className="hero__lede">
-              Notre unité dédiée à l&rsquo;impression grand format, à la
-              signalétique et aux objets personnalisés &mdash; pensée comme un
-              univers distinct, tactile et orienté production.
+            <p className="kp-eyebrow">
+              Impression · Personnalisation · Production
             </p>
           </Reveal>
-          <Reveal delay={0.3}>
-            <Link
-              href="/kwaliti-print/devis"
-              className="button button--kwaliti"
-            >
-              Demander un devis
-            </Link>
+          <Reveal delay={0.08}>
+            <h1>Vos idées méritent de sortir de l’écran.</h1>
+          </Reveal>
+          <Reveal delay={0.16}>
+            <p className="kp-hero__lede">
+              Kwaliti Print transforme vos visuels en supports concrets,
+              visibles et bien finis — du prototype à la série.
+            </p>
+          </Reveal>
+          <Reveal delay={0.24}>
+            <div className="kp-hero__actions">
+              <Link
+                href="/kwaliti-print/devis"
+                className="button button--kwaliti"
+              >
+                Demander un devis
+              </Link>
+              <a href="#capacites-kp" className="kp-text-link">
+                Voir les possibilités
+              </a>
+            </div>
           </Reveal>
         </div>
-        <Reveal delay={0.2}>
-          <div className="media-slot" aria-hidden="true">
-            Photographie à venir
+
+        <Reveal delay={0.12}>
+          <div className="kp-hero__visual" aria-hidden="true">
+            <span className="kp-shape kp-shape--cyan" />
+            <span className="kp-shape kp-shape--yellow" />
+            <span className="kp-shape kp-shape--magenta" />
+            <strong>KP</strong>
           </div>
         </Reveal>
       </section>
+      <section className="kp-strip" aria-label="Catégories principales">
+        {DEFAULT_CAPABILITIES.map((item) => (
+          <span key={item}>{item}</span>
+        ))}
+      </section>
 
-      <section className="section">
-        <Reveal>
-          <h2 className="section__title">Capacité actuelle</h2>
-        </Reveal>
+      <section id="capacites-kp" className="kp-capabilities">
+        <div className="kp-section-heading">
+          <p>Ce qu’on produit</p>
+          <h2>
+            Des supports qui font exister votre marque dans le vrai monde.
+          </h2>
+        </div>
+
         {capabilities.length === 0 ? (
-          <Reveal delay={0.1}>
-            <p className="section__empty">
-              Notre catalogue de capacités est en cours de publication.
-            </p>
-          </Reveal>
+          <div className="kp-capabilities__fallback">
+            {DEFAULT_CAPABILITIES.map((item, index) => (
+              <article key={item}>
+                <span>0{index + 1}</span>
+                <h3>{item}</h3>
+              </article>
+            ))}
+          </div>
         ) : (
-          <div className="service-groups">
-            {groups.map((group) => (
-              <div key={group.label} className="service-group">
-                <Reveal>
-                  <h3 className="service-group__title">{group.label}</h3>
-                </Reveal>
-                <div className="capability-grid">
-                  {group.services.map((capability, index) => (
-                    <Reveal
-                      key={capability.slug}
-                      delay={Math.min(index * 0.05, 0.4)}
-                    >
-                      <article className="capability-card">
-                        <div className="media-slot" aria-hidden="true">
-                          Photographie à venir
-                        </div>
-                        <div className="capability-card__body">
-                          <h3 className="capability-card__title">
-                            {capability.name}
-                          </h3>
-                          <p className="capability-card__description">
-                            {capability.description}
-                          </p>
-                          <Link
-                            href={`/kwaliti-print/devis?service=${encodeURIComponent(capability.slug)}`}
-                            className="button button--kwaliti"
-                          >
-                            Demander un devis
-                          </Link>
-                        </div>
-                      </article>
-                    </Reveal>
-                  ))}
+          <div className="kp-capabilities__groups">
+            {groups.map((group, groupIndex) => (
+              <section key={group.label} className="kp-capability-group">
+                <p>0{groupIndex + 1}</p>
+                <div>
+                  <h3>{group.label}</h3>
+                  <div className="kp-capability-group__links">
+                    {group.services.map((capability) => (
+                      <Link
+                        key={capability.slug}
+                        href={`/kwaliti-print/devis?service=${encodeURIComponent(capability.slug)}`}
+                      >
+                        {capability.name}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </section>
             ))}
           </div>
         )}
       </section>
 
-      <section className="section section--inverted">
-        <Reveal>
-          <h2 className="section__title">Une exigence de production</h2>
-        </Reveal>
-        <Reveal delay={0.1}>
-          <p className="section__lede">
-            Matières, finitions et délais pensés pour des rendus fiables et
-            reproductibles, du prototype à la série.
-          </p>
-        </Reveal>
+      <section className="kp-quality">
+        <div>
+          <p>Notre exigence</p>
+          <h2>Le bon support. La bonne finition. Le bon délai.</h2>
+        </div>
+        <div className="kp-quality__points">
+          <span>Conseil matière</span>
+          <span>Contrôle des fichiers</span>
+          <span>Production suivie</span>
+          <span>Finition propre</span>
+        </div>
       </section>
-
-      <section className="section section--closing">
-        <Reveal>
-          <h2 className="section__title">Un projet à personnaliser ?</h2>
-        </Reveal>
-        <Reveal delay={0.1}>
-          <Link href="/kwaliti-print/devis" className="button button--kwaliti">
-            Demander un devis
-          </Link>
-        </Reveal>
+      <section className="kp-closing">
+        <p>Un besoin précis ou juste une idée ?</p>
+        <h2>On vous aide à choisir la bonne manière de l’imprimer.</h2>
+        <Link href="/kwaliti-print/devis" className="button button--kwaliti">
+          Obtenir un devis
+        </Link>
       </section>
     </main>
   );

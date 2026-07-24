@@ -2,18 +2,20 @@ import Link from "next/link";
 
 export function SiteFooter() {
   return (
-    <footer className="site-footer">
-      <div className="site-footer__row">
-        <span className="site-footer__mark">Pixel&amp;Digital</span>
-        <nav aria-label="Navigation de pied de page">
-          <Link href="/#capacites">Ce que nous faisons</Link>
-          <Link href="/kwaliti-print">Kwaliti Print</Link>
-          <Link href="/contact">Nous contacter</Link>
-        </nav>
+    <footer className="public-footer">
+      <div className="public-footer__lead">
+        <p>Pixel&amp;Digital</p>
+        <h2>Une marque qu’on remarque. Une stratégie qui rapporte.</h2>
       </div>
-      <p className="site-footer__legal">
-        Informations légales en cours de finalisation.
-      </p>
+      <div className="public-footer__bottom">
+        <nav aria-label="Navigation de pied de page">
+          <Link href="/#capacites">Expertises</Link>
+          <Link href="/#preuve">Méthode</Link>
+          <Link href="/kwaliti-print">Kwaliti Print</Link>
+          <Link href="/contact">Lancer un projet</Link>
+        </nav>
+        <p>Ouagadougou · Afrique de l’Ouest &amp; au-delà</p>
+      </div>
     </footer>
   );
 }

@@ -37,7 +37,12 @@ export class PrismaEditorialItemRepository implements EditorialItemRepository {
         channel: item.channel,
         title: item.title,
         scheduledFor: item.scheduledFor,
-        status: item.status,
+        status:
+          item.status === "PLANNED"
+            ? "DRAFT"
+            : item.status === "DONE"
+              ? "PUBLISHED"
+              : "CANCELLED",
         proofUrl: item.proofUrl,
         notes: item.notes,
         realizedAt: item.realizedAt,
@@ -50,7 +55,12 @@ export class PrismaEditorialItemRepository implements EditorialItemRepository {
         channel: item.channel,
         title: item.title,
         scheduledFor: item.scheduledFor,
-        status: item.status,
+        status:
+          item.status === "PLANNED"
+            ? "DRAFT"
+            : item.status === "DONE"
+              ? "PUBLISHED"
+              : "CANCELLED",
         proofUrl: item.proofUrl,
         notes: item.notes,
         realizedAt: item.realizedAt,

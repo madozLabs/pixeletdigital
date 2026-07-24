@@ -7,10 +7,25 @@ import type { ReactNode } from "react";
 import { ThemeToggle } from "./theme-toggle";
 
 const NAV_ITEMS = [
+  { href: "/workspace", label: "Tableau de bord" },
+  { href: "/workspace/clients", label: "Clients" },
+  { href: "/workspace/projects", label: "Projets" },
+  { href: "/workspace/tasks", label: "Tâches" },
   { href: "/workspace/services", label: "Services" },
+  { href: "/workspace/site-content", label: "Site & contenus" },
   { href: "/workspace/editorial", label: "Calendrier éditorial" },
   { href: "/workspace/enquiries", label: "Demandes de contact" },
 ] as const;
+
+const ACCESS_NAV_ITEM = {
+  href: "/workspace/access",
+  label: "Utilisateurs et accès",
+} as const;
+
+const ORGANIZATION_NAV_ITEM = {
+  href: "/workspace/organization",
+  label: "Organisation",
+} as const;
 
 const BILLING_NAV_ITEM = {
   href: "/workspace/billing",
@@ -41,10 +56,13 @@ export function AdminShell({
   const router = useRouter();
   const searchParams = useSearchParams();
   const worldKey = searchParams.get("world") ?? WORLDS[0].key;
-  const navItems =
-    role && BILLING_ROLES.includes(role as (typeof BILLING_ROLES)[number])
-      ? [...NAV_ITEMS, BILLING_NAV_ITEM]
-      : NAV_ITEMS;
+  const navItems = [
+    ...(role === "SUPER_ADMIN" ? [ACCESS_NAV_ITEM, ORGANIZATION_NAV_ITEM] : []),
+    ...NAV_ITEMS,
+    ...(role && BILLING_ROLES.includes(role as (typeof BILLING_ROLES)[number])
+      ? [BILLING_NAV_ITEM]
+      : []),
+  ];
 
   function handleWorldChange(event: React.ChangeEvent<HTMLSelectElement>) {
     const params = new URLSearchParams(searchParams);
@@ -58,7 +76,7 @@ export function AdminShell({
         Aller au contenu principal
       </a>
       <aside className="admin-sidebar">
-        <Link href="/workspace/services" className="admin-sidebar__mark">
+        <Link href="/workspace" className="admin-sidebar__mark">
           Pixel<span className="admin-sidebar__mark-accent">&</span>Digital
         </Link>
 

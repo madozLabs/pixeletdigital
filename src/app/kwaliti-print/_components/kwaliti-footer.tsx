@@ -2,17 +2,19 @@ import Link from "next/link";
 
 export function KwalitiFooter() {
   return (
-    <footer className="site-footer">
-      <div className="site-footer__row">
-        <span className="site-footer__mark">kwaliti print</span>
-        <nav aria-label="Navigation de pied de page">
-          <Link href="/">Pixel&amp;Digital</Link>
-          <Link href="/kwaliti-print/devis">Demander un devis</Link>
-        </nav>
+    <footer className="kp-site-footer">
+      <div>
+        <p className="kp-site-footer__mark">kwaliti print</p>
+        <h2>Votre marque mérite mieux qu’un support qu’on oublie.</h2>
       </div>
-      <p className="site-footer__legal">
-        Informations légales en cours de finalisation.
-      </p>
+      <div className="kp-site-footer__bottom">
+        <nav aria-label="Navigation de pied de page">
+          <Link href="/kwaliti-print/#possibilites">Possibilités</Link>
+          <Link href="/kwaliti-print/devis">Demander un devis</Link>
+          <Link href="/">Pixel&amp;Digital</Link>
+        </nav>
+        <p>Personnalisation · Impression · Signalétique</p>
+      </div>
     </footer>
   );
 }

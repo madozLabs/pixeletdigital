@@ -72,7 +72,7 @@ export async function createCatalogueItemAction(
   const context = await getWorkspaceRequestContext();
   if (!context) return;
 
-  const priceEuros = Number(formData.get("unitPrice"));
+  const priceXof = Number(formData.get("unitPrice"));
   const result = await createCatalogueItem(
     {
       catalogueItems: new PrismaCatalogueItemRepository(prisma),
@@ -84,7 +84,7 @@ export async function createCatalogueItemAction(
       worldKey: String(formData.get("worldKey")),
       label: String(formData.get("label")),
       kind: String(formData.get("kind")),
-      unitPriceCents: Math.round(priceEuros * 100),
+      unitPriceCents: Math.round(priceXof * 100),
     },
   );
   if (!result.ok) console.error("createCatalogueItem failed", result.error);

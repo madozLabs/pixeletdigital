@@ -2,47 +2,23 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
-import { listCatalogueItemsByWorld } from "@/modules/billing/application/catalogue-item-use-cases";
-import { listClientsByWorld } from "@/modules/billing/application/client-use-cases";
-import { listInvoicesByWorld } from "@/modules/billing/application/invoice-use-cases";
-import { PrismaCatalogueItemRepository } from "@/modules/billing/infrastructure/prisma-catalogue-item-repository";
-import { PrismaClientRepository } from "@/modules/billing/infrastructure/prisma-client-repository";
-import { PrismaInvoiceRepository } from "@/modules/billing/infrastructure/prisma-invoice-repository";
-import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
-import type { ApprovedRole } from "@/shared/request-context";
-
 import { getWorkspaceRequestContext } from "../get-workspace-context";
+import { formatXof } from "./_lib/money";
 import {
-  archiveCatalogueItemAction,
-  archiveClientAction,
-  cancelInvoiceAction,
-  createCatalogueItemAction,
-  createClientAction,
-  createInvoiceAction,
-  markInvoicePaidAction,
-  markInvoiceSentAction,
-} from "./actions";
-import { formatEuros } from "./_lib/money";
-import { ROLES_MATRIX_COLUMNS, ROLES_MATRIX_ROWS } from "./_lib/roles-matrix";
+  convertQuoteToInvoiceAction,
+  createQuoteAction,
+  recordPaymentAction,
+  updateQuoteStatusAction,
+} from "./professional-actions";
+import { cancelInvoiceAction, markInvoiceSentAction } from "./actions";
 
-const WORLDS = [
-  { key: "pixel-digital", label: "Pixel&Digital" },
-  { key: "kwaliti-print", label: "Kwaliti Print" },
-];
-
-const BILLING_ROLES: readonly ApprovedRole[] = [
-  "SUPER_ADMIN",
-  "ADMIN",
-  "WORLD_MANAGER",
-];
-
+const BILLING_ROLES = ["SUPER_ADMIN", "ADMIN", "WORLD_MANAGER"] as const;
 const TABS = [
-  { id: "clients", label: "Clients" },
-  { id: "catalogue", label: "Services & produits" },
+  { id: "quotes", label: "Devis" },
   { id: "invoices", label: "Factures" },
-  { id: "roles", label: "Rôles & permissions" },
+  { id: "balances", label: "Soldes clients" },
+  { id: "catalogue", label: "Catalogue" },
 ] as const;
-
 export default async function WorkspaceBillingPage({
   searchParams,
 }: {
@@ -50,453 +26,364 @@ export default async function WorkspaceBillingPage({
 }) {
   const context = await getWorkspaceRequestContext();
   if (!context) redirect("/login");
-
-  const role = context.actor?.role ?? null;
-  if (role === null || !BILLING_ROLES.includes(role)) {
+  if (
+    !context.actor?.role ||
+    !BILLING_ROLES.includes(
+      context.actor.role as (typeof BILLING_ROLES)[number],
+    )
+  ) {
     return (
-      <>
-        <h1 className="admin-content__title">Facturation</h1>
-        <p role="alert">Vous n&apos;êtes pas autorisé à consulter ce module.</p>
-      </>
+      <p role="alert">
+        Vous n&apos;êtes pas autorisé à consulter la facturation.
+      </p>
     );
   }
 
   const { world, tab } = await searchParams;
-  const worldKey = world ?? WORLDS[0]!.key;
-  const activeTab = TABS.find((t) => t.id === tab)?.id ?? TABS[0].id;
-
-  const deps = {
-    clients: new PrismaClientRepository(prisma),
-    catalogueItems: new PrismaCatalogueItemRepository(prisma),
-    invoices: new PrismaInvoiceRepository(prisma),
-    worlds: new PrismaWorldRepository(prisma),
-  };
-
-  const [clientsResult, catalogueResult, invoicesResult] = await Promise.all([
-    listClientsByWorld(deps, context, { worldKey }),
-    listCatalogueItemsByWorld(deps, context, { worldKey }),
-    listInvoicesByWorld(deps, context, { worldKey }),
+  const worldKey = world ?? "pixel-digital";
+  const activeTab = TABS.find((item) => item.id === tab)?.id ?? "quotes";
+  const [clients, quotes, invoices, catalogue] = await Promise.all([
+    prisma.client.findMany({
+      where: { worldKey, status: "ACTIVE" },
+      orderBy: { name: "asc" },
+    }),
+    prisma.quote.findMany({
+      where: { worldKey },
+      include: { client: true, lines: true, invoice: true },
+      orderBy: { issuedAt: "desc" },
+    }),
+    prisma.invoice.findMany({
+      where: { worldKey },
+      include: { client: true, lines: true, payments: true },
+      orderBy: { issuedAt: "desc" },
+    }),
+    prisma.catalogueItem.findMany({
+      where: { worldKey, status: "ACTIVE" },
+      orderBy: { label: "asc" },
+    }),
   ]);
 
-  if (!clientsResult.ok || !catalogueResult.ok || !invoicesResult.ok) {
-    const error = !clientsResult.ok
-      ? clientsResult.error
-      : !catalogueResult.ok
-        ? catalogueResult.error
-        : !invoicesResult.ok
-          ? invoicesResult.error
-          : null;
-    return (
-      <>
-        <h1 className="admin-content__title">Facturation</h1>
-        <p role="alert">{error?.message}</p>
-      </>
+  const clientBalances = clients.map((client) => {
+    const clientInvoices = invoices.filter(
+      (invoice) =>
+        invoice.clientId === client.id && invoice.status !== "CANCELLED",
     );
-  }
-
-  const clients = clientsResult.value;
-  const catalogueItems = catalogueResult.value;
-  const invoices = invoicesResult.value;
-  const clientNameById = new Map(clients.map((c) => [c.id, c.name]));
-
+    const billed = clientInvoices.reduce(
+      (sum, invoice) => sum + invoiceTotal(invoice),
+      0,
+    );
+    const paid = clientInvoices.reduce(
+      (sum, invoice) =>
+        sum +
+        invoice.payments.reduce(
+          (inner, payment) => inner + payment.amountCents,
+          0,
+        ),
+      0,
+    );
+    return { client, billed, paid, balance: Math.max(0, billed - paid) };
+  });
   return (
     <>
-      <h1 className="admin-content__title">Facturation</h1>
+      <div className="admin-page-heading">
+        <div>
+          <h1 className="admin-content__title">Facturation XOF</h1>
+          <p className="admin-content__lede">
+            Devis, factures, paiements et soldes clients.
+          </p>
+        </div>
+        <span className="admin-metric">
+          {formatXof(
+            clientBalances.reduce((sum, item) => sum + item.balance, 0),
+          )}{" "}
+          à encaisser
+        </span>
+      </div>
 
       <div className="admin-tabs" role="tablist">
-        {TABS.map((t) => (
+        {TABS.map((item) => (
           <Link
-            key={t.id}
-            href={`/workspace/billing?world=${worldKey}&tab=${t.id}`}
+            key={item.id}
+            href={`/workspace/billing?world=${worldKey}&tab=${item.id}`}
             role="tab"
-            aria-selected={t.id === activeTab}
+            aria-selected={item.id === activeTab}
             className={
-              t.id === activeTab
+              item.id === activeTab
                 ? "admin-tabs__item admin-tabs__item--active"
                 : "admin-tabs__item"
             }
           >
-            {t.label}
+            {item.label}
           </Link>
         ))}
       </div>
 
-      {activeTab === "clients" ? (
+      {activeTab === "quotes" ? (
         <>
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Nom</th>
-                  <th>Email</th>
-                  <th>Téléphone</th>
-                  <th>Statut</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {clients.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="admin-empty">
-                      Aucun client pour cet univers.
-                    </td>
-                  </tr>
-                ) : (
-                  clients.map((c) => (
-                    <tr key={c.id}>
-                      <td>{c.name}</td>
-                      <td>{c.email ?? "—"}</td>
-                      <td>{c.phone ?? "—"}</td>
-                      <td>{c.status === "ACTIVE" ? "Actif" : "Archivé"}</td>
-                      <td className="admin-table__actions">
-                        {c.status === "ACTIVE" ? (
-                          <form action={archiveClientAction}>
-                            <input type="hidden" name="id" value={c.id} />
-                            <input
-                              type="hidden"
-                              name="expectedVersion"
-                              value={c.version}
-                            />
-                            <button
-                              type="submit"
-                              className="admin-table__action"
-                            >
-                              Archiver
-                            </button>
-                          </form>
-                        ) : (
-                          <span className="admin-table__note">
-                            Aucune action
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <h2 className="admin-content__subtitle">Ajouter un client</h2>
-          <form action={createClientAction} className="editorial-form">
+          <section className="billing-card-grid">
+            {quotes.length === 0 ? (
+              <p className="admin-empty">Aucun devis.</p>
+            ) : null}
+            {quotes.map((quote) => {
+              const total = documentTotal(quote);
+              return (
+                <article className="billing-card" key={quote.id}>
+                  <header>
+                    <div>
+                      <p className="billing-card__eyebrow">{quote.number}</p>
+                      <h2>{quote.client.name}</h2>
+                    </div>
+                    <span className="status-badge">
+                      {QUOTE_STATUS_LABEL[quote.status]}
+                    </span>
+                  </header>
+                  <p>
+                    {quote.lines.length} ligne(s) · {formatXof(total)}
+                  </p>
+                  <p className="admin-table__note">
+                    Valide jusqu’au{" "}
+                    {quote.validUntil?.toLocaleDateString("fr-FR") ?? "—"}
+                  </p>
+                  <form
+                    action={updateQuoteStatusAction}
+                    className="billing-inline-form"
+                  >
+                    <input type="hidden" name="quoteId" value={quote.id} />
+                    <select name="status" defaultValue={quote.status}>
+                      {Object.entries(QUOTE_STATUS_LABEL)
+                        .filter(([key]) => key !== "CONVERTED")
+                        .map(([key, label]) => (
+                          <option key={key} value={key}>
+                            {label}
+                          </option>
+                        ))}
+                    </select>
+                    <button className="admin-table__action" type="submit">
+                      Mettre à jour
+                    </button>
+                  </form>
+                  {quote.status === "ACCEPTED" && !quote.invoice ? (
+                    <form action={convertQuoteToInvoiceAction}>
+                      <input type="hidden" name="quoteId" value={quote.id} />
+                      <button className="admin-table__action" type="submit">
+                        Convertir en facture
+                      </button>
+                    </form>
+                  ) : null}
+                </article>
+              );
+            })}
+          </section>
+          <h2 className="admin-content__subtitle">Nouveau devis</h2>
+          <form action={createQuoteAction} className="editorial-form">
             <input type="hidden" name="worldKey" value={worldKey} />
             <label>
-              Nom
-              <input type="text" name="name" required maxLength={160} />
-            </label>
-            <label>
-              Email
-              <input type="email" name="email" maxLength={254} />
-            </label>
-            <label>
-              Téléphone
-              <input type="text" name="phone" maxLength={40} />
-            </label>
-            <label>
-              Adresse
-              <input type="text" name="address" maxLength={240} />
-            </label>
-            <button type="submit" className="admin-table__action">
-              Ajouter le client
-            </button>
-          </form>
-        </>
-      ) : null}
-
-      {activeTab === "catalogue" ? (
-        <>
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Libellé</th>
-                  <th>Type</th>
-                  <th>Prix unitaire</th>
-                  <th>Statut</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {catalogueItems.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="admin-empty">
-                      Aucun service ou produit pour cet univers.
-                    </td>
-                  </tr>
-                ) : (
-                  catalogueItems.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.label}</td>
-                      <td>{item.kind === "SERVICE" ? "Service" : "Produit"}</td>
-                      <td>{formatEuros(item.unitPriceCents)}</td>
-                      <td>{item.status === "ACTIVE" ? "Actif" : "Archivé"}</td>
-                      <td className="admin-table__actions">
-                        {item.status === "ACTIVE" ? (
-                          <form action={archiveCatalogueItemAction}>
-                            <input type="hidden" name="id" value={item.id} />
-                            <input
-                              type="hidden"
-                              name="expectedVersion"
-                              value={item.version}
-                            />
-                            <button
-                              type="submit"
-                              className="admin-table__action"
-                            >
-                              Archiver
-                            </button>
-                          </form>
-                        ) : (
-                          <span className="admin-table__note">
-                            Aucune action
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <h2 className="admin-content__subtitle">
-            Ajouter un service ou produit
-          </h2>
-          <form action={createCatalogueItemAction} className="editorial-form">
-            <input type="hidden" name="worldKey" value={worldKey} />
-            <label>
-              Libellé
-              <input type="text" name="label" required maxLength={160} />
-            </label>
-            <label>
-              Type
-              <select name="kind" defaultValue="SERVICE">
-                <option value="SERVICE">Service</option>
-                <option value="PRODUCT">Produit</option>
+              Client
+              <select name="clientId" required>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.name}
+                  </option>
+                ))}
               </select>
             </label>
             <label>
-              Prix unitaire (€)
+              Valide jusqu’au
+              <input type="date" name="validUntil" />
+            </label>
+            <label>
+              Remise (XOF)
+              <input type="number" name="discount" min={0} step={1} />
+            </label>
+            <label>
+              Taxe (%)
               <input
                 type="number"
-                name="unitPrice"
-                required
+                name="taxRate"
                 min={0}
+                max={100}
                 step="0.01"
               />
             </label>
-            <button type="submit" className="admin-table__action">
-              Ajouter au catalogue
+            {[1, 2, 3].map((index) => (
+              <label key={index}>
+                Ligne {index}
+                <input
+                  name={`lineLabel${index}`}
+                  placeholder="Libellé"
+                  list="billing-catalogue-labels"
+                />
+                <input
+                  name={`lineQuantity${index}`}
+                  type="number"
+                  min={1}
+                  defaultValue={1}
+                  placeholder="Quantité"
+                />
+                <input
+                  name={`lineUnitPrice${index}`}
+                  type="number"
+                  min={0}
+                  step={1}
+                  placeholder="Prix unitaire XOF"
+                />
+              </label>
+            ))}
+            <label>
+              Notes
+              <textarea name="notes" maxLength={1000} />
+            </label>
+            <button className="admin-table__action" type="submit">
+              Créer le devis
             </button>
           </form>
+          <datalist id="billing-catalogue-labels">
+            {catalogue.map((item) => (
+              <option key={item.id} value={item.label} />
+            ))}
+          </datalist>
         </>
       ) : null}
 
       {activeTab === "invoices" ? (
-        <>
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Numéro</th>
-                  <th>Client</th>
-                  <th>Statut</th>
-                  <th>Total</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoices.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="admin-empty">
-                      Aucune facture pour cet univers.
-                    </td>
-                  </tr>
-                ) : (
-                  invoices.map((invoice) => (
-                    <tr key={invoice.id}>
-                      <td>{invoice.number}</td>
-                      <td>{clientNameById.get(invoice.clientId) ?? "—"}</td>
-                      <td>{INVOICE_STATUS_LABEL[invoice.status]}</td>
-                      <td>{formatEuros(invoice.totalCents)}</td>
-                      <td className="admin-table__actions">
-                        <Link
-                          href={`/workspace/billing/invoices/${invoice.id}/print`}
-                          className="admin-table__action"
-                        >
-                          Imprimer
-                        </Link>
-                        {invoice.status === "DRAFT" ? (
-                          <>
-                            <form action={markInvoiceSentAction}>
-                              <input
-                                type="hidden"
-                                name="id"
-                                value={invoice.id}
-                              />
-                              <input
-                                type="hidden"
-                                name="expectedVersion"
-                                value={invoice.version}
-                              />
-                              <button
-                                type="submit"
-                                className="admin-table__action"
-                              >
-                                Envoyer
-                              </button>
-                            </form>
-                            <form action={cancelInvoiceAction}>
-                              <input
-                                type="hidden"
-                                name="id"
-                                value={invoice.id}
-                              />
-                              <input
-                                type="hidden"
-                                name="expectedVersion"
-                                value={invoice.version}
-                              />
-                              <button
-                                type="submit"
-                                className="admin-table__action"
-                              >
-                                Annuler
-                              </button>
-                            </form>
-                          </>
-                        ) : null}
-                        {invoice.status === "SENT" ? (
-                          <>
-                            <form action={markInvoicePaidAction}>
-                              <input
-                                type="hidden"
-                                name="id"
-                                value={invoice.id}
-                              />
-                              <input
-                                type="hidden"
-                                name="expectedVersion"
-                                value={invoice.version}
-                              />
-                              <button
-                                type="submit"
-                                className="admin-table__action"
-                              >
-                                Marquer payée
-                              </button>
-                            </form>
-                            <form action={cancelInvoiceAction}>
-                              <input
-                                type="hidden"
-                                name="id"
-                                value={invoice.id}
-                              />
-                              <input
-                                type="hidden"
-                                name="expectedVersion"
-                                value={invoice.version}
-                              />
-                              <button
-                                type="submit"
-                                className="admin-table__action"
-                              >
-                                Annuler
-                              </button>
-                            </form>
-                          </>
-                        ) : null}
-                        {invoice.status === "PAID" ||
-                        invoice.status === "CANCELLED" ? (
-                          <span className="admin-table__note">
-                            Aucune action
-                          </span>
-                        ) : null}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <h2 className="admin-content__subtitle">Nouvelle facture</h2>
-          {clients.filter((c) => c.status === "ACTIVE").length === 0 ? (
-            <p className="admin-empty">
-              Ajoutez un client actif avant de créer une facture.
-            </p>
-          ) : (
-            <form action={createInvoiceAction} className="editorial-form">
-              <input type="hidden" name="worldKey" value={worldKey} />
-              <label>
-                Client
-                <select name="clientId" required>
-                  {clients
-                    .filter((c) => c.status === "ACTIVE")
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                </select>
-              </label>
-              {[1, 2, 3].map((index) => (
-                <label key={index}>
-                  Ligne {index}
-                  <input
-                    type="text"
-                    name={`lineLabel${index}`}
-                    placeholder="Libellé"
-                    maxLength={160}
-                    list="billing-catalogue-labels"
-                  />
-                  <input
-                    type="number"
-                    name={`lineQuantity${index}`}
-                    placeholder="Quantité"
-                    min={1}
-                    defaultValue={1}
-                  />
-                  <input
-                    type="number"
-                    name={`lineUnitPrice${index}`}
-                    placeholder="Prix unitaire (€)"
-                    min={0}
-                    step="0.01"
-                  />
-                </label>
-              ))}
-              <datalist id="billing-catalogue-labels">
-                {catalogueItems.map((item) => (
-                  <option key={item.id} value={item.label} />
-                ))}
-              </datalist>
-              <button type="submit" className="admin-table__action">
-                Créer la facture
-              </button>
-            </form>
-          )}
-        </>
+        <section className="billing-card-grid">
+          {invoices.length === 0 ? (
+            <p className="admin-empty">Aucune facture.</p>
+          ) : null}
+          {invoices.map((invoice) => {
+            const total = invoiceTotal(invoice);
+            const paid = invoice.payments.reduce(
+              (sum, payment) => sum + payment.amountCents,
+              0,
+            );
+            const balance = Math.max(0, total - paid);
+            return (
+              <article className="billing-card" key={invoice.id}>
+                <header>
+                  <div>
+                    <p className="billing-card__eyebrow">{invoice.number}</p>
+                    <h2>{invoice.client.name}</h2>
+                  </div>
+                  <span className="status-badge">
+                    {INVOICE_STATUS_LABEL[invoice.status]}
+                  </span>
+                </header>
+                <p>
+                  Total {formatXof(total)} · Payé {formatXof(paid)} · Solde{" "}
+                  {formatXof(balance)}
+                </p>
+                <p className="admin-table__note">
+                  Échéance : {invoice.dueAt?.toLocaleDateString("fr-FR") ?? "—"}
+                </p>
+                <div className="admin-table__actions">
+                  <Link
+                    className="admin-table__action"
+                    href={`/workspace/billing/invoices/${invoice.id}/print`}
+                  >
+                    Imprimer
+                  </Link>
+                  {invoice.status === "DRAFT" ? (
+                    <form action={markInvoiceSentAction}>
+                      <input type="hidden" name="id" value={invoice.id} />
+                      <input
+                        type="hidden"
+                        name="expectedVersion"
+                        value={invoice.version}
+                      />
+                      <button className="admin-table__action" type="submit">
+                        Envoyer
+                      </button>
+                    </form>
+                  ) : null}
+                  {invoice.status !== "PAID" &&
+                  invoice.status !== "CANCELLED" ? (
+                    <form action={cancelInvoiceAction}>
+                      <input type="hidden" name="id" value={invoice.id} />
+                      <input
+                        type="hidden"
+                        name="expectedVersion"
+                        value={invoice.version}
+                      />
+                      <button className="admin-table__action" type="submit">
+                        Annuler
+                      </button>
+                    </form>
+                  ) : null}
+                </div>
+                {invoice.status !== "PAID" && invoice.status !== "CANCELLED" ? (
+                  <form
+                    action={recordPaymentAction}
+                    className="billing-inline-form"
+                  >
+                    <input type="hidden" name="invoiceId" value={invoice.id} />
+                    <input
+                      name="amount"
+                      type="number"
+                      min={1}
+                      step={1}
+                      placeholder="Montant XOF"
+                      required
+                    />
+                    <select name="method" defaultValue="MOBILE_MONEY">
+                      <option value="MOBILE_MONEY">Mobile Money</option>
+                      <option value="BANK_TRANSFER">Virement</option>
+                      <option value="CASH">Espèces</option>
+                      <option value="CARD">Carte</option>
+                      <option value="CHEQUE">Chèque</option>
+                      <option value="OTHER">Autre</option>
+                    </select>
+                    <input name="reference" placeholder="Référence" />
+                    <button className="admin-table__action" type="submit">
+                      Enregistrer paiement
+                    </button>
+                  </form>
+                ) : null}
+              </article>
+            );
+          })}
+        </section>
       ) : null}
-
-      {activeTab === "roles" ? (
+      {activeTab === "balances" ? (
         <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
               <tr>
-                <th>Domaine</th>
-                {ROLES_MATRIX_COLUMNS.map((column) => (
-                  <th key={column}>{column}</th>
-                ))}
+                <th>Client</th>
+                <th>Facturé</th>
+                <th>Payé</th>
+                <th>Solde</th>
               </tr>
             </thead>
             <tbody>
-              {ROLES_MATRIX_ROWS.map((row) => (
-                <tr key={row.domain}>
-                  <td>{row.domain}</td>
-                  {row.values.map((value, index) => (
-                    <td key={ROLES_MATRIX_COLUMNS[index]}>{value}</td>
-                  ))}
+              {clientBalances.map((item) => (
+                <tr key={item.client.id}>
+                  <td>{item.client.name}</td>
+                  <td>{formatXof(item.billed)}</td>
+                  <td>{formatXof(item.paid)}</td>
+                  <td>{formatXof(item.balance)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
+      {activeTab === "catalogue" ? (
+        <div className="admin-table-wrap">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Libellé</th>
+                <th>Type</th>
+                <th>Prix XOF</th>
+              </tr>
+            </thead>
+            <tbody>
+              {catalogue.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.label}</td>
+                  <td>{item.kind === "SERVICE" ? "Service" : "Produit"}</td>
+                  <td>{formatXof(item.unitPriceCents)}</td>
                 </tr>
               ))}
             </tbody>
@@ -507,9 +394,41 @@ export default async function WorkspaceBillingPage({
   );
 }
 
+function documentTotal(document: {
+  lines: { quantity: number; unitPriceCents: number }[];
+  discountCents: number;
+  taxRateBps: number;
+}): number {
+  const subtotal = document.lines.reduce(
+    (sum, line) => sum + line.quantity * line.unitPriceCents,
+    0,
+  );
+  const taxable = Math.max(0, subtotal - document.discountCents);
+  return taxable + Math.round((taxable * document.taxRateBps) / 10000);
+}
+
+function invoiceTotal(invoice: {
+  lines: { quantity: number; unitPriceCents: number }[];
+  discountCents: number;
+  taxRateBps: number;
+}): number {
+  return documentTotal(invoice);
+}
+
+const QUOTE_STATUS_LABEL: Readonly<Record<string, string>> = {
+  DRAFT: "Brouillon",
+  SENT: "Envoyé",
+  ACCEPTED: "Accepté",
+  DECLINED: "Refusé",
+  EXPIRED: "Expiré",
+  CONVERTED: "Converti",
+  CANCELLED: "Annulé",
+};
 const INVOICE_STATUS_LABEL: Readonly<Record<string, string>> = {
   DRAFT: "Brouillon",
   SENT: "Envoyée",
+  PARTIALLY_PAID: "Partiellement payée",
   PAID: "Payée",
+  OVERDUE: "En retard",
   CANCELLED: "Annulée",
 };
