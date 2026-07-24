@@ -149,6 +149,11 @@ export default async function WorkspaceBillingPage({
                     className="billing-inline-form"
                   >
                     <input type="hidden" name="quoteId" value={quote.id} />
+                    <input
+                      type="hidden"
+                      name="expectedVersion"
+                      value={quote.version}
+                    />
                     <select name="status" defaultValue={quote.status}>
                       {Object.entries(QUOTE_STATUS_LABEL)
                         .filter(([key]) => key !== "CONVERTED")
@@ -165,6 +170,11 @@ export default async function WorkspaceBillingPage({
                   {quote.status === "ACCEPTED" && !quote.invoice ? (
                     <form action={convertQuoteToInvoiceAction}>
                       <input type="hidden" name="quoteId" value={quote.id} />
+                      <input
+                        type="hidden"
+                        name="expectedVersion"
+                        value={quote.version}
+                      />
                       <button className="admin-table__action" type="submit">
                         Convertir en facture
                       </button>
@@ -316,6 +326,11 @@ export default async function WorkspaceBillingPage({
                     className="billing-inline-form"
                   >
                     <input type="hidden" name="invoiceId" value={invoice.id} />
+                    <input
+                      type="hidden"
+                      name="expectedVersion"
+                      value={invoice.version}
+                    />
                     <input
                       name="amount"
                       type="number"

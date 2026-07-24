@@ -81,10 +81,12 @@ export async function advanceEditorialWorkflowAction(
   const itemId = text(formData, "itemId");
   const item = await prisma.editorialItem.findUnique({
     where: { id: itemId },
-    select: { worldKey: true },
+    select: { worldKey: true, version: true },
   });
   if (!item) return;
   requireWorldAccess(context.actor, item.worldKey);
+  const expectedVersion = Number(formData.get("expectedVersion"));
+  if (item.version !== expectedVersion) return;
 
   const nextStatus = text(formData, "status") as
     | "DRAFT"
@@ -107,6 +109,13 @@ export async function advanceEditorialWorkflowAction(
     data.proofUrl = optionalText(formData, "proofUrl");
   }
 
-  await prisma.editorialItem.update({ where: { id: itemId }, data });
+  try {
+    await prisma.editorialItem.update({
+      where: { id: itemId, version: expectedVersion },
+      data,
+    });
+  } catch {
+    return;
+  }
   revalidatePath("/workspace/editorial");
 }

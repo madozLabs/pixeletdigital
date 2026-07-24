@@ -146,6 +146,11 @@ export default async function ClientsPage({
             {client.status === "ACTIVE" ? (
               <form action={archiveProfessionalClientAction}>
                 <input type="hidden" name="clientId" value={client.id} />
+                <input
+                  type="hidden"
+                  name="expectedVersion"
+                  value={client.version}
+                />
                 <button className="admin-table__action" type="submit">
                   Archiver le client
                 </button>

@@ -80,12 +80,21 @@ export async function updateQuoteStatusAction(
   if (!quote) return;
   requireWorldAccess(context.actor, quote.worldKey);
 
+  const expectedVersion = Number(formData.get("expectedVersion"));
   const status = text(formData, "status") as
     "DRAFT" | "SENT" | "ACCEPTED" | "DECLINED" | "EXPIRED" | "CANCELLED";
-  await prisma.quote.update({
-    where: { id: quoteId },
-    data: { status, version: { increment: 1 }, updatedAt: context.clock.now() },
-  });
+  try {
+    await prisma.quote.update({
+      where: { id: quoteId, version: expectedVersion },
+      data: {
+        status,
+        version: { increment: 1 },
+        updatedAt: context.clock.now(),
+      },
+    });
+  } catch {
+    return;
+  }
   revalidatePath("/workspace/billing");
 }
 
@@ -101,6 +110,8 @@ export async function convertQuoteToInvoiceAction(
   });
   if (!quote || quote.status !== "ACCEPTED") return;
   requireWorldAccess(context.actor, quote.worldKey);
+  const expectedVersion = Number(formData.get("expectedVersion"));
+  if (quote.version !== expectedVersion) return;
   const count = await prisma.invoice.count({
     where: { worldKey: quote.worldKey },
   });
@@ -109,43 +120,47 @@ export async function convertQuoteToInvoiceAction(
   const number = `${prefix}-${now.getUTCFullYear()}-${String(count + 1).padStart(4, "0")}`;
   const dueAt = new Date(now);
   dueAt.setUTCDate(dueAt.getUTCDate() + 30);
-  await prisma.$transaction([
-    prisma.invoice.create({
-      data: {
-        id: randomUUID(),
-        worldKey: quote.worldKey,
-        clientId: quote.clientId,
-        quoteId,
-        number,
-        status: "DRAFT",
-        issuedAt: now,
-        dueAt,
-        discountCents: quote.discountCents,
-        taxRateBps: quote.taxRateBps,
-        notes: quote.notes,
-        version: 1,
-        createdAt: now,
-        updatedAt: now,
-        lines: {
-          create: quote.lines.map((line) => ({
-            id: randomUUID(),
-            label: line.label,
-            quantity: line.quantity,
-            unitPriceCents: line.unitPriceCents,
-            order: line.order,
-          })),
+  try {
+    await prisma.$transaction([
+      prisma.invoice.create({
+        data: {
+          id: randomUUID(),
+          worldKey: quote.worldKey,
+          clientId: quote.clientId,
+          quoteId,
+          number,
+          status: "DRAFT",
+          issuedAt: now,
+          dueAt,
+          discountCents: quote.discountCents,
+          taxRateBps: quote.taxRateBps,
+          notes: quote.notes,
+          version: 1,
+          createdAt: now,
+          updatedAt: now,
+          lines: {
+            create: quote.lines.map((line) => ({
+              id: randomUUID(),
+              label: line.label,
+              quantity: line.quantity,
+              unitPriceCents: line.unitPriceCents,
+              order: line.order,
+            })),
+          },
         },
-      },
-    }),
-    prisma.quote.update({
-      where: { id: quoteId },
-      data: {
-        status: "CONVERTED",
-        convertedAt: now,
-        version: { increment: 1 },
-      },
-    }),
-  ]);
+      }),
+      prisma.quote.update({
+        where: { id: quoteId, version: expectedVersion },
+        data: {
+          status: "CONVERTED",
+          convertedAt: now,
+          version: { increment: 1 },
+        },
+      }),
+    ]);
+  } catch {
+    return;
+  }
   revalidatePath("/workspace/billing");
 }
 export async function recordPaymentAction(formData: FormData): Promise<void> {
@@ -160,6 +175,8 @@ export async function recordPaymentAction(formData: FormData): Promise<void> {
   });
   if (!invoice || invoice.status === "CANCELLED") return;
   requireWorldAccess(context.actor, invoice.worldKey);
+  const expectedVersion = Number(formData.get("expectedVersion"));
+  if (invoice.version !== expectedVersion) return;
   const subtotal = invoice.lines.reduce(
     (sum, line) => sum + line.quantity * line.unitPriceCents,
     0,
@@ -172,32 +189,36 @@ export async function recordPaymentAction(formData: FormData): Promise<void> {
   );
   const paidAfter = paidBefore + amountCents;
   const paidAt = context.clock.now();
-  await prisma.$transaction([
-    prisma.payment.create({
-      data: {
-        invoiceId,
-        amountCents,
-        method: text(formData, "method") as
-          | "CASH"
-          | "BANK_TRANSFER"
-          | "MOBILE_MONEY"
-          | "CARD"
-          | "CHEQUE"
-          | "OTHER",
-        paidAt,
-        reference: text(formData, "reference") || null,
-      },
-    }),
-    prisma.invoice.update({
-      where: { id: invoiceId },
-      data: {
-        status: paidAfter >= total ? "PAID" : "PARTIALLY_PAID",
-        paidAt: paidAfter >= total ? paidAt : null,
-        version: { increment: 1 },
-        updatedAt: paidAt,
-      },
-    }),
-  ]);
+  try {
+    await prisma.$transaction([
+      prisma.payment.create({
+        data: {
+          invoiceId,
+          amountCents,
+          method: text(formData, "method") as
+            | "CASH"
+            | "BANK_TRANSFER"
+            | "MOBILE_MONEY"
+            | "CARD"
+            | "CHEQUE"
+            | "OTHER",
+          paidAt,
+          reference: text(formData, "reference") || null,
+        },
+      }),
+      prisma.invoice.update({
+        where: { id: invoiceId, version: expectedVersion },
+        data: {
+          status: paidAfter >= total ? "PAID" : "PARTIALLY_PAID",
+          paidAt: paidAfter >= total ? paidAt : null,
+          version: { increment: 1 },
+          updatedAt: paidAt,
+        },
+      }),
+    ]);
+  } catch {
+    return;
+  }
   revalidatePath("/workspace/billing");
   revalidatePath("/workspace");
 }

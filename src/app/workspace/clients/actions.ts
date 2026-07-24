@@ -111,14 +111,19 @@ export async function addClientContactAction(
 export async function archiveProfessionalClientAction(formData: FormData) {
   const context = await getWorkspaceRequestContext();
   if (!context?.actor || !canManageClients(context.actor.role)) return;
-  await prisma.client.update({
-    where: { id: text(formData, "clientId") },
-    data: {
-      status: "ARCHIVED",
-      version: { increment: 1 },
-      updatedAt: context.clock.now(),
-    },
-  });
+  const expectedVersion = Number(formData.get("expectedVersion"));
+  try {
+    await prisma.client.update({
+      where: { id: text(formData, "clientId"), version: expectedVersion },
+      data: {
+        status: "ARCHIVED",
+        version: { increment: 1 },
+        updatedAt: context.clock.now(),
+      },
+    });
+  } catch {
+    return;
+  }
   revalidatePath("/workspace/clients");
   revalidatePath("/workspace/billing");
 }

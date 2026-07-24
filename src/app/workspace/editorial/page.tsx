@@ -162,6 +162,11 @@ export default async function WorkspaceEditorialPage({
                         className="editorial-card__workflow"
                       >
                         <input type="hidden" name="itemId" value={item.id} />
+                        <input
+                          type="hidden"
+                          name="expectedVersion"
+                          value={item.version}
+                        />
                         <select name="status" defaultValue={item.status}>
                           <option value="DRAFT">Brouillon</option>
                           <option value="INTERNAL_REVIEW">
