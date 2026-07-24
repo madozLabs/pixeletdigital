@@ -35,25 +35,3 @@ export function AbuseStatusBadge({ status }: Readonly<{ status: string }>) {
     </span>
   );
 }
-
-export function EditorialStatusBadge({
-  status,
-  isLate,
-}: Readonly<{ status: string; isLate: boolean }>) {
-  if (status === "PLANNED" && isLate) {
-    return (
-      <span className="status-badge status-badge--warning">En retard</span>
-    );
-  }
-  const label: Readonly<Record<string, string>> = {
-    PLANNED: "Planifié",
-    DONE: "Fait",
-    CANCELLED: "Annulé",
-  };
-  const tone = status === "DONE" ? "positive" : "neutral";
-  return (
-    <span className={`status-badge status-badge--${tone}`}>
-      {label[status] ?? status}
-    </span>
-  );
-}
