@@ -1751,6 +1751,134 @@ a.world-switcher__item:focus-visible {
   width: 100%;
 }
 
+.task-card__handle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  cursor: grab;
+}
+
+.task-card--dragging {
+  box-shadow: 0 0.75rem 1.5rem rgb(0 0 0 / 18%);
+  transform: rotate(-1deg);
+}
+
+.task-column--drop-active {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface) 92%);
+  border-color: var(--accent);
+}
+
+.task-card__assignee {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9em;
+  color: var(--ink-soft);
+}
+
+.priority-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.78em;
+  font-weight: 700;
+  padding: 0.2em 0.6em;
+  border-radius: var(--radius-pill);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.priority-pill--low {
+  background: color-mix(in srgb, var(--ink) 10%, var(--surface) 90%);
+  color: var(--ink-soft);
+}
+
+.priority-pill--normal {
+  background: color-mix(in srgb, #298dff 16%, var(--surface) 84%);
+  color: #1a5fb4;
+}
+
+.priority-pill--high {
+  background: color-mix(in srgb, #ff9100 18%, var(--surface) 82%);
+  color: #a15400;
+}
+
+.priority-pill--urgent {
+  background: color-mix(in srgb, var(--pd-red) 18%, var(--surface) 82%);
+  color: var(--pd-red-dark);
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  font-weight: 700;
+  color: var(--color-white);
+  line-height: 1;
+}
+
+.avatar--xs {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: 0.65rem;
+}
+
+.avatar--sm {
+  width: 2rem;
+  height: 2rem;
+  font-size: 0.78rem;
+}
+
+.avatar--md {
+  width: 2.75rem;
+  height: 2.75rem;
+  font-size: 1rem;
+}
+
+.avatar--overflow {
+  background: color-mix(in srgb, var(--ink) 30%, var(--surface) 70%);
+  color: var(--ink);
+}
+
+.avatar-group {
+  display: inline-flex;
+}
+
+.avatar-group .avatar {
+  margin-left: -0.5rem;
+  border: 2px solid var(--surface);
+}
+
+.avatar-group .avatar:first-child {
+  margin-left: 0;
+}
+
+.avatar--hue-0 {
+  background: #e5077a;
+}
+.avatar--hue-1 {
+  background: #298dff;
+}
+.avatar--hue-2 {
+  background: #00a67e;
+}
+.avatar--hue-3 {
+  background: #ff9100;
+}
+.avatar--hue-4 {
+  background: #7429f8;
+}
+.avatar--hue-5 {
+  background: #00b0c7;
+}
+.avatar--hue-6 {
+  background: #c2374a;
+}
+.avatar--hue-7 {
+  background: #5a6b7a;
+}
+
 .editorial-card--professional {
   gap: 0.65rem;
 }

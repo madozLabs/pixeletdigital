@@ -2,23 +2,9 @@ import { redirect } from "next/navigation";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
-import { createTaskAction, updateTaskAction } from "./actions";
+import { createTaskAction } from "./actions";
+import { TaskBoard, type BoardTask } from "./task-board";
 
-const COLUMNS = [
-  ["BACKLOG", "Backlog"],
-  ["TODO", "À faire"],
-  ["IN_PROGRESS", "En cours"],
-  ["BLOCKED", "Bloqué"],
-  ["REVIEW", "Validation"],
-  ["DONE", "Terminé"],
-] as const;
-
-const PRIORITY_LABEL: Readonly<Record<string, string>> = {
-  LOW: "Faible",
-  NORMAL: "Normale",
-  HIGH: "Haute",
-  URGENT: "Urgente",
-};
 export default async function TasksPage({
   searchParams,
 }: Readonly<{ searchParams: Promise<{ world?: string; project?: string }> }>) {
@@ -39,18 +25,13 @@ export default async function TasksPage({
   });
   const activeProjectId = project ?? projects[0]?.id ?? null;
   const [tasks, users] = await Promise.all([
-    activeProjectId
-      ? prisma.task.findMany({
-          where: { projectId: activeProjectId, status: { not: "CANCELLED" } },
-          include: { assignee: true, parentTask: true, dependencyTask: true },
-          orderBy: [{ position: "asc" }, { dueDate: "asc" }],
-        })
-      : Promise.resolve([]),
+    activeProjectId ? loadTasks(activeProjectId) : Promise.resolve([]),
     prisma.user.findMany({
       where: { status: "ACTIVE" },
       orderBy: { displayName: "asc" },
     }),
   ]);
+  const boardTasks = tasks.map(toBoardTask);
   return (
     <>
       <div className="admin-page-heading">
@@ -148,81 +129,32 @@ export default async function TasksPage({
           </button>
         </form>
       ) : null}
-      <section className="task-board">
-        {COLUMNS.map(([status, label]) => {
-          const columnTasks = tasks.filter((task) => task.status === status);
-          return (
-            <section key={status} className="task-column">
-              <header className="task-column__header">
-                <h2>{label}</h2>
-                <span>{columnTasks.length}</span>
-              </header>
-              <div className="task-column__list">
-                {columnTasks.length === 0 ? (
-                  <p className="admin-empty">Aucune tâche.</p>
-                ) : null}
-                {columnTasks.map((task) => (
-                  <article key={task.id} className="task-card">
-                    <div className="task-card__topline">
-                      <span>{PRIORITY_LABEL[task.priority]}</span>
-                      {task.dueDate ? (
-                        <time>{task.dueDate.toLocaleDateString("fr-FR")}</time>
-                      ) : null}
-                    </div>
-                    <h3>{task.title}</h3>
-                    <p>{task.assignee?.displayName ?? "Non affecté"}</p>
-                    {task.parentTask ? (
-                      <small>Sous-tâche de {task.parentTask.title}</small>
-                    ) : null}
-                    {task.dependencyTask ? (
-                      <small>Dépend de {task.dependencyTask.title}</small>
-                    ) : null}
-                    <div className="project-progress">
-                      <span style={{ width: `${task.progress}%` }} />
-                    </div>
-                    <form
-                      action={updateTaskAction}
-                      className="task-card__controls"
-                    >
-                      <input type="hidden" name="taskId" value={task.id} />
-                      <select name="status" defaultValue={task.status}>
-                        <option value="BACKLOG">Backlog</option>
-                        <option value="TODO">À faire</option>
-                        <option value="IN_PROGRESS">En cours</option>
-                        <option value="BLOCKED">Bloqué</option>
-                        <option value="REVIEW">Validation</option>
-                        <option value="DONE">Terminé</option>
-                        <option value="CANCELLED">Annulé</option>
-                      </select>
-                      <input
-                        name="progress"
-                        type="number"
-                        min={0}
-                        max={100}
-                        defaultValue={task.progress}
-                        aria-label="Progression"
-                      />
-                      <input
-                        name="actualHours"
-                        type="number"
-                        min={0}
-                        step="0.25"
-                        defaultValue={
-                          task.actualMinutes ? task.actualMinutes / 60 : 0
-                        }
-                        aria-label="Temps réalisé en heures"
-                      />
-                      <button className="admin-table__action" type="submit">
-                        Mettre à jour
-                      </button>
-                    </form>
-                  </article>
-                ))}
-              </div>
-            </section>
-          );
-        })}
-      </section>
+      <TaskBoard tasks={boardTasks} canMutate />
     </>
   );
+}
+
+function toBoardTask(
+  task: Awaited<ReturnType<typeof loadTasks>>[number],
+): BoardTask {
+  return {
+    id: task.id,
+    title: task.title,
+    status: task.status,
+    priority: task.priority,
+    progress: task.progress,
+    dueDate: task.dueDate ? task.dueDate.toLocaleDateString("fr-FR") : null,
+    assigneeName: task.assignee?.displayName ?? null,
+    actualHours: task.actualMinutes ? task.actualMinutes / 60 : 0,
+    parentTaskTitle: task.parentTask?.title ?? null,
+    dependencyTaskTitle: task.dependencyTask?.title ?? null,
+  };
+}
+
+function loadTasks(activeProjectId: string) {
+  return prisma.task.findMany({
+    where: { projectId: activeProjectId, status: { not: "CANCELLED" } },
+    include: { assignee: true, parentTask: true, dependencyTask: true },
+    orderBy: [{ position: "asc" }, { dueDate: "asc" }],
+  });
 }

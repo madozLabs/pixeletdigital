@@ -52,6 +52,52 @@ export async function createTaskAction(formData: FormData): Promise<void> {
   });
   revalidatePath("/workspace/tasks");
 }
+const TASK_STATUSES = [
+  "BACKLOG",
+  "TODO",
+  "IN_PROGRESS",
+  "BLOCKED",
+  "REVIEW",
+  "DONE",
+  "CANCELLED",
+] as const;
+type TaskStatus = (typeof TASK_STATUSES)[number];
+
+function isTaskStatus(value: string): value is TaskStatus {
+  return (TASK_STATUSES as readonly string[]).includes(value);
+}
+
+// Drag-and-drop column move: only touches status + position, never
+// progress/actualMinutes, so it can't clobber the values entered through
+// the manual edit form below.
+export async function moveTaskAction(
+  taskId: string,
+  status: string,
+): Promise<void> {
+  const context = await getWorkspaceRequestContext();
+  if (!context?.actor || !mayManageTasks(context.actor.role)) return;
+  if (!isTaskStatus(status)) return;
+
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    select: { projectId: true, project: { select: { worldKey: true } } },
+  });
+  if (!task) return;
+  requireWorldAccess(context.actor, task.project.worldKey);
+
+  const last = await prisma.task.findFirst({
+    where: { projectId: task.projectId, status },
+    orderBy: { position: "desc" },
+    select: { position: true },
+  });
+
+  await prisma.task.update({
+    where: { id: taskId },
+    data: { status, position: (last?.position ?? -1) + 1 },
+  });
+  revalidatePath("/workspace/tasks");
+}
+
 export async function updateTaskAction(formData: FormData): Promise<void> {
   const context = await getWorkspaceRequestContext();
   if (!context?.actor || !mayManageTasks(context.actor.role)) return;
