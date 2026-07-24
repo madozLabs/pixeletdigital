@@ -872,8 +872,23 @@ a.world-switcher__item:focus-visible {
 .admin-nav {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: var(--space-2);
   flex: 1;
+}
+
+.admin-nav__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.admin-nav__group-label {
+  padding: 0.6em 0.75em 0.2em;
+  font-size: 0.72em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
 }
 
 .admin-nav__item {
@@ -1299,6 +1314,15 @@ a.world-switcher__item:focus-visible {
     flex-wrap: wrap;
   }
 
+  .admin-nav__group {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .admin-nav__group-label {
+    display: none;
+  }
+
   .admin-shell {
     flex-direction: column;
   }
@@ -1578,19 +1602,24 @@ a.world-switcher__item:focus-visible {
   justify-content: flex-start;
 }
 
-.client-card__identity img,
-.client-card__logo-placeholder {
+.client-card__identity img {
   width: 3.5rem;
   height: 3.5rem;
   border-radius: var(--radius-control);
   object-fit: cover;
 }
-.client-card__logo-placeholder {
-  display: grid;
-  place-items: center;
-  background: var(--hairline);
-  font-weight: 800;
+
+.client-card__identity .avatar--md {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: var(--radius-control);
   font-size: var(--step-2);
+}
+
+.client-card__person {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .client-card__meta {

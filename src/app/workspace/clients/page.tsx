@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
+import { Avatar } from "../_components/avatar";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import { archiveProfessionalClientAction } from "./actions";
 import { ClientContactForm, CreateClientForm } from "./client-forms";
@@ -82,9 +83,7 @@ export default async function ClientsPage({
                 {client.logoUrl ? (
                   <img src={client.logoUrl} alt="" width={56} height={56} />
                 ) : (
-                  <span className="client-card__logo-placeholder">
-                    {client.name.slice(0, 1)}
-                  </span>
+                  <Avatar name={client.name} size="md" />
                 )}
                 <div>
                   <h2>{client.name}</h2>
@@ -102,11 +101,23 @@ export default async function ClientsPage({
             <dl className="client-card__meta">
               <div>
                 <dt>Responsable</dt>
-                <dd>{client.accountManager?.displayName ?? "Non affecté"}</dd>
+                <dd className="client-card__person">
+                  <Avatar
+                    name={client.accountManager?.displayName ?? null}
+                    size="xs"
+                  />
+                  {client.accountManager?.displayName ?? "Non affecté"}
+                </dd>
               </div>
               <div>
                 <dt>Commercial</dt>
-                <dd>{client.commercialOwner?.displayName ?? "Non affecté"}</dd>
+                <dd className="client-card__person">
+                  <Avatar
+                    name={client.commercialOwner?.displayName ?? null}
+                    size="xs"
+                  />
+                  {client.commercialOwner?.displayName ?? "Non affecté"}
+                </dd>
               </div>
               <div>
                 <dt>Équipe</dt>
@@ -128,10 +139,13 @@ export default async function ClientsPage({
               ) : (
                 <ul>
                   {client.contacts.map((contact) => (
-                    <li key={contact.id}>
-                      <strong>{contact.name}</strong>
-                      {contact.role ? ` · ${contact.role}` : ""}
-                      {contact.isPrimary ? " · Principal" : ""}
+                    <li key={contact.id} className="client-card__person">
+                      <Avatar name={contact.name} size="xs" />
+                      <span>
+                        <strong>{contact.name}</strong>
+                        {contact.role ? ` · ${contact.role}` : ""}
+                        {contact.isPrimary ? " · Principal" : ""}
+                      </span>
                     </li>
                   ))}
                 </ul>
