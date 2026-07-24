@@ -25,6 +25,21 @@ const WORLDS = [
 
 const UNGROUPED_TAB_ID = "autres";
 
+const AVAILABILITY_LABEL: Readonly<Record<string, string>> = {
+  CANDIDATE: "Candidat",
+  CURRENT_STATED: "Annoncé",
+  APPROVED_CURRENT: "Approuvé",
+  FUTURE_ONLY: "À venir",
+  WITHDRAWN: "Retiré",
+};
+const AVAILABILITY_TONE: Readonly<Record<string, string>> = {
+  CANDIDATE: "neutral",
+  CURRENT_STATED: "scheduled",
+  APPROVED_CURRENT: "positive",
+  FUTURE_ONLY: "warning",
+  WITHDRAWN: "cancelled",
+};
+
 export default async function WorkspaceServicesPage({
   searchParams,
 }: {
@@ -63,6 +78,7 @@ export default async function WorkspaceServicesPage({
       </>
     );
   }
+  const totalServices = servicesResult.value.length;
 
   const families = [...familiesResult.value].sort((a, b) => a.order - b.order);
   const byFamily = new Map<string, Service[]>();
@@ -93,7 +109,15 @@ export default async function WorkspaceServicesPage({
 
   return (
     <>
-      <h1 className="admin-content__title">Services</h1>
+      <div className="admin-page-heading">
+        <div>
+          <h1 className="admin-content__title">Services</h1>
+          <p className="admin-content__lede">
+            Catalogue public par famille, cycle de vie et disponibilité.
+          </p>
+        </div>
+        <span className="admin-metric">{totalServices} services</span>
+      </div>
 
       {tabs.length === 0 ? (
         <p className="admin-empty">
@@ -140,7 +164,14 @@ export default async function WorkspaceServicesPage({
                       <td>
                         <LifecycleBadge lifecycle={service.lifecycle} />
                       </td>
-                      <td>{service.availabilityStatus}</td>
+                      <td>
+                        <span
+                          className={`status-badge status-badge--${AVAILABILITY_TONE[service.availabilityStatus] ?? "neutral"}`}
+                        >
+                          {AVAILABILITY_LABEL[service.availabilityStatus] ??
+                            service.availabilityStatus}
+                        </span>
+                      </td>
                       <td className="admin-table__actions">
                         {service.lifecycle === "DRAFT" && (
                           <form action={submitForReviewAction}>

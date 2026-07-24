@@ -136,7 +136,9 @@ export default async function WorkspaceBillingPage({
                       <p className="billing-card__eyebrow">{quote.number}</p>
                       <h2>{quote.client.name}</h2>
                     </div>
-                    <span className="status-badge">
+                    <span
+                      className={`status-badge status-badge--${quote.status.toLowerCase()}`}
+                    >
                       {QUOTE_STATUS_LABEL[quote.status]}
                     </span>
                   </header>
@@ -277,7 +279,9 @@ export default async function WorkspaceBillingPage({
                     <p className="billing-card__eyebrow">{invoice.number}</p>
                     <h2>{invoice.client.name}</h2>
                   </div>
-                  <span className="status-badge">
+                  <span
+                    className={`status-badge status-badge--${invoice.status.toLowerCase()}`}
+                  >
                     {INVOICE_STATUS_LABEL[invoice.status]}
                   </span>
                 </header>

@@ -58,8 +58,11 @@ export default async function SiteContentPage({
       <div className="admin-page-heading">
         <div>
           <h1 className="admin-content__title">Site &amp; contenus</h1>
-          <p>Gérez les pages, leurs sections et la médiathèque Supabase.</p>
+          <p className="admin-content__lede">
+            Gérez les pages, leurs sections et la médiathèque Supabase.
+          </p>
         </div>
+        <span className="admin-metric">{pages.length} pages</span>
       </div>
 
       <div className="admin-tabs" role="tablist">
@@ -127,7 +130,7 @@ function PagesPanel({
             <option>PORTFOLIO</option>
           </select>
         </label>
-        <button className="button button--primary" type="submit">
+        <button className="admin-table__action" type="submit">
           Créer la page
         </button>
       </form>
@@ -312,7 +315,9 @@ function NewSectionForm({ pageId, order }: { pageId: string; order: number }) {
           }
         />
       </label>
-      <button className="button button--primary">Ajouter</button>
+      <button className="admin-table__action" type="submit">
+        Ajouter
+      </button>
     </form>
   );
 }
@@ -378,7 +383,7 @@ function MediaPanel({
           Tags
           <input name="tags" placeholder="équipe, campagne, print" />
         </label>
-        <button className="button button--primary">
+        <button className="admin-table__action" type="submit">
           Envoyer vers Supabase
         </button>
         <p className="section__note">

@@ -3834,7 +3834,9 @@ a.world-switcher__item:focus-visible {
 .status-badge--approved,
 .status-badge--completed,
 .status-badge--paid,
-.status-badge--done {
+.status-badge--done,
+.status-badge--accepted,
+.status-badge--converted {
   background: color-mix(in srgb, #00a67e 15%, var(--wk-card));
   color: #007a5c;
 }
@@ -3859,7 +3861,9 @@ a.world-switcher__item:focus-visible {
 .status-badge--cancelled,
 .status-badge--overdue,
 .status-badge--blocked,
-.status-badge--inactive {
+.status-badge--inactive,
+.status-badge--declined,
+.status-badge--expired {
   background: color-mix(in srgb, #e5484d 13%, var(--wk-card));
   color: #c22f34;
 }
@@ -3877,7 +3881,9 @@ a.world-switcher__item:focus-visible {
 [data-theme="dark"] .status-badge--approved,
 [data-theme="dark"] .status-badge--completed,
 [data-theme="dark"] .status-badge--paid,
-[data-theme="dark"] .status-badge--done {
+[data-theme="dark"] .status-badge--done,
+[data-theme="dark"] .status-badge--accepted,
+[data-theme="dark"] .status-badge--converted {
   color: #4cd7ae;
 }
 
@@ -3899,8 +3905,65 @@ a.world-switcher__item:focus-visible {
 [data-theme="dark"] .status-badge--cancelled,
 [data-theme="dark"] .status-badge--overdue,
 [data-theme="dark"] .status-badge--blocked,
-[data-theme="dark"] .status-badge--inactive {
+[data-theme="dark"] .status-badge--inactive,
+[data-theme="dark"] .status-badge--declined,
+[data-theme="dark"] .status-badge--expired {
   color: #ff8589;
+}
+
+/* --- Billing cards ----------------------------------------------------- */
+
+.billing-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: var(--space-3);
+}
+
+.billing-card {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.billing-card header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.billing-card__eyebrow {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+
+.billing-card h2 {
+  margin: 0.15rem 0 0;
+  font-size: 1.05rem;
+}
+
+.billing-inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.billing-inline-form input,
+.billing-inline-form select {
+  min-width: 0;
+  flex: 1 1 8rem;
+}
+
+@media (max-width: 42rem) {
+  .billing-card-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* --- Misc polish ------------------------------------------------------ */

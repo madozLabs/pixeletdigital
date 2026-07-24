@@ -29,13 +29,23 @@ export default async function WorkspaceEnquiriesPage({
     { worldKey },
   );
 
+  const enquiries = result.ok ? result.value : [];
+
   return (
     <>
-      <h1 className="admin-content__title">Demandes de contact</h1>
+      <div className="admin-page-heading">
+        <div>
+          <h1 className="admin-content__title">Demandes de contact</h1>
+          <p className="admin-content__lede">
+            Messages reçus via les formulaires publics du site.
+          </p>
+        </div>
+        <span className="admin-metric">{enquiries.length} demandes</span>
+      </div>
 
       {!result.ok ? (
         <p role="alert">{result.error.message}</p>
-      ) : result.value.length === 0 ? (
+      ) : enquiries.length === 0 ? (
         <p className="admin-empty">Aucune demande reçue pour cet univers.</p>
       ) : (
         <div className="admin-table-wrap">
@@ -52,9 +62,9 @@ export default async function WorkspaceEnquiriesPage({
               </tr>
             </thead>
             <tbody>
-              {result.value.map((enquiry) => (
+              {enquiries.map((enquiry) => (
                 <tr key={enquiry.id}>
-                  <td>{enquiry.submittedAt.toISOString()}</td>
+                  <td>{formatDateTime(enquiry.submittedAt)}</td>
                   <td>{enquiry.name}</td>
                   <td>{enquiry.email}</td>
                   <td>{enquiry.phone ?? "—"}</td>
@@ -71,4 +81,15 @@ export default async function WorkspaceEnquiriesPage({
       )}
     </>
   );
+}
+
+function formatDateTime(date: Date): string {
+  return date.toLocaleString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  });
 }
