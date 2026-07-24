@@ -13,6 +13,7 @@ const OPEN_TASK_STATUSES = [
   "REVIEW",
 ] as const;
 const REVIEW_STATUSES = ["INTERNAL_REVIEW", "CLIENT_REVIEW"] as const;
+const BILLING_ROLES = ["SUPER_ADMIN", "ADMIN", "WORLD_MANAGER"] as const;
 
 export default async function WorkspaceDashboardPage({
   searchParams,
@@ -25,6 +26,12 @@ export default async function WorkspaceDashboardPage({
   const now = context.clock.now();
   const weekEnd = new Date(now);
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
+  const canSeeBilling = Boolean(
+    context.actor?.role &&
+    BILLING_ROLES.includes(
+      context.actor.role as (typeof BILLING_ROLES)[number],
+    ),
+  );
 
   const [activeClients, projects, tasks, editorialItems, invoices, users] =
     await Promise.all([
@@ -50,10 +57,12 @@ export default async function WorkspaceDashboardPage({
         include: { client: true, owner: true, reviewer: true },
         orderBy: { scheduledFor: "asc" },
       }),
-      prisma.invoice.findMany({
-        where: { worldKey, status: { in: ["SENT", "PAID"] } },
-        include: { lines: true },
-      }),
+      canSeeBilling
+        ? prisma.invoice.findMany({
+            where: { worldKey, status: { in: ["SENT", "PAID"] } },
+            include: { lines: true },
+          })
+        : Promise.resolve([]),
       prisma.user.findMany({
         where: { status: "ACTIVE" },
         include: {
@@ -123,16 +132,20 @@ export default async function WorkspaceDashboardPage({
           value={dueSoonTasks.length}
           href="/workspace/tasks"
         />
-        <Metric
-          label="Facturé en attente"
-          value={formatXof(sentAmount)}
-          href="/workspace/billing"
-        />
-        <Metric
-          label="Encaissé"
-          value={formatXof(paidAmount)}
-          href="/workspace/billing"
-        />
+        {canSeeBilling ? (
+          <>
+            <Metric
+              label="Facturé en attente"
+              value={formatXof(sentAmount)}
+              href="/workspace/billing"
+            />
+            <Metric
+              label="Encaissé"
+              value={formatXof(paidAmount)}
+              href="/workspace/billing"
+            />
+          </>
+        ) : null}
       </section>
 
       <div className="dashboard-grid">

@@ -1,4 +1,4 @@
-import Image from "next/image";
+/* eslint-disable @next/next/no-img-element */
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
@@ -80,7 +80,7 @@ export default async function ClientsPage({
             <header className="client-card__header">
               <div className="client-card__identity">
                 {client.logoUrl ? (
-                  <Image src={client.logoUrl} alt="" width={56} height={56} />
+                  <img src={client.logoUrl} alt="" width={56} height={56} />
                 ) : (
                   <span className="client-card__logo-placeholder">
                     {client.name.slice(0, 1)}

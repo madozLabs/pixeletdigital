@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
+import { requireWorldAccess } from "../_lib/authorization";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 
 function text(formData: FormData, key: string): string {
@@ -21,13 +22,16 @@ export async function createProjectAction(formData: FormData): Promise<void> {
   const context = await getWorkspaceRequestContext();
   if (!context?.actor || !mayManageProjects(context.actor.role)) return;
 
+  const worldKey = text(formData, "worldKey");
+  requireWorldAccess(context.actor, worldKey);
+
   const budget = Number(formData.get("budget"));
   const startDate = optionalText(formData, "startDate");
   const dueDate = optionalText(formData, "dueDate");
 
   await prisma.project.create({
     data: {
-      worldKey: text(formData, "worldKey"),
+      worldKey,
       clientId: text(formData, "clientId"),
       name: text(formData, "name"),
       description: optionalText(formData, "description"),
@@ -47,9 +51,17 @@ export async function updateProjectAction(formData: FormData): Promise<void> {
   const context = await getWorkspaceRequestContext();
   if (!context?.actor || !mayManageProjects(context.actor.role)) return;
 
+  const projectId = text(formData, "projectId");
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { worldKey: true },
+  });
+  if (!project) return;
+  requireWorldAccess(context.actor, project.worldKey);
+
   const progress = Number(formData.get("progress"));
   await prisma.project.update({
-    where: { id: text(formData, "projectId") },
+    where: { id: projectId },
     data: {
       status: text(formData, "status") as
         "PLANNED" | "ACTIVE" | "ON_HOLD" | "COMPLETED" | "CANCELLED",
