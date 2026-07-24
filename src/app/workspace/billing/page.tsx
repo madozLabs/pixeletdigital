@@ -5,12 +5,15 @@ import { prisma } from "@/infrastructure/shared/prisma-client";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import { formatXof } from "./_lib/money";
 import {
+  archiveCatalogueItemAction,
+  cancelInvoiceAction,
   convertQuoteToInvoiceAction,
+  createCatalogueItemAction,
   createQuoteAction,
+  markInvoiceSentAction,
   recordPaymentAction,
   updateQuoteStatusAction,
-} from "./professional-actions";
-import { cancelInvoiceAction, markInvoiceSentAction } from "./actions";
+} from "./actions";
 
 const BILLING_ROLES = ["SUPER_ADMIN", "ADMIN", "WORLD_MANAGER"] as const;
 const TABS = [
@@ -384,26 +387,75 @@ export default async function WorkspaceBillingPage({
       ) : null}
 
       {activeTab === "catalogue" ? (
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Libellé</th>
-                <th>Type</th>
-                <th>Prix XOF</th>
-              </tr>
-            </thead>
-            <tbody>
-              {catalogue.map((item) => (
-                <tr key={item.id}>
-                  <td>{item.label}</td>
-                  <td>{item.kind === "SERVICE" ? "Service" : "Produit"}</td>
-                  <td>{formatXof(item.unitPriceCents)}</td>
+        <>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Libellé</th>
+                  <th>Type</th>
+                  <th>Prix XOF</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {catalogue.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="admin-empty">
+                      Aucun service ou produit.
+                    </td>
+                  </tr>
+                ) : (
+                  catalogue.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.label}</td>
+                      <td>{item.kind === "SERVICE" ? "Service" : "Produit"}</td>
+                      <td>{formatXof(item.unitPriceCents)}</td>
+                      <td>
+                        <form action={archiveCatalogueItemAction}>
+                          <input type="hidden" name="id" value={item.id} />
+                          <input
+                            type="hidden"
+                            name="expectedVersion"
+                            value={item.version}
+                          />
+                          <button className="admin-table__action" type="submit">
+                            Archiver
+                          </button>
+                        </form>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <h2 className="admin-content__subtitle">
+            Ajouter un service ou produit
+          </h2>
+          <form action={createCatalogueItemAction} className="editorial-form">
+            <input type="hidden" name="worldKey" value={worldKey} />
+            <label>
+              Libellé
+              <input type="text" name="label" required maxLength={160} />
+            </label>
+            <label>
+              Type
+              <select name="kind" defaultValue="SERVICE">
+                <option value="SERVICE">Service</option>
+                <option value="PRODUCT">Produit</option>
+              </select>
+            </label>
+            <label>
+              Prix unitaire (XOF)
+              <input type="number" name="unitPrice" required min={0} step={1} />
+            </label>
+            <button type="submit" className="admin-table__action">
+              Ajouter au catalogue
+            </button>
+          </form>
+        </>
       ) : null}
     </>
   );

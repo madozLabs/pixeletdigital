@@ -7,8 +7,8 @@ import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-wo
 
 import { createClient } from "../domain/client";
 import {
+  applyInvoicePayment,
   createDraftInvoice,
-  markInvoiceSent,
   type Invoice,
 } from "../domain/invoice";
 import { PrismaClientRepository } from "./prisma-client-repository";
@@ -48,7 +48,7 @@ afterAll(async () => {
 });
 
 describe("PrismaInvoiceRepository", () => {
-  it("persists and reloads a draft invoice with its lines", async () => {
+  it("persists and reloads a draft invoice with its lines and computed totals", async () => {
     const invoice = validInvoice({ id: "billing_invoice_test_01" });
 
     await repository.save(invoice);
@@ -60,22 +60,30 @@ describe("PrismaInvoiceRepository", () => {
   it("persists a status transition without touching lines", async () => {
     const invoice = validInvoice({
       id: "billing_invoice_test_02",
-      number: "PD-2026-0002",
+      number: "PD-FA-2026-0002",
     });
     await repository.save(invoice);
-    const sent = markInvoiceSent(invoice, new Date("2026-07-23T10:00:00.000Z"));
-    if (!sent.ok) throw new Error("expected transition to succeed");
+    const paid = applyInvoicePayment(
+      invoice,
+      invoice.totalCents,
+      new Date("2026-07-23T10:00:00.000Z"),
+    );
+    if (!paid.ok) throw new Error("expected payment application to succeed");
 
-    await repository.save(sent.value);
+    await repository.save(paid.value);
     const persisted = await repository.findById(invoice.id);
 
-    expect(persisted).toEqual(sent.value);
+    expect(persisted).toEqual(paid.value);
+    expect(persisted?.status).toBe("PAID");
   });
 
   it("counts invoices for a world", async () => {
     const before = await repository.countByWorld("billing-invoice-test-world");
     await repository.save(
-      validInvoice({ id: "billing_invoice_test_03", number: "PD-2026-COUNT" }),
+      validInvoice({
+        id: "billing_invoice_test_03",
+        number: "PD-FA-2026-COUNT",
+      }),
     );
 
     const after = await repository.countByWorld("billing-invoice-test-world");
@@ -110,7 +118,7 @@ function validInvoice(
     id: overrides.id ?? "billing_invoice_test_default",
     worldKey: "billing-invoice-test-world",
     clientId: "billing_invoice_test_client",
-    number: overrides.number ?? "PD-2026-0001",
+    number: overrides.number ?? "PD-FA-2026-0001",
     lines: [
       {
         id: `${overrides.id ?? "default"}_line_01`,
@@ -125,7 +133,11 @@ function validInvoice(
         unitPriceCents: 20000,
       },
     ],
+    discountCents: 5000,
+    taxRateBps: 1800,
+    notes: "Acompte de 50% à la commande.",
     issuedAt: now,
+    dueAt: new Date("2026-08-22T00:00:00.000Z"),
     createdAt: now,
     updatedAt: now,
   });

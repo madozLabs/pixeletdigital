@@ -10,18 +10,19 @@ import {
   createCatalogueItem,
 } from "@/modules/billing/application/catalogue-item-use-cases";
 import {
-  archiveClient,
-  createClient,
-} from "@/modules/billing/application/client-use-cases";
-import {
   cancelInvoice,
-  createDraftInvoice,
-  markInvoicePaid,
   markInvoiceSent,
 } from "@/modules/billing/application/invoice-use-cases";
+import { recordInvoicePayment } from "@/modules/billing/application/payment-use-cases";
+import {
+  convertQuoteToInvoice,
+  createDraftQuote,
+  updateQuoteStatus,
+} from "@/modules/billing/application/quote-use-cases";
 import { PrismaCatalogueItemRepository } from "@/modules/billing/infrastructure/prisma-catalogue-item-repository";
-import { PrismaClientRepository } from "@/modules/billing/infrastructure/prisma-client-repository";
 import { PrismaInvoiceRepository } from "@/modules/billing/infrastructure/prisma-invoice-repository";
+import { PrismaPaymentRepository } from "@/modules/billing/infrastructure/prisma-payment-repository";
+import { PrismaQuoteRepository } from "@/modules/billing/infrastructure/prisma-quote-repository";
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
 
 import { getWorkspaceRequestContext } from "../get-workspace-context";
@@ -30,40 +31,9 @@ function worldDependencies() {
   return { worlds: new PrismaWorldRepository(prisma) };
 }
 
-export async function createClientAction(formData: FormData): Promise<void> {
-  const context = await getWorkspaceRequestContext();
-  if (!context) return;
-
-  const result = await createClient(
-    { clients: new PrismaClientRepository(prisma), ...worldDependencies() },
-    context,
-    {
-      id: randomUUID(),
-      worldKey: String(formData.get("worldKey")),
-      name: String(formData.get("name")),
-      email: String(formData.get("email") ?? ""),
-      phone: String(formData.get("phone") ?? ""),
-      address: String(formData.get("address") ?? ""),
-    },
-  );
-  if (!result.ok) console.error("createClient failed", result.error);
-  revalidatePath("/workspace/billing");
-}
-
-export async function archiveClientAction(formData: FormData): Promise<void> {
-  const context = await getWorkspaceRequestContext();
-  if (!context) return;
-
-  const result = await archiveClient(
-    { clients: new PrismaClientRepository(prisma), ...worldDependencies() },
-    context,
-    {
-      id: String(formData.get("id")),
-      expectedVersion: Number(formData.get("expectedVersion")),
-    },
-  );
-  if (!result.ok) console.error("archiveClient failed", result.error);
-  revalidatePath("/workspace/billing");
+function xofToCents(value: FormDataEntryValue | null): number {
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount > 0 ? Math.round(amount * 100) : 0;
 }
 
 export async function createCatalogueItemAction(
@@ -72,7 +42,6 @@ export async function createCatalogueItemAction(
   const context = await getWorkspaceRequestContext();
   if (!context) return;
 
-  const priceXof = Number(formData.get("unitPrice"));
   const result = await createCatalogueItem(
     {
       catalogueItems: new PrismaCatalogueItemRepository(prisma),
@@ -84,7 +53,7 @@ export async function createCatalogueItemAction(
       worldKey: String(formData.get("worldKey")),
       label: String(formData.get("label")),
       kind: String(formData.get("kind")),
-      unitPriceCents: Math.round(priceXof * 100),
+      unitPriceCents: xofToCents(formData.get("unitPrice")),
     },
   );
   if (!result.ok) console.error("createCatalogueItem failed", result.error);
@@ -112,37 +81,90 @@ export async function archiveCatalogueItemAction(
   revalidatePath("/workspace/billing");
 }
 
-export async function createInvoiceAction(formData: FormData): Promise<void> {
-  const context = await getWorkspaceRequestContext();
-  if (!context) return;
-
-  const lines = [1, 2, 3].flatMap((index) => {
+function quoteLinesFromForm(formData: FormData) {
+  return [1, 2, 3].flatMap((index) => {
     const label = String(formData.get(`lineLabel${index}`) ?? "").trim();
     if (!label) return [];
-    const quantity = Number(formData.get(`lineQuantity${index}`) ?? 1);
-    const priceEuros = Number(formData.get(`lineUnitPrice${index}`) ?? 0);
     return [
       {
         id: randomUUID(),
         label,
-        quantity,
-        unitPriceCents: Math.round(priceEuros * 100),
+        quantity: Math.max(
+          1,
+          Number(formData.get(`lineQuantity${index}`)) || 1,
+        ),
+        unitPriceCents: xofToCents(formData.get(`lineUnitPrice${index}`)),
       },
     ];
   });
+}
 
-  const result = await createDraftInvoice(
-    { invoices: new PrismaInvoiceRepository(prisma), ...worldDependencies() },
+export async function createQuoteAction(formData: FormData): Promise<void> {
+  const context = await getWorkspaceRequestContext();
+  if (!context) return;
+
+  const validUntil = String(formData.get("validUntil") ?? "").trim();
+  const taxRate = Number(formData.get("taxRate"));
+  const result = await createDraftQuote(
+    { quotes: new PrismaQuoteRepository(prisma), ...worldDependencies() },
     context,
     {
       id: randomUUID(),
       worldKey: String(formData.get("worldKey")),
       clientId: String(formData.get("clientId")),
-      lines,
+      lines: quoteLinesFromForm(formData),
+      discountCents: xofToCents(formData.get("discount")),
+      taxRateBps: Number.isFinite(taxRate)
+        ? Math.max(0, Math.round(taxRate * 100))
+        : 0,
+      notes: String(formData.get("notes") ?? "").trim() || null,
       issuedAt: context.clock.now(),
+      validUntil: validUntil ? new Date(validUntil) : null,
     },
   );
-  if (!result.ok) console.error("createDraftInvoice failed", result.error);
+  if (!result.ok) console.error("createDraftQuote failed", result.error);
+  revalidatePath("/workspace/billing");
+}
+
+export async function updateQuoteStatusAction(
+  formData: FormData,
+): Promise<void> {
+  const context = await getWorkspaceRequestContext();
+  if (!context) return;
+
+  const result = await updateQuoteStatus(
+    { quotes: new PrismaQuoteRepository(prisma), ...worldDependencies() },
+    context,
+    {
+      id: String(formData.get("quoteId")),
+      expectedVersion: Number(formData.get("expectedVersion")),
+      status: String(formData.get("status")),
+    },
+  );
+  if (!result.ok) console.error("updateQuoteStatus failed", result.error);
+  revalidatePath("/workspace/billing");
+}
+
+export async function convertQuoteToInvoiceAction(
+  formData: FormData,
+): Promise<void> {
+  const context = await getWorkspaceRequestContext();
+  if (!context) return;
+
+  const result = await convertQuoteToInvoice(
+    {
+      quotes: new PrismaQuoteRepository(prisma),
+      invoices: new PrismaInvoiceRepository(prisma),
+      ...worldDependencies(),
+    },
+    context,
+    {
+      id: String(formData.get("quoteId")),
+      expectedVersion: Number(formData.get("expectedVersion")),
+      invoiceId: randomUUID(),
+    },
+  );
+  if (!result.ok) console.error("convertQuoteToInvoice failed", result.error);
   revalidatePath("/workspace/billing");
 }
 
@@ -162,22 +184,6 @@ export async function markInvoiceSentAction(formData: FormData): Promise<void> {
   revalidatePath("/workspace/billing");
 }
 
-export async function markInvoicePaidAction(formData: FormData): Promise<void> {
-  const context = await getWorkspaceRequestContext();
-  if (!context) return;
-
-  const result = await markInvoicePaid(
-    { invoices: new PrismaInvoiceRepository(prisma), ...worldDependencies() },
-    context,
-    {
-      id: String(formData.get("id")),
-      expectedVersion: Number(formData.get("expectedVersion")),
-    },
-  );
-  if (!result.ok) console.error("markInvoicePaid failed", result.error);
-  revalidatePath("/workspace/billing");
-}
-
 export async function cancelInvoiceAction(formData: FormData): Promise<void> {
   const context = await getWorkspaceRequestContext();
   if (!context) return;
@@ -192,4 +198,28 @@ export async function cancelInvoiceAction(formData: FormData): Promise<void> {
   );
   if (!result.ok) console.error("cancelInvoice failed", result.error);
   revalidatePath("/workspace/billing");
+}
+
+export async function recordPaymentAction(formData: FormData): Promise<void> {
+  const context = await getWorkspaceRequestContext();
+  if (!context) return;
+
+  const amountCents = xofToCents(formData.get("amount"));
+  const result = await recordInvoicePayment(
+    {
+      invoices: new PrismaInvoiceRepository(prisma),
+      payments: new PrismaPaymentRepository(prisma),
+    },
+    context,
+    {
+      invoiceId: String(formData.get("invoiceId")),
+      expectedVersion: Number(formData.get("expectedVersion")),
+      amountCents,
+      method: String(formData.get("method")),
+      reference: String(formData.get("reference") ?? "").trim() || null,
+    },
+  );
+  if (!result.ok) console.error("recordInvoicePayment failed", result.error);
+  revalidatePath("/workspace/billing");
+  revalidatePath("/workspace");
 }

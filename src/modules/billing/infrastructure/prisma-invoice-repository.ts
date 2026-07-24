@@ -38,7 +38,7 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
   // avoided in this codebase. Invoice lines are immutable once created
   // (the domain never edits them after createDraftInvoice), so only the
   // create path needs to also persist lines -- later saves only touch the
-  // invoice's own status/version fields.
+  // invoice's own status/version/paidAt fields.
   async save(invoice: Invoice): Promise<void> {
     const existing = await this.client.invoice.findUnique({
       where: { id: invoice.id },
@@ -51,9 +51,15 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
           id: invoice.id,
           worldKey: invoice.worldKey,
           clientId: invoice.clientId,
+          quoteId: invoice.quoteId,
           number: invoice.number,
           status: invoice.status,
+          discountCents: invoice.discountCents,
+          taxRateBps: invoice.taxRateBps,
+          notes: invoice.notes,
           issuedAt: invoice.issuedAt,
+          dueAt: invoice.dueAt,
+          paidAt: invoice.paidAt,
           version: invoice.version,
           createdAt: invoice.createdAt,
           updatedAt: invoice.updatedAt,
@@ -78,6 +84,7 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
       where: { id: invoice.id },
       data: {
         status: invoice.status,
+        paidAt: invoice.paidAt,
         version: invoice.version,
         updatedAt: invoice.updatedAt,
       },

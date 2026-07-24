@@ -5,7 +5,6 @@ import type { RequestContext } from "@/shared/request-context";
 import {
   cancelInvoice as cancelInvoiceDomain,
   createDraftInvoice as createDraftInvoiceDomain,
-  markInvoicePaid as markInvoicePaidDomain,
   markInvoiceSent as markInvoiceSentDomain,
   type DraftInvoiceLineInput,
   type Invoice,
@@ -27,16 +26,21 @@ export type InvoiceDependencies = Readonly<{
 }>;
 
 const WORLD_INVOICE_PREFIXES: Readonly<Record<string, string>> = {
-  "pixel-digital": "PD",
-  "kwaliti-print": "KP",
+  "pixel-digital": "PD-FA",
+  "kwaliti-print": "KP-FA",
 };
 
 export type CreateDraftInvoiceInput = Readonly<{
   id: string;
   worldKey: string;
   clientId: string;
+  quoteId?: string | null;
   lines: readonly DraftInvoiceLineInput[];
+  discountCents?: number;
+  taxRateBps?: number;
+  notes?: string | null;
   issuedAt: Date;
+  dueAt?: Date | null;
 }>;
 
 export async function createDraftInvoice(
@@ -83,9 +87,14 @@ export async function createDraftInvoice(
     id: input.id,
     worldKey: world.key,
     clientId: input.clientId,
+    quoteId: input.quoteId,
     number,
     lines: input.lines,
+    discountCents: input.discountCents,
+    taxRateBps: input.taxRateBps,
+    notes: input.notes,
     issuedAt: input.issuedAt,
+    dueAt: input.dueAt,
     createdAt: now,
     updatedAt: now,
   });
@@ -164,16 +173,6 @@ export async function markInvoiceSent(
 ): Promise<Result<Invoice, BillingApplicationError>> {
   return withMutableInvoice(dependencies, context, input, (invoice, now) =>
     markInvoiceSentDomain(invoice, now),
-  );
-}
-
-export async function markInvoicePaid(
-  dependencies: InvoiceDependencies,
-  context: RequestContext,
-  input: TransitionInvoiceInput,
-): Promise<Result<Invoice, BillingApplicationError>> {
-  return withMutableInvoice(dependencies, context, input, (invoice, now) =>
-    markInvoicePaidDomain(invoice, now),
   );
 }
 

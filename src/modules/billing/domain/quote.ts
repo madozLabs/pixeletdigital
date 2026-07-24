@@ -1,24 +1,18 @@
 export type Result<T, E> =
   Readonly<{ ok: true; value: T }> | Readonly<{ ok: false; error: E }>;
 
-export const INVOICE_STATUSES = [
+export const QUOTE_STATUSES = [
   "DRAFT",
   "SENT",
-  "PARTIALLY_PAID",
-  "PAID",
-  "OVERDUE",
+  "ACCEPTED",
+  "DECLINED",
+  "EXPIRED",
+  "CONVERTED",
   "CANCELLED",
 ] as const;
-export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
+export type QuoteStatus = (typeof QUOTE_STATUSES)[number];
 
-const CANCELLABLE_STATUSES: readonly InvoiceStatus[] = [
-  "DRAFT",
-  "SENT",
-  "PARTIALLY_PAID",
-  "OVERDUE",
-];
-
-export type InvoiceDomainErrorCode =
+export type QuoteDomainErrorCode =
   | "INVALID_ID"
   | "INVALID_WORLD_KEY"
   | "INVALID_CLIENT_ID"
@@ -32,15 +26,14 @@ export type InvoiceDomainErrorCode =
   | "INVALID_NOTES"
   | "INVALID_STATUS"
   | "INVALID_VERSION"
-  | "INVALID_TRANSITION"
-  | "INVALID_PAYMENT_AMOUNT";
+  | "INVALID_TRANSITION";
 
-export type InvoiceDomainError = Readonly<{
-  code: InvoiceDomainErrorCode;
+export type QuoteDomainError = Readonly<{
+  code: QuoteDomainErrorCode;
   message: string;
 }>;
 
-export type InvoiceLine = Readonly<{
+export type QuoteLine = Readonly<{
   id: string;
   label: string;
   quantity: number;
@@ -48,62 +41,60 @@ export type InvoiceLine = Readonly<{
   totalCents: number;
 }>;
 
-export type Invoice = Readonly<{
+export type Quote = Readonly<{
   id: string;
   worldKey: string;
   clientId: string;
-  quoteId: string | null;
   number: string;
-  status: InvoiceStatus;
+  status: QuoteStatus;
   subtotalCents: number;
   discountCents: number;
   taxRateBps: number;
   totalCents: number;
   notes: string | null;
-  lines: readonly InvoiceLine[];
+  lines: readonly QuoteLine[];
   issuedAt: Date;
-  dueAt: Date | null;
-  paidAt: Date | null;
+  validUntil: Date | null;
+  convertedAt: Date | null;
   version: number;
   createdAt: Date;
   updatedAt: Date;
 }>;
 
-export function isInvoiceStatus(value: string): value is InvoiceStatus {
-  return INVOICE_STATUSES.includes(value as InvoiceStatus);
+export function isQuoteStatus(value: string): value is QuoteStatus {
+  return QUOTE_STATUSES.includes(value as QuoteStatus);
 }
 
-export type DraftInvoiceLineInput = Readonly<{
+export type DraftQuoteLineInput = Readonly<{
   id: string;
   label: string;
   quantity: number;
   unitPriceCents: number;
 }>;
 
-export type DraftInvoiceInput = Readonly<{
+export type DraftQuoteInput = Readonly<{
   id: string;
   worldKey: string;
   clientId: string;
-  quoteId?: string | null;
   number: string;
-  lines: readonly DraftInvoiceLineInput[];
+  lines: readonly DraftQuoteLineInput[];
   discountCents?: number;
   taxRateBps?: number;
   notes?: string | null;
   issuedAt: Date;
-  dueAt?: Date | null;
+  validUntil?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }>;
 
-export function createDraftInvoice(
-  input: DraftInvoiceInput,
-): Result<Invoice, InvoiceDomainError> {
+export function createDraftQuote(
+  input: DraftQuoteInput,
+): Result<Quote, QuoteDomainError> {
   const id = input.id.trim();
   if (!id || id.length > 128) {
     return failure(
       "INVALID_ID",
-      "Invoice id must be a non-empty opaque identifier.",
+      "Quote id must be a non-empty opaque identifier.",
     );
   }
 
@@ -114,7 +105,7 @@ export function createDraftInvoice(
   if (!clientId) {
     return failure(
       "INVALID_CLIENT_ID",
-      "Invoice clientId must be a non-empty identifier.",
+      "Quote clientId must be a non-empty identifier.",
     );
   }
 
@@ -122,15 +113,15 @@ export function createDraftInvoice(
   if (!number || number.length > 40) {
     return failure(
       "INVALID_NUMBER",
-      "Invoice number must contain between 1 and 40 characters.",
+      "Quote number must contain between 1 and 40 characters.",
     );
   }
 
   if (input.lines.length === 0) {
-    return failure("INVALID_LINES", "Invoice must contain at least one line.");
+    return failure("INVALID_LINES", "Quote must contain at least one line.");
   }
 
-  const lines: InvoiceLine[] = [];
+  const lines: QuoteLine[] = [];
   for (const rawLine of input.lines) {
     const lineResult = buildLine(rawLine);
     if (!lineResult.ok) return lineResult;
@@ -159,7 +150,6 @@ export function createDraftInvoice(
       id,
       worldKey: worldKeyResult.value,
       clientId,
-      quoteId: input.quoteId?.trim() || null,
       number,
       status: "DRAFT",
       subtotalCents,
@@ -169,8 +159,8 @@ export function createDraftInvoice(
       notes: notesResult.value,
       lines: Object.freeze(lines),
       issuedAt: new Date(input.issuedAt),
-      dueAt: input.dueAt ? new Date(input.dueAt) : null,
-      paidAt: null,
+      validUntil: input.validUntil ? new Date(input.validUntil) : null,
+      convertedAt: null,
       version: 1,
       createdAt: new Date(input.createdAt),
       updatedAt: new Date(input.updatedAt),
@@ -178,53 +168,52 @@ export function createDraftInvoice(
   };
 }
 
-export function restoreInvoice(
+export function restoreQuote(
   input: Readonly<{
     id: string;
     worldKey: string;
     clientId: string;
-    quoteId: string | null;
     number: string;
     status: string;
     discountCents: number;
     taxRateBps: number;
     notes: string | null;
-    lines: readonly InvoiceLine[];
+    lines: readonly QuoteLine[];
     issuedAt: Date;
-    dueAt: Date | null;
-    paidAt: Date | null;
+    validUntil: Date | null;
+    convertedAt: Date | null;
     version: number;
     createdAt: Date;
     updatedAt: Date;
   }>,
-): Result<Invoice, InvoiceDomainError> {
+): Result<Quote, QuoteDomainError> {
   const id = input.id.trim();
   if (!id || id.length > 128) {
     return failure(
       "INVALID_ID",
-      "Invoice id must be a non-empty opaque identifier.",
+      "Quote id must be a non-empty opaque identifier.",
     );
   }
 
   const worldKeyResult = parseWorldKey(input.worldKey);
   if (!worldKeyResult.ok) return worldKeyResult;
 
-  if (!isInvoiceStatus(input.status)) {
+  if (!isQuoteStatus(input.status)) {
     return failure(
       "INVALID_STATUS",
-      "Invoice status is not part of the controlled vocabulary.",
+      "Quote status is not part of the controlled vocabulary.",
     );
   }
 
   if (!Number.isInteger(input.version) || input.version < 1) {
     return failure(
       "INVALID_VERSION",
-      "Invoice version must be a positive integer.",
+      "Quote version must be a positive integer.",
     );
   }
 
   if (input.lines.length === 0) {
-    return failure("INVALID_LINES", "Invoice must contain at least one line.");
+    return failure("INVALID_LINES", "Quote must contain at least one line.");
   }
 
   const subtotalCents = sumLines(input.lines);
@@ -240,7 +229,6 @@ export function restoreInvoice(
       id,
       worldKey: worldKeyResult.value,
       clientId: input.clientId,
-      quoteId: input.quoteId,
       number: input.number,
       status: input.status,
       subtotalCents,
@@ -250,8 +238,8 @@ export function restoreInvoice(
       notes: input.notes,
       lines: Object.freeze([...input.lines]),
       issuedAt: new Date(input.issuedAt),
-      dueAt: input.dueAt ? new Date(input.dueAt) : null,
-      paidAt: input.paidAt ? new Date(input.paidAt) : null,
+      validUntil: input.validUntil ? new Date(input.validUntil) : null,
+      convertedAt: input.convertedAt ? new Date(input.convertedAt) : null,
       version: input.version,
       createdAt: new Date(input.createdAt),
       updatedAt: new Date(input.updatedAt),
@@ -259,85 +247,75 @@ export function restoreInvoice(
   };
 }
 
-export function markInvoiceSent(
-  invoice: Invoice,
+const SETTABLE_STATUSES: readonly QuoteStatus[] = [
+  "DRAFT",
+  "SENT",
+  "ACCEPTED",
+  "DECLINED",
+  "EXPIRED",
+  "CANCELLED",
+];
+
+export function setQuoteStatus(
+  quote: Quote,
+  status: string,
   updatedAt: Date,
-): Result<Invoice, InvoiceDomainError> {
-  if (invoice.status !== "DRAFT") {
+): Result<Quote, QuoteDomainError> {
+  if (quote.status === "CONVERTED") {
     return failure(
       "INVALID_TRANSITION",
-      `Only a draft invoice can be sent, but status is ${invoice.status}.`,
+      "A converted quote can no longer change status.",
     );
   }
-  return transition(invoice, { status: "SENT" }, updatedAt);
-}
-
-export function cancelInvoice(
-  invoice: Invoice,
-  updatedAt: Date,
-): Result<Invoice, InvoiceDomainError> {
-  if (!CANCELLABLE_STATUSES.includes(invoice.status)) {
+  if (!isQuoteStatus(status) || !SETTABLE_STATUSES.includes(status)) {
     return failure(
-      "INVALID_TRANSITION",
-      `An invoice with status ${invoice.status} cannot be cancelled.`,
-    );
-  }
-  return transition(invoice, { status: "CANCELLED" }, updatedAt);
-}
-
-export function applyInvoicePayment(
-  invoice: Invoice,
-  totalPaidCents: number,
-  paidAt: Date,
-): Result<Invoice, InvoiceDomainError> {
-  if (!CANCELLABLE_STATUSES.includes(invoice.status)) {
-    return failure(
-      "INVALID_TRANSITION",
-      `Cannot record a payment against an invoice with status ${invoice.status}.`,
-    );
-  }
-  if (!Number.isInteger(totalPaidCents) || totalPaidCents <= 0) {
-    return failure(
-      "INVALID_PAYMENT_AMOUNT",
-      "Payment amount must be a positive integer.",
+      "INVALID_STATUS",
+      "Quote status is not part of the controlled vocabulary.",
     );
   }
 
-  const isFullyPaid = totalPaidCents >= invoice.totalCents;
-  return transition(
-    invoice,
-    {
-      status: isFullyPaid ? "PAID" : "PARTIALLY_PAID",
-      paidAt: isFullyPaid ? paidAt : invoice.paidAt,
-    },
-    paidAt,
-  );
-}
-
-function transition(
-  invoice: Invoice,
-  changes: Readonly<{ status: InvoiceStatus; paidAt?: Date | null }>,
-  updatedAt: Date,
-): Result<Invoice, InvoiceDomainError> {
   return {
     ok: true,
     value: Object.freeze({
-      ...invoice,
-      ...changes,
-      version: invoice.version + 1,
+      ...quote,
+      status,
+      version: quote.version + 1,
       updatedAt: new Date(updatedAt),
     }),
   };
 }
 
+export function markQuoteConverted(
+  quote: Quote,
+  convertedAt: Date,
+): Result<Quote, QuoteDomainError> {
+  if (quote.status !== "ACCEPTED") {
+    return failure(
+      "INVALID_TRANSITION",
+      `Only an accepted quote can be converted, but status is ${quote.status}.`,
+    );
+  }
+
+  return {
+    ok: true,
+    value: Object.freeze({
+      ...quote,
+      status: "CONVERTED",
+      convertedAt: new Date(convertedAt),
+      version: quote.version + 1,
+      updatedAt: new Date(convertedAt),
+    }),
+  };
+}
+
 function buildLine(
-  rawLine: DraftInvoiceLineInput,
-): Result<InvoiceLine, InvoiceDomainError> {
+  rawLine: DraftQuoteLineInput,
+): Result<QuoteLine, QuoteDomainError> {
   const id = rawLine.id.trim();
   if (!id) {
     return failure(
       "INVALID_ID",
-      "Invoice line id must be a non-empty opaque identifier.",
+      "Quote line id must be a non-empty opaque identifier.",
     );
   }
 
@@ -345,21 +323,21 @@ function buildLine(
   if (!label || label.length > 160) {
     return failure(
       "INVALID_LINE_LABEL",
-      "Invoice line label must contain between 1 and 160 characters.",
+      "Quote line label must contain between 1 and 160 characters.",
     );
   }
 
   if (!Number.isInteger(rawLine.quantity) || rawLine.quantity < 1) {
     return failure(
       "INVALID_LINE_QUANTITY",
-      "Invoice line quantity must be a positive integer.",
+      "Quote line quantity must be a positive integer.",
     );
   }
 
   if (!Number.isInteger(rawLine.unitPriceCents) || rawLine.unitPriceCents < 0) {
     return failure(
       "INVALID_LINE_UNIT_PRICE_CENTS",
-      "Invoice line unitPriceCents must be a non-negative integer.",
+      "Quote line unitPriceCents must be a non-negative integer.",
     );
   }
 
@@ -375,7 +353,7 @@ function buildLine(
   };
 }
 
-function sumLines(lines: readonly InvoiceLine[]): number {
+function sumLines(lines: readonly QuoteLine[]): number {
   return lines.reduce(
     (sum, line) => sum + line.quantity * line.unitPriceCents,
     0,
@@ -391,34 +369,32 @@ function computeTotal(
   return taxable + Math.round((taxable * taxRateBps) / 10000);
 }
 
-function parseWorldKey(
-  rawWorldKey: string,
-): Result<string, InvoiceDomainError> {
+function parseWorldKey(rawWorldKey: string): Result<string, QuoteDomainError> {
   const worldKey = rawWorldKey.trim();
   if (!worldKey || worldKey.length > 64) {
     return failure(
       "INVALID_WORLD_KEY",
-      "Invoice worldKey must be a non-empty world stable key.",
+      "Quote worldKey must be a non-empty world stable key.",
     );
   }
   return { ok: true, value: worldKey };
 }
 
-function parseDiscountCents(value: number): Result<number, InvoiceDomainError> {
+function parseDiscountCents(value: number): Result<number, QuoteDomainError> {
   if (!Number.isInteger(value) || value < 0) {
     return failure(
       "INVALID_DISCOUNT_CENTS",
-      "Invoice discountCents must be a non-negative integer.",
+      "Quote discountCents must be a non-negative integer.",
     );
   }
   return { ok: true, value };
 }
 
-function parseTaxRateBps(value: number): Result<number, InvoiceDomainError> {
+function parseTaxRateBps(value: number): Result<number, QuoteDomainError> {
   if (!Number.isInteger(value) || value < 0 || value > 10000) {
     return failure(
       "INVALID_TAX_RATE_BPS",
-      "Invoice taxRateBps must be between 0 and 10000.",
+      "Quote taxRateBps must be between 0 and 10000.",
     );
   }
   return { ok: true, value };
@@ -426,21 +402,21 @@ function parseTaxRateBps(value: number): Result<number, InvoiceDomainError> {
 
 function parseNotes(
   value: string | null | undefined,
-): Result<string | null, InvoiceDomainError> {
+): Result<string | null, QuoteDomainError> {
   if (!value || !value.trim()) return { ok: true, value: null };
   const notes = value.trim();
   if (notes.length > 1200) {
     return failure(
       "INVALID_NOTES",
-      "Invoice notes must contain at most 1200 characters.",
+      "Quote notes must contain at most 1200 characters.",
     );
   }
   return { ok: true, value: notes };
 }
 
 function failure(
-  code: InvoiceDomainErrorCode,
+  code: QuoteDomainErrorCode,
   message: string,
-): Result<never, InvoiceDomainError> {
+): Result<never, QuoteDomainError> {
   return { ok: false, error: { code, message } };
 }

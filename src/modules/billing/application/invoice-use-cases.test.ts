@@ -14,7 +14,6 @@ import {
   cancelInvoice,
   createDraftInvoice,
   listInvoicesByWorld,
-  markInvoicePaid,
   markInvoiceSent,
 } from "./invoice-use-cases";
 import { InMemoryInvoiceRepository } from "./testing/in-memory-invoice-repository";
@@ -36,7 +35,11 @@ describe("createDraftInvoice", () => {
 
       expect(result).toMatchObject({
         ok: true,
-        value: { status: "DRAFT", number: "PD-2026-0001", totalCents: 45000 },
+        value: {
+          status: "DRAFT",
+          number: "PD-FA-2026-0001",
+          totalCents: 45000,
+        },
       });
       expect(dependencies.invoices.savedInvoices).toHaveLength(1);
     },
@@ -58,8 +61,20 @@ describe("createDraftInvoice", () => {
 
     expect(result).toMatchObject({
       ok: true,
-      value: { number: "PD-2026-0002" },
+      value: { number: "PD-FA-2026-0002" },
     });
+  });
+
+  it("applies discount and tax to the computed total", async () => {
+    const dependencies = dependenciesWithWorld();
+
+    const result = await createDraftInvoice(
+      dependencies,
+      context("ADMIN", [{ type: "GLOBAL" }]),
+      { ...validCreateInput(), discountCents: 5000, taxRateBps: 1000 },
+    );
+
+    expect(result).toMatchObject({ ok: true, value: { totalCents: 44000 } });
   });
 
   it.each<ApprovedRole>(["EDITOR", "SALES", "CONTRIBUTOR", "READER"])(
@@ -94,7 +109,7 @@ describe("listInvoicesByWorld", () => {
 });
 
 describe("invoice lifecycle use-cases", () => {
-  it("transitions DRAFT -> SENT -> PAID", async () => {
+  it("transitions DRAFT -> SENT", async () => {
     const dependencies = dependenciesWithWorld();
     const invoice = savedInvoice();
     await dependencies.invoices.save(invoice);
@@ -105,14 +120,6 @@ describe("invoice lifecycle use-cases", () => {
       { id: invoice.id, expectedVersion: invoice.version },
     );
     expect(sent).toMatchObject({ ok: true, value: { status: "SENT" } });
-    if (!sent.ok) return;
-
-    const paid = await markInvoicePaid(
-      dependencies,
-      context("ADMIN", [{ type: "GLOBAL" }]),
-      { id: sent.value.id, expectedVersion: sent.value.version },
-    );
-    expect(paid).toMatchObject({ ok: true, value: { status: "PAID" } });
   });
 
   it("cancels a draft invoice", async () => {
@@ -127,6 +134,20 @@ describe("invoice lifecycle use-cases", () => {
     );
 
     expect(result).toMatchObject({ ok: true, value: { status: "CANCELLED" } });
+  });
+
+  it("returns CONFLICT on a stale version", async () => {
+    const dependencies = dependenciesWithWorld();
+    const invoice = savedInvoice();
+    await dependencies.invoices.save(invoice);
+
+    const result = await cancelInvoice(
+      dependencies,
+      context("SUPER_ADMIN", [{ type: "GLOBAL" }]),
+      { id: invoice.id, expectedVersion: invoice.version + 1 },
+    );
+
+    expect(result).toMatchObject({ ok: false, error: { code: "CONFLICT" } });
   });
 });
 
@@ -169,7 +190,7 @@ function savedInvoice() {
     id: "invoice_use_case_saved",
     worldKey: "pixel-digital",
     clientId: "client_01",
-    number: "PD-2026-0001",
+    number: "PD-FA-2026-0001",
     lines: [
       {
         id: "line_01",

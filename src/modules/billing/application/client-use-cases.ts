@@ -8,6 +8,7 @@ import {
   editClient as editClientDomain,
   type Client,
   type ClientDomainError,
+  type ClientFields,
   type Result,
 } from "../domain/client";
 import type { BillingApplicationError } from "./application-error";
@@ -24,14 +25,8 @@ export type ClientDependencies = Readonly<{
   worlds: WorldRepository;
 }>;
 
-export type CreateClientInput = Readonly<{
-  id: string;
-  worldKey: string;
-  name: string;
-  email?: string | null;
-  phone?: string | null;
-  address?: string | null;
-}>;
+export type CreateClientInput = ClientFields &
+  Readonly<{ id: string; worldKey: string }>;
 
 export async function createClient(
   dependencies: ClientDependencies,
@@ -69,12 +64,9 @@ export async function createClient(
 
   const now = context.clock.now();
   const clientResult = createClientDomain({
+    ...input,
     id: input.id,
     worldKey: world.key,
-    name: input.name,
-    email: input.email,
-    phone: input.phone,
-    address: input.address,
     createdAt: now,
     updatedAt: now,
   });
@@ -82,6 +74,28 @@ export async function createClient(
 
   await dependencies.clients.save(clientResult.value);
   return { ok: true, value: clientResult.value };
+}
+
+export type GetClientByIdInput = Readonly<{ id: string }>;
+
+export async function getClientById(
+  dependencies: ClientDependencies,
+  context: RequestContext,
+  input: GetClientByIdInput,
+): Promise<Result<Client, BillingApplicationError>> {
+  const actorResult = requireActiveActor(context);
+  if (!actorResult.ok) return actorResult;
+
+  const client = await dependencies.clients.findById(input.id);
+  if (!client) return notFound();
+  if (
+    !mayAccessBilling(actorResult.value) ||
+    !hasWorldScope(actorResult.value, client.worldKey)
+  ) {
+    return forbidden();
+  }
+
+  return { ok: true, value: client };
 }
 
 export type ListClientsByWorldInput = Readonly<{ worldKey: string }>;
@@ -117,14 +131,8 @@ export async function listClientsByWorld(
   return { ok: true, value: clients };
 }
 
-export type EditClientInput = Readonly<{
-  id: string;
-  expectedVersion: number;
-  name: string;
-  email?: string | null;
-  phone?: string | null;
-  address?: string | null;
-}>;
+export type EditClientInput = ClientFields &
+  Readonly<{ id: string; expectedVersion: number }>;
 
 export async function editClient(
   dependencies: ClientDependencies,
@@ -132,16 +140,7 @@ export async function editClient(
   input: EditClientInput,
 ): Promise<Result<Client, BillingApplicationError>> {
   return withMutableClient(dependencies, context, input, (client, now) =>
-    editClientDomain(
-      client,
-      {
-        name: input.name,
-        email: input.email,
-        phone: input.phone,
-        address: input.address,
-      },
-      now,
-    ),
+    editClientDomain(client, input, now),
   );
 }
 

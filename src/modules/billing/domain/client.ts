@@ -10,6 +10,11 @@ export type ClientDomainErrorCode =
   | "INVALID_WORLD_KEY"
   | "INVALID_NAME"
   | "INVALID_EMAIL"
+  | "INVALID_LEGAL_NAME"
+  | "INVALID_INDUSTRY"
+  | "INVALID_WEBSITE"
+  | "INVALID_LOGO_URL"
+  | "INVALID_NOTES"
   | "INVALID_STATUS"
   | "INVALID_VERSION"
   | "INVALID_TRANSITION";
@@ -23,13 +28,36 @@ export type Client = Readonly<{
   id: string;
   worldKey: string;
   name: string;
+  legalName: string | null;
   email: string | null;
   phone: string | null;
   address: string | null;
+  website: string | null;
+  logoUrl: string | null;
+  industry: string | null;
+  notes: string | null;
+  accountManagerId: string | null;
+  commercialOwnerId: string | null;
+  teamId: string | null;
   status: ClientStatus;
   version: number;
   createdAt: Date;
   updatedAt: Date;
+}>;
+
+export type ClientFields = Readonly<{
+  name: string;
+  legalName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  website?: string | null;
+  logoUrl?: string | null;
+  industry?: string | null;
+  notes?: string | null;
+  accountManagerId?: string | null;
+  commercialOwnerId?: string | null;
+  teamId?: string | null;
 }>;
 
 export function isClientStatus(value: string): value is ClientStatus {
@@ -37,16 +65,12 @@ export function isClientStatus(value: string): value is ClientStatus {
 }
 
 export function createClient(
-  input: Readonly<{
+  input: ClientFields & {
     id: string;
     worldKey: string;
-    name: string;
-    email?: string | null;
-    phone?: string | null;
-    address?: string | null;
     createdAt: Date;
     updatedAt: Date;
-  }>,
+  },
 ): Result<Client, ClientDomainError> {
   const id = input.id.trim();
   if (!id || id.length > 128) {
@@ -59,21 +83,18 @@ export function createClient(
   const worldKeyResult = parseWorldKey(input.worldKey);
   if (!worldKeyResult.ok) return worldKeyResult;
 
-  const nameResult = parseName(input.name);
-  if (!nameResult.ok) return nameResult;
-
-  const emailResult = parseEmail(input.email);
-  if (!emailResult.ok) return emailResult;
+  const fieldsResult = parseFields(input);
+  if (!fieldsResult.ok) return fieldsResult;
 
   return {
     ok: true,
     value: Object.freeze({
       id,
       worldKey: worldKeyResult.value,
-      name: nameResult.value,
-      email: emailResult.value,
-      phone: input.phone?.trim() ? input.phone.trim() : null,
-      address: input.address?.trim() ? input.address.trim() : null,
+      ...fieldsResult.value,
+      accountManagerId: input.accountManagerId?.trim() || null,
+      commercialOwnerId: input.commercialOwnerId?.trim() || null,
+      teamId: input.teamId?.trim() || null,
       status: "ACTIVE",
       version: 1,
       createdAt: new Date(input.createdAt),
@@ -87,9 +108,17 @@ export function restoreClient(
     id: string;
     worldKey: string;
     name: string;
+    legalName: string | null;
     email: string | null;
     phone: string | null;
     address: string | null;
+    website: string | null;
+    logoUrl: string | null;
+    industry: string | null;
+    notes: string | null;
+    accountManagerId: string | null;
+    commercialOwnerId: string | null;
+    teamId: string | null;
     status: string;
     version: number;
     createdAt: Date;
@@ -107,8 +136,8 @@ export function restoreClient(
   const worldKeyResult = parseWorldKey(input.worldKey);
   if (!worldKeyResult.ok) return worldKeyResult;
 
-  const nameResult = parseName(input.name);
-  if (!nameResult.ok) return nameResult;
+  const fieldsResult = parseFields(input);
+  if (!fieldsResult.ok) return fieldsResult;
 
   if (!isClientStatus(input.status)) {
     return failure(
@@ -129,10 +158,10 @@ export function restoreClient(
     value: Object.freeze({
       id,
       worldKey: worldKeyResult.value,
-      name: nameResult.value,
-      email: input.email,
-      phone: input.phone,
-      address: input.address,
+      ...fieldsResult.value,
+      accountManagerId: input.accountManagerId,
+      commercialOwnerId: input.commercialOwnerId,
+      teamId: input.teamId,
       status: input.status,
       version: input.version,
       createdAt: new Date(input.createdAt),
@@ -143,28 +172,20 @@ export function restoreClient(
 
 export function editClient(
   client: Client,
-  changes: Readonly<{
-    name: string;
-    email?: string | null;
-    phone?: string | null;
-    address?: string | null;
-  }>,
+  changes: ClientFields,
   updatedAt: Date,
 ): Result<Client, ClientDomainError> {
-  const nameResult = parseName(changes.name);
-  if (!nameResult.ok) return nameResult;
-
-  const emailResult = parseEmail(changes.email);
-  if (!emailResult.ok) return emailResult;
+  const fieldsResult = parseFields(changes);
+  if (!fieldsResult.ok) return fieldsResult;
 
   return {
     ok: true,
     value: Object.freeze({
       ...client,
-      name: nameResult.value,
-      email: emailResult.value,
-      phone: changes.phone?.trim() ? changes.phone.trim() : null,
-      address: changes.address?.trim() ? changes.address.trim() : null,
+      ...fieldsResult.value,
+      accountManagerId: changes.accountManagerId?.trim() || null,
+      commercialOwnerId: changes.commercialOwnerId?.trim() || null,
+      teamId: changes.teamId?.trim() || null,
       version: client.version + 1,
       updatedAt: new Date(updatedAt),
     }),
@@ -187,6 +208,83 @@ export function archiveClient(
       version: client.version + 1,
       updatedAt: new Date(updatedAt),
     }),
+  };
+}
+
+type ParsedFields = Readonly<{
+  name: string;
+  legalName: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  website: string | null;
+  logoUrl: string | null;
+  industry: string | null;
+  notes: string | null;
+}>;
+
+function parseFields(
+  input: ClientFields,
+): Result<ParsedFields, ClientDomainError> {
+  const nameResult = parseName(input.name);
+  if (!nameResult.ok) return nameResult;
+
+  const emailResult = parseEmail(input.email);
+  if (!emailResult.ok) return emailResult;
+
+  const legalNameResult = parseOptional(
+    input.legalName,
+    180,
+    "INVALID_LEGAL_NAME",
+    "legalName",
+  );
+  if (!legalNameResult.ok) return legalNameResult;
+
+  const industryResult = parseOptional(
+    input.industry,
+    120,
+    "INVALID_INDUSTRY",
+    "industry",
+  );
+  if (!industryResult.ok) return industryResult;
+
+  const websiteResult = parseOptional(
+    input.website,
+    240,
+    "INVALID_WEBSITE",
+    "website",
+  );
+  if (!websiteResult.ok) return websiteResult;
+
+  const logoUrlResult = parseOptional(
+    input.logoUrl,
+    500,
+    "INVALID_LOGO_URL",
+    "logoUrl",
+  );
+  if (!logoUrlResult.ok) return logoUrlResult;
+
+  const notesResult = parseOptional(
+    input.notes,
+    1200,
+    "INVALID_NOTES",
+    "notes",
+  );
+  if (!notesResult.ok) return notesResult;
+
+  return {
+    ok: true,
+    value: {
+      name: nameResult.value,
+      email: emailResult.value,
+      phone: input.phone?.trim() || null,
+      address: input.address?.trim() || null,
+      legalName: legalNameResult.value,
+      industry: industryResult.value,
+      website: websiteResult.value,
+      logoUrl: logoUrlResult.value,
+      notes: notesResult.value,
+    },
   };
 }
 
@@ -224,6 +322,23 @@ function parseEmail(
     );
   }
   return { ok: true, value: email };
+}
+
+function parseOptional(
+  rawValue: string | null | undefined,
+  maxLength: number,
+  code: ClientDomainErrorCode,
+  fieldName: string,
+): Result<string | null, ClientDomainError> {
+  if (!rawValue || !rawValue.trim()) return { ok: true, value: null };
+  const value = rawValue.trim();
+  if (value.length > maxLength) {
+    return failure(
+      code,
+      `Client ${fieldName} must contain at most ${maxLength} characters.`,
+    );
+  }
+  return { ok: true, value };
 }
 
 function failure(

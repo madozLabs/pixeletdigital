@@ -86,6 +86,28 @@ describe("PrismaClientRepository", () => {
 
     await expect(repository.save(orphan)).rejects.toThrow();
   });
+
+  it("persists and reloads the professional fields", async () => {
+    const now = new Date("2026-07-23T00:00:00.000Z");
+    const created = createClient({
+      id: "billing_client_test_06",
+      worldKey: "billing-test-world",
+      name: "Client Pro",
+      legalName: "Client Pro SARL",
+      industry: "Distribution",
+      website: "https://client-pro.example.com",
+      logoUrl: "https://client-pro.example.com/logo.png",
+      notes: "Signé en juillet 2026.",
+      createdAt: now,
+      updatedAt: now,
+    });
+    if (!created.ok) throw new Error("expected a valid client");
+
+    await repository.save(created.value);
+    const persisted = await repository.findById(created.value.id);
+
+    expect(persisted).toEqual(created.value);
+  });
 });
 
 function validWorld() {
