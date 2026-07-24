@@ -41,7 +41,9 @@ export default async function TasksPage({
             Organisez la production, les responsabilités, délais et charges.
           </p>
         </div>
-        <span className="admin-metric">{tasks.length} tâches</span>
+        <span className="admin-metric">
+          {tasks.length} tâche{tasks.length > 1 ? "s" : ""}
+        </span>
       </div>
 
       <form className="admin-form-card" method="get">

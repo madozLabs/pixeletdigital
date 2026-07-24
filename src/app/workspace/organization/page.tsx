@@ -68,7 +68,8 @@ export default async function OrganizationPage() {
           </p>
         </div>
         <span className="admin-metric">
-          {users.length} collaborateurs actifs
+          {users.length} collaborateur{users.length > 1 ? "s" : ""} actif
+          {users.length > 1 ? "s" : ""}
         </span>
       </div>
 

@@ -96,7 +96,9 @@ export default async function WorkspaceEditorialPage({
             publication.
           </p>
         </div>
-        <span className="admin-metric">{items.length} contenus</span>
+        <span className="admin-metric">
+          {items.length} contenu{items.length > 1 ? "s" : ""}
+        </span>
       </div>
 
       <div className="editorial-week-nav">

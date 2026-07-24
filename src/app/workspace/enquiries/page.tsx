@@ -40,7 +40,9 @@ export default async function WorkspaceEnquiriesPage({
             Messages reçus via les formulaires publics du site.
           </p>
         </div>
-        <span className="admin-metric">{enquiries.length} demandes</span>
+        <span className="admin-metric">
+          {enquiries.length} demande{enquiries.length > 1 ? "s" : ""}
+        </span>
       </div>
 
       {!result.ok ? (

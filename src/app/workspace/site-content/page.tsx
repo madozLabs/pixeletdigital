@@ -62,7 +62,9 @@ export default async function SiteContentPage({
             Gérez les pages, leurs sections et la médiathèque Supabase.
           </p>
         </div>
-        <span className="admin-metric">{pages.length} pages</span>
+        <span className="admin-metric">
+          {pages.length} page{pages.length > 1 ? "s" : ""}
+        </span>
       </div>
 
       <div className="admin-tabs" role="tablist">

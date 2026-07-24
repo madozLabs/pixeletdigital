@@ -64,7 +64,9 @@ export default async function ProjectsPage({
             échéances.
           </p>
         </div>
-        <span className="admin-metric">{projects.length} projets</span>
+        <span className="admin-metric">
+          {projects.length} projet{projects.length > 1 ? "s" : ""}
+        </span>
       </div>
 
       <form action={createProjectAction} className="admin-form-card">

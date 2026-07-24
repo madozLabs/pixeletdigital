@@ -53,7 +53,9 @@ export default async function WorkspaceAccessPage() {
             univers.
           </p>
         </div>
-        <span className="admin-metric">{users.length} profils</span>
+        <span className="admin-metric">
+          {users.length} profil{users.length > 1 ? "s" : ""}
+        </span>
       </div>
 
       <CreateEmployeeForm />

@@ -63,7 +63,9 @@ export default async function ClientsPage({
             Gérez les comptes, contacts, responsables et équipes affectées.
           </p>
         </div>
-        <span className="admin-metric">{clients.length} clients</span>
+        <span className="admin-metric">
+          {clients.length} client{clients.length > 1 ? "s" : ""}
+        </span>
       </div>
 
       <CreateClientForm

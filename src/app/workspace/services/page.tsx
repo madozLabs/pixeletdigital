@@ -116,7 +116,9 @@ export default async function WorkspaceServicesPage({
             Catalogue public par famille, cycle de vie et disponibilité.
           </p>
         </div>
-        <span className="admin-metric">{totalServices} services</span>
+        <span className="admin-metric">
+          {totalServices} service{totalServices > 1 ? "s" : ""}
+        </span>
       </div>
 
       {tabs.length === 0 ? (

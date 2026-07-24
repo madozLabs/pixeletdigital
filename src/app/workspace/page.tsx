@@ -118,7 +118,10 @@ export default async function WorkspaceDashboardPage({
             Vue opérationnelle des urgences, validations, charge et finances.
           </p>
         </div>
-        <span className="admin-metric">{activeClients} clients actifs</span>
+        <span className="admin-metric">
+          {activeClients} client{activeClients > 1 ? "s" : ""} actif
+          {activeClients > 1 ? "s" : ""}
+        </span>
       </div>
       <section className="dashboard-metrics">
         <Metric
