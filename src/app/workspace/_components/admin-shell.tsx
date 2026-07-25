@@ -159,7 +159,7 @@ export function AdminShell({
   }
 
   return (
-    <div className="admin-shell">
+    <div className="admin-shell" data-world={worldKey}>
       <a href="#main-content" className="skip-link">
         Aller au contenu principal
       </a>

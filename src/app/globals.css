@@ -3514,6 +3514,32 @@ a.world-switcher__item:focus-visible {
   z-index: 0;
 }
 
+/* --- World theming: the admin takes the active universe's accent ----- */
+
+.admin-shell[data-world="kwaliti-print"] {
+  --accent: var(--kp-magenta);
+  --accent-dark: var(--kp-magenta-dark);
+  --accent-soft: color-mix(in srgb, var(--kp-magenta) 10%, transparent);
+}
+
+.admin-shell[data-world="kwaliti-print"] .admin-sidebar__mark-accent {
+  color: var(--kp-magenta);
+}
+
+.admin-sidebar__world {
+  border-left: 3px solid var(--accent);
+}
+
+.dashboard-panel--crossworld {
+  border-left: 3px solid var(--accent);
+}
+
+.dashboard-panel--crossworld > a {
+  margin-top: 0.9rem;
+  display: inline-block;
+  text-decoration: none;
+}
+
 /* --- Public site: motion & interactivity pass ------------------------ */
 
 /* Pixel&Digital hero: slow-drifting orbs */

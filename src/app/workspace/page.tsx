@@ -32,6 +32,10 @@ export default async function WorkspaceDashboardPage({
 
   const { world } = await searchParams;
   const worldKey = world ?? "pixel-digital";
+  const otherWorldKey =
+    worldKey === "pixel-digital" ? "kwaliti-print" : "pixel-digital";
+  const otherWorldLabel =
+    otherWorldKey === "kwaliti-print" ? "Kwaliti Print" : "Pixel&Digital";
   const now = context.clock.now();
   const weekEnd = new Date(now);
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
@@ -42,46 +46,70 @@ export default async function WorkspaceDashboardPage({
     ),
   );
 
-  const [activeClients, projects, tasks, editorialItems, invoices, users] =
-    await Promise.all([
-      prisma.client.count({ where: { worldKey, status: "ACTIVE" } }),
-      prisma.project.findMany({
-        where: { worldKey, status: { in: [...ACTIVE_PROJECT_STATUSES] } },
-        include: { client: true, projectManager: true },
-        orderBy: { dueDate: "asc" },
-      }),
-      prisma.task.findMany({
-        where: {
-          project: { worldKey },
-          status: { in: [...OPEN_TASK_STATUSES] },
+  const [
+    activeClients,
+    projects,
+    tasks,
+    editorialItems,
+    invoices,
+    users,
+    otherClients,
+    otherActiveProjects,
+    otherPendingReviews,
+  ] = await Promise.all([
+    prisma.client.count({ where: { worldKey, status: "ACTIVE" } }),
+    prisma.project.findMany({
+      where: { worldKey, status: { in: [...ACTIVE_PROJECT_STATUSES] } },
+      include: { client: true, projectManager: true },
+      orderBy: { dueDate: "asc" },
+    }),
+    prisma.task.findMany({
+      where: {
+        project: { worldKey },
+        status: { in: [...OPEN_TASK_STATUSES] },
+      },
+      include: { project: true, assignee: true },
+      orderBy: { dueDate: "asc" },
+    }),
+    prisma.editorialItem.findMany({
+      where: {
+        worldKey,
+        status: { in: [...REVIEW_STATUSES] },
+      },
+      include: { client: true, owner: true, reviewer: true },
+      orderBy: { scheduledFor: "asc" },
+    }),
+    canSeeBilling
+      ? prisma.invoice.findMany({
+          where: { worldKey, status: { in: ["SENT", "PAID"] } },
+          include: { lines: true },
+        })
+      : Promise.resolve([]),
+    prisma.user.findMany({
+      where: { status: "ACTIVE" },
+      include: {
+        assignedTasks: {
+          where: { status: { in: [...OPEN_TASK_STATUSES] } },
         },
-        include: { project: true, assignee: true },
-        orderBy: { dueDate: "asc" },
-      }),
-      prisma.editorialItem.findMany({
-        where: {
-          worldKey,
-          status: { in: [...REVIEW_STATUSES] },
-        },
-        include: { client: true, owner: true, reviewer: true },
-        orderBy: { scheduledFor: "asc" },
-      }),
-      canSeeBilling
-        ? prisma.invoice.findMany({
-            where: { worldKey, status: { in: ["SENT", "PAID"] } },
-            include: { lines: true },
-          })
-        : Promise.resolve([]),
-      prisma.user.findMany({
-        where: { status: "ACTIVE" },
-        include: {
-          assignedTasks: {
-            where: { status: { in: [...OPEN_TASK_STATUSES] } },
-          },
-        },
-        orderBy: { displayName: "asc" },
-      }),
-    ]);
+      },
+      orderBy: { displayName: "asc" },
+    }),
+    prisma.client.count({
+      where: { worldKey: otherWorldKey, status: "ACTIVE" },
+    }),
+    prisma.project.count({
+      where: {
+        worldKey: otherWorldKey,
+        status: { in: [...ACTIVE_PROJECT_STATUSES] },
+      },
+    }),
+    prisma.editorialItem.count({
+      where: {
+        worldKey: otherWorldKey,
+        status: { in: [...REVIEW_STATUSES] },
+      },
+    }),
+  ]);
 
   const lateProjects = projects.filter(
     (project) => project.dueDate && project.dueDate.getTime() < now.getTime(),
@@ -205,6 +233,38 @@ export default async function WorkspaceDashboardPage({
             meta: `${user.count} tâche${user.count > 1 ? "s" : ""} ouverte${user.count > 1 ? "s" : ""}`,
           }))}
         />
+        <section className="dashboard-panel dashboard-panel--crossworld">
+          <h2>{otherWorldLabel} en un coup d’œil</h2>
+          <ul>
+            <li>
+              <strong>
+                {otherClients} client{otherClients > 1 ? "s" : ""} actif
+                {otherClients > 1 ? "s" : ""}
+              </strong>
+              <span>Comptes de l’autre univers</span>
+            </li>
+            <li>
+              <strong>
+                {otherActiveProjects} projet
+                {otherActiveProjects > 1 ? "s" : ""} en cours
+              </strong>
+              <span>Production {otherWorldLabel}</span>
+            </li>
+            <li>
+              <strong>
+                {otherPendingReviews} contenu
+                {otherPendingReviews > 1 ? "s" : ""} à valider
+              </strong>
+              <span>Calendrier éditorial</span>
+            </li>
+          </ul>
+          <Link
+            className="admin-table__action"
+            href={`/workspace?world=${otherWorldKey}`}
+          >
+            Basculer vers {otherWorldLabel}
+          </Link>
+        </section>
       </div>
     </>
   );
