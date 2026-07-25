@@ -13,7 +13,9 @@ import {
 
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/infrastructure/shared/prisma-client";
+import { parsePage, toSkipTake } from "@/shared/pagination";
 import { LifecycleBadge } from "../_components/status-badge";
+import { Pagination } from "../_components/pagination";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import {
   createPageAction,
@@ -46,7 +48,12 @@ type MediaAsset = Awaited<
 export default async function SiteContentPage({
   searchParams,
 }: {
-  searchParams: Promise<{ world?: string; page?: string; tab?: string }>;
+  searchParams: Promise<{
+    world?: string;
+    page?: string;
+    tab?: string;
+    listPage?: string;
+  }>;
 }) {
   const context = await getWorkspaceRequestContext();
   if (!context) redirect("/login");
@@ -54,13 +61,65 @@ export default async function SiteContentPage({
   const params = await searchParams;
   const worldKey = params.world ?? "pixel-digital";
   const tab = params.tab ?? "overview";
-  const [pages, media, publishedServices, enquiryCount] = await Promise.all([
+  const listPageParams = parsePage(params.listPage);
+  const { skip: listSkip, take: listTake } = toSkipTake(listPageParams);
+
+  // The editor's media picker needs to see every asset to select from, so it
+  // is only fetched when actually editing a page rather than on every load.
+  const needsFullMediaForEditor = Boolean(params.page) && tab !== "media";
+
+  const [
+    recentPages,
+    homePage,
+    totalPages,
+    publishedCount,
+    draftCount,
+    totalMedia,
+    pagesForTab,
+    mediaForTab,
+    fullMediaForEditor,
+    publishedServices,
+    enquiryCount,
+  ] = await Promise.all([
     prisma.page
-      .findMany({ where: { worldKey }, orderBy: { updatedAt: "desc" } })
+      .findMany({ where: { worldKey }, orderBy: { updatedAt: "desc" }, take: 6 })
       .catch(() => []),
-    prisma.mediaAsset
-      .findMany({ where: { worldKey }, orderBy: { createdAt: "desc" } })
-      .catch(() => []),
+    prisma.page
+      .findFirst({ where: { worldKey, slug: "accueil" } })
+      .catch(() => null),
+    prisma.page.count({ where: { worldKey } }).catch(() => 0),
+    prisma.page
+      .count({ where: { worldKey, lifecycle: "PUBLISHED" } })
+      .catch(() => 0),
+    prisma.page
+      .count({ where: { worldKey, lifecycle: "DRAFT" } })
+      .catch(() => 0),
+    prisma.mediaAsset.count({ where: { worldKey } }).catch(() => 0),
+    tab === "pages"
+      ? prisma.page
+          .findMany({
+            where: { worldKey },
+            orderBy: { updatedAt: "desc" },
+            skip: listSkip,
+            take: listTake,
+          })
+          .catch(() => [])
+      : Promise.resolve([]),
+    tab === "media"
+      ? prisma.mediaAsset
+          .findMany({
+            where: { worldKey },
+            orderBy: { createdAt: "desc" },
+            skip: listSkip,
+            take: listTake,
+          })
+          .catch(() => [])
+      : Promise.resolve([]),
+    needsFullMediaForEditor
+      ? prisma.mediaAsset
+          .findMany({ where: { worldKey }, orderBy: { createdAt: "desc" } })
+          .catch(() => [])
+      : Promise.resolve([]),
     prisma.service
       .count({ where: { worldKey, lifecycle: "PUBLISHED" } })
       .catch(() => 0),
@@ -75,8 +134,12 @@ export default async function SiteContentPage({
         .catch(() => null)
     : null;
 
-  const publishedPages = pages.filter((p) => p.lifecycle === "PUBLISHED");
-  const draftPages = pages.filter((p) => p.lifecycle === "DRAFT");
+  const totalListPages = Math.max(
+    1,
+    Math.ceil(
+      (tab === "media" ? totalMedia : totalPages) / listPageParams.pageSize,
+    ),
+  );
 
   return (
     <>
@@ -88,8 +151,7 @@ export default async function SiteContentPage({
           </p>
         </div>
         <span className="admin-metric">
-          {publishedPages.length} page{publishedPages.length > 1 ? "s" : ""} en
-          ligne
+          {publishedCount} page{publishedCount > 1 ? "s" : ""} en ligne
         </span>
       </div>
 
@@ -112,10 +174,10 @@ export default async function SiteContentPage({
           >
             {label}
             {id === "pages" ? (
-              <span className="admin-tabs__count">{pages.length}</span>
+              <span className="admin-tabs__count">{totalPages}</span>
             ) : null}
             {id === "media" ? (
-              <span className="admin-tabs__count">{media.length}</span>
+              <span className="admin-tabs__count">{totalMedia}</span>
             ) : null}
           </Link>
         ))}
@@ -124,19 +186,42 @@ export default async function SiteContentPage({
       {tab === "overview" ? (
         <OverviewPanel
           worldKey={worldKey}
-          pages={pages}
-          publishedCount={publishedPages.length}
-          draftCount={draftPages.length}
-          mediaCount={media.length}
+          recentPages={recentPages}
+          homePage={homePage}
+          publishedCount={publishedCount}
+          draftCount={draftCount}
+          mediaCount={totalMedia}
           publishedServices={publishedServices}
           enquiryCount={enquiryCount}
         />
       ) : tab === "media" ? (
-        <MediaPanel worldKey={worldKey} media={media} now={now} />
+        <>
+          <MediaPanel worldKey={worldKey} media={mediaForTab} now={now} />
+          <Pagination
+            basePath="/workspace/site-content"
+            searchParams={{ world: worldKey, tab: "media" }}
+            page={listPageParams.page}
+            totalPages={totalListPages}
+            total={totalMedia}
+          />
+        </>
       ) : selectedPage ? (
-        <PageEditor worldKey={worldKey} page={selectedPage} media={media} />
+        <PageEditor
+          worldKey={worldKey}
+          page={selectedPage}
+          media={fullMediaForEditor}
+        />
       ) : (
-        <PagesPanel worldKey={worldKey} pages={pages} />
+        <>
+          <PagesPanel worldKey={worldKey} pages={pagesForTab} />
+          <Pagination
+            basePath="/workspace/site-content"
+            searchParams={{ world: worldKey, tab: "pages" }}
+            page={listPageParams.page}
+            totalPages={totalListPages}
+            total={totalPages}
+          />
+        </>
       )}
     </>
   );
@@ -144,7 +229,8 @@ export default async function SiteContentPage({
 
 function OverviewPanel({
   worldKey,
-  pages,
+  recentPages,
+  homePage,
   publishedCount,
   draftCount,
   mediaCount,
@@ -152,15 +238,15 @@ function OverviewPanel({
   enquiryCount,
 }: {
   worldKey: string;
-  pages: Awaited<ReturnType<typeof prisma.page.findMany>>;
+  recentPages: Awaited<ReturnType<typeof prisma.page.findMany>>;
+  homePage: Awaited<ReturnType<typeof prisma.page.findFirst>>;
   publishedCount: number;
   draftCount: number;
   mediaCount: number;
   publishedServices: number;
   enquiryCount: number;
 }) {
-  const recent = pages.slice(0, 6);
-  const homePage = pages.find((page) => page.slug === "accueil");
+  const recent = recentPages;
   return (
     <div className="cms-overview">
       <section className="dashboard-metrics cms-overview__metrics">

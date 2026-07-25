@@ -150,7 +150,7 @@ Recherche exhaustive : aucun type de section "témoignage" ou "étude de cas" n'
 | C1 | Combler le trou de traçabilité d'audit (publication, facturation, accès) | Critique | Sécurité/Archi | Ouvert |
 | C2 | Trancher la dérive de périmètre architecturale (Organisation/Projets/Tâches/Facturation) | Critique | Archi/Gouvernance | ✅ décision documentée (ODR-025), tranche propriétaire en attente |
 | C3 | Corriger le bug d'encodage UTF-8 (mojibake FR) | Critique | Qualité/Brand | ✅ traité 2026-07-25 |
-| C4 | Introduire la pagination bornée sur toutes les listes | Critique | Archi/Perf | Ouvert |
+| C4 | Introduire la pagination bornée sur toutes les listes | Critique | Archi/Perf | ✅ traité 2026-07-25 (listes principales) |
 | C5 | Compléter le pipeline Leads/Enquiries (qualification → conversion) | Critique | Produit/UX | Ouvert |
 | C6 | Retour utilisateur explicite sur chaque mutation (fin des échecs silencieux) | Critique | UX | Ouvert |
 | C7 | Résilience du site public face à l'indisponibilité base de données | Critique | Archi/Fiabilité | Ouvert |
@@ -238,7 +238,15 @@ Contraintes :
 Résultat attendu : Plus aucune corruption de caractères accentués français sur le site public, cause racine corrigée et documentée, script de rafistolage devenu inutile supprimé.
 ```
 
-**C4 — Pagination bornée sur toutes les listes**
+**C4 — Pagination bornée sur toutes les listes** — ✅ traité le 25 juillet 2026, avec un périmètre resserré par rapport au prompt d'origine :
+- Ajouté `src/shared/pagination.ts` (utilitaire framework-agnostique : `parsePage`, `toSkipTake`, `buildPaginatedResult`, testé) et `src/app/workspace/_components/pagination.tsx` (composant `<Pagination>` réutilisable, liens `?page=`).
+- Paginé les vraies listes parcourables et non bornées : Clients, Projets, Devis, Factures, Pages du site, Médiathèque, Utilisateurs (`?page=`, 20 par page).
+- Tableau de bord (`workspace/page.tsx`) : remplacé le pattern "charger toutes les lignes puis compter/trancher en JS" par des requêtes `count()` bornées pour les chiffres exacts et des `findMany({take:6})` séparées pour les aperçus — même résultat affiché, sans plus jamais charger l'intégralité des projets/tâches/contenus éditoriaux du monde à chaque vue du dashboard.
+- **Exclu délibérément de ce périmètre**, avec justification : Tâches (`tasks/page.tsx`, tableau kanban `TaskBoard` par projet — déjà borné par projet, la pagination casserait le glisser-déposer par position) ; Éditorial (`editorial/page.tsx`, tableau kanban `EditorialPipeline` — même raison ; un vrai correctif futur serait un filtre par fenêtre de dates, pas une pagination classique, à traiter séparément) ; Organisation (départements/postes/équipes — structure interne naturellement petite, pagination non justifiée par le principe AGENTS.md "aucune complexité sans besoin démontré").
+- Non résolu dans ce lot, noté pour un futur correctif dédié : `billing/page.tsx` calcule toujours les soldes clients (`clientBalances`) et le tableau de bord calcule `sentAmount`/`paidAmount` en sommant les lignes de facture en JS sur l'intégralité des factures filtrées — une vraie agrégation, pas une liste à parcourir ; la pagination ne s'y applique pas, la bonne correction serait une agrégation SQL (`_sum`/`groupBy`) côté Prisma.
+- Vérifié : `tsc --noEmit` propre, `eslint` propre, suite de tests complète (487 tests) toujours verte, 9 nouveaux tests unitaires sur l'utilitaire de pagination.
+
+Prompt d'origine conservé ci-dessous pour mémoire — le périmètre réellement couvert diffère (voir ci-dessus).
 ```text
 Contexte : Aucun des appels prisma.*.findMany du Workspace (32 occurrences dans src/app/workspace/**) ne borne ses résultats avec take/skip — contraire à docs/05-architecture/APPLICATION_CONTRACTS.md §7 qui exige une pagination bornée et déterministe. Concerné notamment : workspace/clients/page.tsx, workspace/enquiries/page.tsx, workspace/billing/page.tsx (clients, devis, factures, catalogue), workspace/tasks/page.tsx, workspace/organization/page.tsx.
 

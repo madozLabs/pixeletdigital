@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
+import { parsePage, toSkipTake } from "@/shared/pagination";
+import { Pagination } from "../_components/pagination";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import { formatXof } from "./_lib/money";
 import {
@@ -25,7 +27,7 @@ const TABS = [
 export default async function WorkspaceBillingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ world?: string; tab?: string }>;
+  searchParams: Promise<{ world?: string; tab?: string; page?: string }>;
 }) {
   const context = await getWorkspaceRequestContext();
   if (!context) redirect("/login");
@@ -42,10 +44,20 @@ export default async function WorkspaceBillingPage({
     );
   }
 
-  const { world, tab } = await searchParams;
+  const { world, tab, page: pageParam } = await searchParams;
   const worldKey = world ?? "pixel-digital";
   const activeTab = TABS.find((item) => item.id === tab)?.id ?? "quotes";
-  const [clients, quotes, invoices, catalogue] = await Promise.all([
+  const pageParams = parsePage(pageParam);
+  const { skip, take } = toSkipTake(pageParams);
+  const [
+    clients,
+    quotes,
+    totalQuotes,
+    invoices,
+    totalInvoices,
+    invoicesForBalances,
+    catalogue,
+  ] = await Promise.all([
     prisma.client.findMany({
       where: { worldKey, status: "ACTIVE" },
       orderBy: { name: "asc" },
@@ -54,20 +66,47 @@ export default async function WorkspaceBillingPage({
       where: { worldKey },
       include: { client: true, lines: true, invoice: true },
       orderBy: { issuedAt: "desc" },
+      skip,
+      take,
     }),
+    prisma.quote.count({ where: { worldKey } }),
     prisma.invoice.findMany({
       where: { worldKey },
       include: { client: true, lines: true, payments: true },
       orderBy: { issuedAt: "desc" },
+      skip,
+      take,
+    }),
+    prisma.invoice.count({ where: { worldKey } }),
+    // Full scan needed to compute accurate per-client balances (an aggregate,
+    // not a browsable list) — kept lean (no client include) to limit overfetch.
+    prisma.invoice.findMany({
+      where: { worldKey },
+      select: {
+        clientId: true,
+        status: true,
+        discountCents: true,
+        taxRateBps: true,
+        lines: { select: { quantity: true, unitPriceCents: true } },
+        payments: { select: { amountCents: true } },
+      },
     }),
     prisma.catalogueItem.findMany({
       where: { worldKey, status: "ACTIVE" },
       orderBy: { label: "asc" },
     }),
   ]);
+  const totalQuotePages = Math.max(
+    1,
+    Math.ceil(totalQuotes / pageParams.pageSize),
+  );
+  const totalInvoicePages = Math.max(
+    1,
+    Math.ceil(totalInvoices / pageParams.pageSize),
+  );
 
   const clientBalances = clients.map((client) => {
-    const clientInvoices = invoices.filter(
+    const clientInvoices = invoicesForBalances.filter(
       (invoice) =>
         invoice.clientId === client.id && invoice.status !== "CANCELLED",
     );
@@ -192,6 +231,13 @@ export default async function WorkspaceBillingPage({
               );
             })}
           </section>
+          <Pagination
+            basePath="/workspace/billing"
+            searchParams={{ world: worldKey, tab: "quotes" }}
+            page={pageParams.page}
+            totalPages={totalQuotePages}
+            total={totalQuotes}
+          />
           <h2 className="admin-content__subtitle">Nouveau devis</h2>
           <form action={createQuoteAction} className="editorial-form">
             <input type="hidden" name="worldKey" value={worldKey} />
@@ -380,6 +426,15 @@ export default async function WorkspaceBillingPage({
             );
           })}
         </section>
+      ) : null}
+      {activeTab === "invoices" ? (
+        <Pagination
+          basePath="/workspace/billing"
+          searchParams={{ world: worldKey, tab: "invoices" }}
+          page={pageParams.page}
+          totalPages={totalInvoicePages}
+          total={totalInvoices}
+        />
       ) : null}
       {activeTab === "balances" ? (
         <div className="admin-table-wrap">

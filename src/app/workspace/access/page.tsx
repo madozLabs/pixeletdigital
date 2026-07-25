@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
+import { parsePage, toSkipTake } from "@/shared/pagination";
+import { Pagination } from "../_components/pagination";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import {
   AssignRoleForm,
@@ -19,7 +21,9 @@ const ROLE_LABEL: Readonly<Record<string, string>> = {
   READER: "Lecteur",
 };
 
-export default async function WorkspaceAccessPage() {
+export default async function WorkspaceAccessPage({
+  searchParams,
+}: Readonly<{ searchParams: Promise<{ page?: string }> }>) {
   const context = await getWorkspaceRequestContext();
   if (!context) redirect("/login");
   if (context.actor?.role !== "SUPER_ADMIN") {
@@ -33,15 +37,24 @@ export default async function WorkspaceAccessPage() {
     );
   }
 
-  const users = await prisma.user.findMany({
-    include: {
-      roleAssignments: {
-        include: { world: { select: { displayName: true, key: true } } },
-        orderBy: { validFrom: "desc" },
+  const { page: pageParam } = await searchParams;
+  const pageParams = parsePage(pageParam);
+  const { skip, take } = toSkipTake(pageParams);
+  const [users, totalUsers] = await Promise.all([
+    prisma.user.findMany({
+      include: {
+        roleAssignments: {
+          include: { world: { select: { displayName: true, key: true } } },
+          orderBy: { validFrom: "desc" },
+        },
       },
-    },
-    orderBy: [{ status: "asc" }, { displayName: "asc" }],
-  });
+      orderBy: [{ status: "asc" }, { displayName: "asc" }],
+      skip,
+      take,
+    }),
+    prisma.user.count(),
+  ]);
+  const totalPages = Math.max(1, Math.ceil(totalUsers / pageParams.pageSize));
   const now = new Date();
   return (
     <>
@@ -54,7 +67,7 @@ export default async function WorkspaceAccessPage() {
           </p>
         </div>
         <span className="admin-metric">
-          {users.length} profil{users.length > 1 ? "s" : ""}
+          {totalUsers} profil{totalUsers > 1 ? "s" : ""}
         </span>
       </div>
 
@@ -118,6 +131,14 @@ export default async function WorkspaceAccessPage() {
           );
         })}
       </div>
+
+      <Pagination
+        basePath="/workspace/access"
+        searchParams={{}}
+        page={pageParams.page}
+        totalPages={totalPages}
+        total={totalUsers}
+      />
     </>
   );
 }

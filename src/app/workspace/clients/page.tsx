@@ -2,7 +2,9 @@
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
+import { parsePage, toSkipTake } from "@/shared/pagination";
 import { Avatar } from "../_components/avatar";
+import { Pagination } from "../_components/pagination";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import { archiveProfessionalClientAction } from "./actions";
 import { ClientContactForm, CreateClientForm } from "./client-forms";
@@ -11,7 +13,7 @@ const CLIENT_ROLES = ["SUPER_ADMIN", "ADMIN", "WORLD_MANAGER"] as const;
 
 export default async function ClientsPage({
   searchParams,
-}: Readonly<{ searchParams: Promise<{ world?: string }> }>) {
+}: Readonly<{ searchParams: Promise<{ world?: string; page?: string }> }>) {
   const context = await getWorkspaceRequestContext();
   if (!context) redirect("/login");
   if (
@@ -23,9 +25,11 @@ export default async function ClientsPage({
     );
   }
 
-  const { world } = await searchParams;
+  const { world, page: pageParam } = await searchParams;
   const worldKey = world ?? "pixel-digital";
-  const [clients, users, teams] = await Promise.all([
+  const pageParams = parsePage(pageParam);
+  const { skip, take } = toSkipTake(pageParams);
+  const [clients, totalClients, users, teams] = await Promise.all([
     prisma.client.findMany({
       where: { worldKey },
       include: {
@@ -35,7 +39,10 @@ export default async function ClientsPage({
         contacts: { orderBy: [{ isPrimary: "desc" }, { name: "asc" }] },
       },
       orderBy: [{ status: "asc" }, { name: "asc" }],
+      skip,
+      take,
     }),
+    prisma.client.count({ where: { worldKey } }),
     prisma.user.findMany({
       where: { status: "ACTIVE" },
       orderBy: { displayName: "asc" },
@@ -45,6 +52,7 @@ export default async function ClientsPage({
       orderBy: { name: "asc" },
     }),
   ]);
+  const totalPages = Math.max(1, Math.ceil(totalClients / pageParams.pageSize));
   const userOptions = users.map((item) => ({
     value: item.id,
     label: item.displayName ?? item.normalizedEmail ?? "Collaborateur",
@@ -64,7 +72,7 @@ export default async function ClientsPage({
           </p>
         </div>
         <span className="admin-metric">
-          {clients.length} client{clients.length > 1 ? "s" : ""}
+          {totalClients} client{totalClients > 1 ? "s" : ""}
         </span>
       </div>
 
@@ -175,6 +183,14 @@ export default async function ClientsPage({
           </article>
         ))}
       </section>
+
+      <Pagination
+        basePath="/workspace/clients"
+        searchParams={{ world: worldKey }}
+        page={pageParams.page}
+        totalPages={totalPages}
+        total={totalClients}
+      />
     </>
   );
 }

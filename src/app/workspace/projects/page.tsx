@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
+import { parsePage, toSkipTake } from "@/shared/pagination";
+import { Pagination } from "../_components/pagination";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import { createProjectAction, updateProjectAction } from "./actions";
 
@@ -22,7 +24,9 @@ const PRIORITY_LABEL: Readonly<Record<string, string>> = {
 };
 export default async function ProjectsPage({
   searchParams,
-}: Readonly<{ searchParams: Promise<{ world?: string }> }>) {
+}: Readonly<{
+  searchParams: Promise<{ world?: string; page?: string }>;
+}>) {
   const context = await getWorkspaceRequestContext();
   if (!context) redirect("/login");
   if (
@@ -36,14 +40,19 @@ export default async function ProjectsPage({
     );
   }
 
-  const { world } = await searchParams;
+  const { world, page: pageParam } = await searchParams;
   const worldKey = world ?? "pixel-digital";
-  const [projects, clients, users, teams] = await Promise.all([
+  const pageParams = parsePage(pageParam);
+  const { skip, take } = toSkipTake(pageParams);
+  const [projects, totalProjects, clients, users, teams] = await Promise.all([
     prisma.project.findMany({
       where: { worldKey },
       include: { client: true, projectManager: true, team: true },
       orderBy: [{ status: "asc" }, { dueDate: "asc" }],
+      skip,
+      take,
     }),
+    prisma.project.count({ where: { worldKey } }),
     prisma.client.findMany({
       where: { worldKey, status: "ACTIVE" },
       orderBy: { name: "asc" },
@@ -54,6 +63,10 @@ export default async function ProjectsPage({
     }),
     prisma.team.findMany({ orderBy: { name: "asc" } }),
   ]);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(totalProjects / pageParams.pageSize),
+  );
   return (
     <>
       <div className="admin-page-heading">
@@ -65,7 +78,7 @@ export default async function ProjectsPage({
           </p>
         </div>
         <span className="admin-metric">
-          {projects.length} projet{projects.length > 1 ? "s" : ""}
+          {totalProjects} projet{totalProjects > 1 ? "s" : ""}
         </span>
       </div>
 
@@ -209,6 +222,14 @@ export default async function ProjectsPage({
           </article>
         ))}
       </section>
+
+      <Pagination
+        basePath="/workspace/projects"
+        searchParams={{ world: worldKey }}
+        page={pageParams.page}
+        totalPages={totalPages}
+        total={totalProjects}
+      />
     </>
   );
 }

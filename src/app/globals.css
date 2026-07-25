@@ -4588,6 +4588,25 @@ a.world-switcher__item:focus-visible {
   color: inherit;
 }
 
+.admin-table__action--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.admin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1em;
+  margin-top: 1.5em;
+}
+
+.admin-pagination__status {
+  font-size: 0.85em;
+  color: var(--ink-soft);
+}
+
 /* --- Tables ---------------------------------------------------------- */
 
 .admin-table th {

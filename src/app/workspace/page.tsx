@@ -46,11 +46,34 @@ export default async function WorkspaceDashboardPage({
     ),
   );
 
+  const lateProjectsWhere = {
+    worldKey,
+    status: { in: Array.from(ACTIVE_PROJECT_STATUSES) },
+    dueDate: { lt: now },
+  };
+  const blockedTasksWhere = {
+    project: { worldKey },
+    status: "BLOCKED" as const,
+  };
+  const dueSoonTasksWhere = {
+    project: { worldKey },
+    status: { in: Array.from(OPEN_TASK_STATUSES) },
+    dueDate: { gte: now, lte: weekEnd },
+  };
+  const toValidateWhere = {
+    worldKey,
+    status: { in: Array.from(REVIEW_STATUSES) },
+  };
+
   const [
     activeClients,
-    projects,
-    tasks,
-    editorialItems,
+    lateProjectsCount,
+    lateProjectsPreview,
+    blockedTasksCount,
+    blockedTasksPreview,
+    dueSoonTasksCount,
+    toValidateCount,
+    toValidatePreview,
     invoices,
     users,
     otherClients,
@@ -58,26 +81,27 @@ export default async function WorkspaceDashboardPage({
     otherPendingReviews,
   ] = await Promise.all([
     prisma.client.count({ where: { worldKey, status: "ACTIVE" } }),
+    prisma.project.count({ where: lateProjectsWhere }),
     prisma.project.findMany({
-      where: { worldKey, status: { in: [...ACTIVE_PROJECT_STATUSES] } },
-      include: { client: true, projectManager: true },
+      where: lateProjectsWhere,
+      include: { client: true },
       orderBy: { dueDate: "asc" },
+      take: 6,
     }),
+    prisma.task.count({ where: blockedTasksWhere }),
     prisma.task.findMany({
-      where: {
-        project: { worldKey },
-        status: { in: [...OPEN_TASK_STATUSES] },
-      },
+      where: blockedTasksWhere,
       include: { project: true, assignee: true },
       orderBy: { dueDate: "asc" },
+      take: 6,
     }),
+    prisma.task.count({ where: dueSoonTasksWhere }),
+    prisma.editorialItem.count({ where: toValidateWhere }),
     prisma.editorialItem.findMany({
-      where: {
-        worldKey,
-        status: { in: [...REVIEW_STATUSES] },
-      },
-      include: { client: true, owner: true, reviewer: true },
+      where: toValidateWhere,
+      include: { client: true },
       orderBy: { scheduledFor: "asc" },
+      take: 6,
     }),
     canSeeBilling
       ? prisma.invoice.findMany({
@@ -111,16 +135,6 @@ export default async function WorkspaceDashboardPage({
     }),
   ]);
 
-  const lateProjects = projects.filter(
-    (project) => project.dueDate && project.dueDate.getTime() < now.getTime(),
-  );
-  const blockedTasks = tasks.filter((task) => task.status === "BLOCKED");
-  const dueSoonTasks = tasks.filter(
-    (task) =>
-      task.dueDate &&
-      task.dueDate.getTime() >= now.getTime() &&
-      task.dueDate.getTime() <= weekEnd.getTime(),
-  );
   const sentAmount = invoices
     .filter((invoice) => invoice.status === "SENT")
     .reduce((sum, invoice) => sum + invoiceTotal(invoice.lines), 0);
@@ -154,28 +168,28 @@ export default async function WorkspaceDashboardPage({
       <section className="dashboard-metrics">
         <Metric
           label="Projets en retard"
-          value={lateProjects.length}
+          value={lateProjectsCount}
           href="/workspace/projects"
           tone="danger"
           icon={<AlarmClock size={20} />}
         />
         <Metric
           label="Tâches bloquées"
-          value={blockedTasks.length}
+          value={blockedTasksCount}
           href="/workspace/tasks"
           tone="warning"
           icon={<OctagonAlert size={20} />}
         />
         <Metric
           label="À valider"
-          value={editorialItems.length}
+          value={toValidateCount}
           href="/workspace/editorial"
           tone="info"
           icon={<BadgeCheck size={20} />}
         />
         <Metric
           label="Échéances à 7 jours"
-          value={dueSoonTasks.length}
+          value={dueSoonTasksCount}
           href="/workspace/tasks"
           tone="violet"
           icon={<CalendarClock size={20} />}
@@ -204,7 +218,7 @@ export default async function WorkspaceDashboardPage({
         <DashboardList
           title="Projets en retard"
           empty="Aucun projet en retard."
-          items={lateProjects.slice(0, 6).map((project) => ({
+          items={lateProjectsPreview.map((project) => ({
             title: project.name,
             meta: `${project.client.name} · ${project.dueDate ? formatDate(project.dueDate) : "Sans échéance"}`,
           }))}
@@ -212,7 +226,7 @@ export default async function WorkspaceDashboardPage({
         <DashboardList
           title="Tâches bloquées"
           empty="Aucune tâche bloquée."
-          items={blockedTasks.slice(0, 6).map((task) => ({
+          items={blockedTasksPreview.map((task) => ({
             title: task.title,
             meta: `${task.project.name} · ${task.assignee?.displayName ?? "Non assignée"}`,
           }))}
@@ -220,7 +234,7 @@ export default async function WorkspaceDashboardPage({
         <DashboardList
           title="Contenus à valider"
           empty="Aucun contenu en attente."
-          items={editorialItems.slice(0, 6).map((item) => ({
+          items={toValidatePreview.map((item) => ({
             title: item.title,
             meta: `${item.client?.name ?? item.clientLabel} · ${item.status === "INTERNAL_REVIEW" ? "Validation interne" : "Validation client"}`,
           }))}
