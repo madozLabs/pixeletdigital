@@ -99,9 +99,13 @@ export default async function KwalitiPrintHomePage() {
         </Reveal>
       </section>
       <section className="kp-strip" aria-label="Catégories principales">
-        {DEFAULT_CAPABILITIES.map((item) => (
-          <span key={item}>{item}</span>
-        ))}
+        <div className="kp-strip__track">
+          {[...DEFAULT_CAPABILITIES, ...DEFAULT_CAPABILITIES].map(
+            (item, index) => (
+              <span key={`${item}-${index}`}>{item}</span>
+            ),
+          )}
+        </div>
       </section>
 
       <section id="capacites-kp" className="kp-capabilities">
