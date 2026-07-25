@@ -3367,6 +3367,153 @@ a.world-switcher__item:focus-visible {
   }
 }
 
+/* CMS hub: overview, gallery, section editor */
+.cms-overview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.cms-overview__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.cms-quick-actions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cms-quick-actions li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0;
+}
+
+.cms-quick-actions li svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.cms-quick-actions a {
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.cms-quick-actions a:hover {
+  color: var(--accent);
+}
+
+.cms-section-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.cms-section-card__head h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.cms-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+  gap: var(--space-2);
+}
+
+.cms-gallery__tile {
+  position: relative;
+  border-radius: var(--wk-radius);
+  overflow: hidden;
+  border: 1px solid var(--wk-border);
+  aspect-ratio: 4 / 3;
+  background: color-mix(in srgb, var(--ink) 5%, var(--wk-card));
+}
+
+.cms-gallery__tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform var(--duration-base) var(--ease-editorial);
+}
+
+.cms-gallery__tile:hover img {
+  transform: scale(1.05);
+}
+
+.cms-gallery__file {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.cms-gallery__overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: linear-gradient(transparent, rgb(10 12 18 / 82%));
+  color: #fff;
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-editorial);
+}
+
+.cms-gallery__tile:hover .cms-gallery__overlay,
+.cms-gallery__tile:focus-within .cms-gallery__overlay {
+  opacity: 1;
+}
+
+.cms-gallery__overlay strong {
+  font-size: 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cms-gallery__overlay input {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.4rem;
+  border-radius: 0.35rem;
+  border: none;
+  background: rgb(255 255 255 / 18%);
+  color: #fff;
+}
+
+/* CMS-driven hero photos on the public homes */
+.home-hero__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  z-index: 0;
+  opacity: 0.9;
+}
+
+.kp-hero__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  z-index: 0;
+}
+
 /* Public pages rendered from Site & contenus */
 .cms-public-page {
   min-height: 70vh;

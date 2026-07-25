@@ -8,6 +8,7 @@ import { PrismaServiceRepository } from "@/modules/content/infrastructure/prisma
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
 
 import { Reveal } from "@/app/_components/reveal";
+import { getCmsHomeContent } from "@/app/_lib/cms-home";
 import { groupServicesByFamily } from "@/app/_lib/group-services-by-family";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,8 @@ const MANIFESTO = [
   "Les bonnes stratégies, si.",
 ];
 
+const DEFAULT_HERO_LINES = ["Avec nous,", "vous allez", "prendre terrain."];
+
 export default async function HomePage() {
   const deps = {
     services: new PrismaServiceRepository(prisma),
@@ -24,38 +27,53 @@ export default async function HomePage() {
     worlds: new PrismaWorldRepository(prisma),
   };
 
-  const [services, families] = await Promise.all([
+  const [services, families, cms] = await Promise.all([
     listPublishedServices(deps, { worldKey: "pixel-digital" }).catch(() => []),
     listPublishedServiceFamilies(deps, { worldKey: "pixel-digital" }).catch(
       () => [],
     ),
+    getCmsHomeContent("pixel-digital").catch(() => ({
+      hero: null,
+      closing: null,
+    })),
   ]);
 
   const groups = groupServicesByFamily(services, families);
+  const heroLines =
+    cms.hero && cms.hero.titleLines.length >= 1
+      ? cms.hero.titleLines
+      : DEFAULT_HERO_LINES;
 
   return (
     <main id="main-content" className="public-home">
       <section className="home-hero">
-        <div className="home-hero__eyebrow">Agence créative & digitale</div>
+        <div className="home-hero__eyebrow">
+          {cms.hero?.eyebrow ?? "Agence créative & digitale"}
+        </div>
         <div className="home-hero__grid">
           <div className="home-hero__copy">
             <Reveal>
               <h1 className="home-hero__title">
-                Avec nous,
-                <span>vous allez</span>
-                <strong>prendre terrain.</strong>
+                {heroLines[0]}
+                {heroLines[1] ? <span>{heroLines[1]}</span> : null}
+                {heroLines.length > 2 ? (
+                  <strong>{heroLines.slice(2).join(" ")}</strong>
+                ) : null}
               </h1>
             </Reveal>
             <Reveal delay={0.15}>
               <p className="home-hero__lede">
-                Nous construisons des marques visibles, crédibles et difficiles
-                à oublier de la stratégie à l’exécution.
+                {cms.hero?.lede ??
+                  "Nous construisons des marques visibles, crédibles et difficiles à oublier de la stratégie à l’exécution."}
               </p>
             </Reveal>
             <Reveal delay={0.25}>
               <div className="home-hero__actions">
-                <Link href="/contact" className="button button--primary">
-                  Lancer un projet
+                <Link
+                  href={cms.hero?.ctaHref ?? "/contact"}
+                  className="button button--primary"
+                >
+                  {cms.hero?.ctaLabel ?? "Lancer un projet"}
                 </Link>
                 <Link href="#capacites" className="home-hero__secondary-link">
                   Voir nos expertises
@@ -66,6 +84,14 @@ export default async function HomePage() {
 
           <Reveal delay={0.1}>
             <div className="home-hero__visual" aria-hidden="true">
+              {cms.hero?.imageUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  className="home-hero__photo"
+                  src={cms.hero.imageUrl}
+                  alt={cms.hero.imageAlt}
+                />
+              ) : null}
               <div className="home-hero__orb home-hero__orb--red" />
               <div className="home-hero__orb home-hero__orb--black" />
               <div className="home-hero__stamp">P&D</div>
@@ -179,12 +205,18 @@ export default async function HomePage() {
       <section className="home-closing">
         <Reveal>
           <p>
-            &Ecirc;tre partout ne sert à rien si personne ne se souvient de
-            vous.
+            {cms.closing?.kicker ??
+              "Être partout ne sert à rien si personne ne se souvient de vous."}
           </p>
-          <h2>Faisons quelque chose qu&rsquo;on ne peut pas ignorer.</h2>
-          <Link href="/contact" className="button button--primary">
-            Parler à Pixel&Digital
+          <h2>
+            {cms.closing?.title ??
+              "Faisons quelque chose qu’on ne peut pas ignorer."}
+          </h2>
+          <Link
+            href={cms.closing?.ctaHref ?? "/contact"}
+            className="button button--primary"
+          >
+            {cms.closing?.ctaLabel ?? "Parler à Pixel&Digital"}
           </Link>
         </Reveal>
       </section>

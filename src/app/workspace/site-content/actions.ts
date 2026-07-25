@@ -121,6 +121,62 @@ export async function saveSectionAction(formData: FormData): Promise<void> {
   revalidatePath("/workspace/site-content");
 }
 
+const TYPED_PAYLOAD_KEYS = [
+  "eyebrow",
+  "title",
+  "text",
+  "label",
+  "href",
+  "mediaId",
+] as const;
+
+/**
+ * Saves a section from named form fields instead of raw JSON. Unknown keys
+ * already present in the payload are preserved so the advanced JSON editor
+ * and this typed editor can coexist on the same section.
+ */
+export async function saveSectionFieldsAction(
+  formData: FormData,
+): Promise<void> {
+  const pageId = text(formData, "pageId");
+  const page = await prisma.page.findUniqueOrThrow({ where: { id: pageId } });
+  await actorFor(page.worldKey);
+  if (page.lifecycle !== "DRAFT") throw new Error("PAGE_NOT_DRAFT");
+  const id = text(formData, "id") || randomUUID();
+  const existing = await prisma.pageSection.findUnique({ where: { id } });
+  const payload: Record<string, unknown> = {
+    ...((existing?.payload as Record<string, unknown> | null) ?? {}),
+  };
+  for (const key of TYPED_PAYLOAD_KEYS) {
+    if (!formData.has(key)) continue;
+    const value = text(formData, key);
+    if (value) payload[key] = value;
+    else delete payload[key];
+  }
+  const now = new Date();
+  await prisma.pageSection.upsert({
+    where: { id },
+    create: {
+      id,
+      pageId,
+      sectionType: text(formData, "sectionType").toUpperCase(),
+      order: Number(formData.get("order")),
+      payload: payload as Prisma.InputJsonValue,
+      payloadSchemaVersion: 1,
+      version: 1,
+      createdAt: now,
+      updatedAt: now,
+    },
+    update: {
+      order: Number(formData.get("order")),
+      payload: payload as Prisma.InputJsonValue,
+      version: { increment: 1 },
+      updatedAt: now,
+    },
+  });
+  revalidatePath("/workspace/site-content");
+}
+
 export async function deleteSectionAction(formData: FormData): Promise<void> {
   const id = text(formData, "id");
   const section = await prisma.pageSection.findUniqueOrThrow({

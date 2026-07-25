@@ -9,6 +9,7 @@ import { PrismaServiceRepository } from "@/modules/content/infrastructure/prisma
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
 
 import { Reveal } from "@/app/_components/reveal";
+import { getCmsHomeContent } from "@/app/_lib/cms-home";
 import { groupServicesByFamily } from "@/app/_lib/group-services-by-family";
 
 export const dynamic = "force-dynamic";
@@ -31,11 +32,15 @@ export default async function KwalitiPrintHomePage() {
     worlds: new PrismaWorldRepository(prisma),
   };
 
-  const [capabilities, families] = await Promise.all([
+  const [capabilities, families, cms] = await Promise.all([
     listPublishedServices(deps, { worldKey: "kwaliti-print" }).catch(() => []),
     listPublishedServiceFamilies(deps, { worldKey: "kwaliti-print" }).catch(
       () => [],
     ),
+    getCmsHomeContent("kwaliti-print").catch(() => ({
+      hero: null,
+      closing: null,
+    })),
   ]);
   const groups = groupServicesByFamily(capabilities, families);
 
@@ -45,25 +50,29 @@ export default async function KwalitiPrintHomePage() {
         <div className="kp-hero__copy">
           <Reveal>
             <p className="kp-eyebrow">
-              Impression · Personnalisation · Production
+              {cms.hero?.eyebrow ??
+                "Impression · Personnalisation · Production"}
             </p>
           </Reveal>
           <Reveal delay={0.08}>
-            <h1>Vos idées méritent de sortir de l’écran.</h1>
+            <h1>
+              {cms.hero?.titleLines.join(" ") ||
+                "Vos idées méritent de sortir de l’écran."}
+            </h1>
           </Reveal>
           <Reveal delay={0.16}>
             <p className="kp-hero__lede">
-              Kwaliti Print transforme vos visuels en supports concrets,
-              visibles et bien finis — du prototype à la série.
+              {cms.hero?.lede ??
+                "Kwaliti Print transforme vos visuels en supports concrets, visibles et bien finis — du prototype à la série."}
             </p>
           </Reveal>
           <Reveal delay={0.24}>
             <div className="kp-hero__actions">
               <Link
-                href="/kwaliti-print/devis"
+                href={cms.hero?.ctaHref ?? "/kwaliti-print/devis"}
                 className="button button--kwaliti"
               >
-                Demander un devis
+                {cms.hero?.ctaLabel ?? "Demander un devis"}
               </Link>
               <a href="#capacites-kp" className="kp-text-link">
                 Voir les possibilités
@@ -74,6 +83,14 @@ export default async function KwalitiPrintHomePage() {
 
         <Reveal delay={0.12}>
           <div className="kp-hero__visual" aria-hidden="true">
+            {cms.hero?.imageUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                className="kp-hero__photo"
+                src={cms.hero.imageUrl}
+                alt={cms.hero.imageAlt}
+              />
+            ) : null}
             <span className="kp-shape kp-shape--cyan" />
             <span className="kp-shape kp-shape--yellow" />
             <span className="kp-shape kp-shape--magenta" />
@@ -141,10 +158,16 @@ export default async function KwalitiPrintHomePage() {
         </div>
       </section>
       <section className="kp-closing">
-        <p>Un besoin précis ou juste une idée ?</p>
-        <h2>On vous aide à choisir la bonne manière de l’imprimer.</h2>
-        <Link href="/kwaliti-print/devis" className="button button--kwaliti">
-          Obtenir un devis
+        <p>{cms.closing?.kicker ?? "Un besoin précis ou juste une idée ?"}</p>
+        <h2>
+          {cms.closing?.title ??
+            "On vous aide à choisir la bonne manière de l’imprimer."}
+        </h2>
+        <Link
+          href={cms.closing?.ctaHref ?? "/kwaliti-print/devis"}
+          className="button button--kwaliti"
+        >
+          {cms.closing?.ctaLabel ?? "Obtenir un devis"}
         </Link>
       </section>
     </main>

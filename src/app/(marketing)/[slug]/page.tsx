@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
 
@@ -24,7 +24,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CmsPublicPage({ params }: Props) {
-  const page = await loadPage((await params).slug);
+  const { slug } = await params;
+  // The "accueil" page feeds the real home hero; avoid a duplicate route.
+  if (slug === "accueil") redirect("/");
+  const page = await loadPage(slug);
   if (!page) notFound();
 
   const mediaIds = page.sections.flatMap((section) => {

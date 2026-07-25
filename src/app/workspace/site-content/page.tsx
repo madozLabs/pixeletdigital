@@ -1,6 +1,15 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
+import {
+  FileText,
+  Globe,
+  Image as ImageIcon,
+  Layers,
+  PlusCircle,
+  UploadCloud,
+} from "lucide-react";
 
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/infrastructure/shared/prisma-client";
@@ -11,6 +20,7 @@ import {
   deleteMediaAction,
   deleteSectionAction,
   saveSectionAction,
+  saveSectionFieldsAction,
   transitionPageAction,
   updatePageAction,
   uploadMediaAction,
@@ -27,6 +37,12 @@ const SECTION_TYPES = [
   "PORTFOLIO",
 ];
 
+const TYPED_SECTION_TYPES = new Set(["HERO", "TEXT", "MEDIA", "CTA"]);
+
+type MediaAsset = Awaited<
+  ReturnType<typeof prisma.mediaAsset.findMany>
+>[number];
+
 export default async function SiteContentPage({
   searchParams,
 }: {
@@ -36,14 +52,18 @@ export default async function SiteContentPage({
   if (!context) redirect("/login");
   const params = await searchParams;
   const worldKey = params.world ?? "pixel-digital";
-  const tab = params.tab ?? "pages";
-  const [pages, media] = await Promise.all([
+  const tab = params.tab ?? "overview";
+  const [pages, media, publishedServices, enquiryCount] = await Promise.all([
     prisma.page
       .findMany({ where: { worldKey }, orderBy: { updatedAt: "desc" } })
       .catch(() => []),
     prisma.mediaAsset
       .findMany({ where: { worldKey }, orderBy: { createdAt: "desc" } })
       .catch(() => []),
+    prisma.service
+      .count({ where: { worldKey, lifecycle: "PUBLISHED" } })
+      .catch(() => 0),
+    prisma.enquiry.count({ where: { worldKey } }).catch(() => 0),
   ]);
   const selectedPage = params.page
     ? await prisma.page
@@ -53,51 +73,225 @@ export default async function SiteContentPage({
         })
         .catch(() => null)
     : null;
+
+  const publishedPages = pages.filter((p) => p.lifecycle === "PUBLISHED");
+  const draftPages = pages.filter((p) => p.lifecycle === "DRAFT");
+
   return (
     <>
       <div className="admin-page-heading">
         <div>
           <h1 className="admin-content__title">Site &amp; contenus</h1>
           <p className="admin-content__lede">
-            Gérez les pages, leurs sections et la médiathèque Supabase.
+            Pilotez le site public : pages, sections, médias et publication.
           </p>
         </div>
         <span className="admin-metric">
-          {pages.length} page{pages.length > 1 ? "s" : ""}
+          {publishedPages.length} page{publishedPages.length > 1 ? "s" : ""} en
+          ligne
         </span>
       </div>
 
       <div className="admin-tabs" role="tablist">
-        <Link
-          className={
-            tab === "pages"
-              ? "admin-tabs__item admin-tabs__item--active"
-              : "admin-tabs__item"
-          }
-          href={`/workspace/site-content?world=${worldKey}&tab=pages`}
-        >
-          Pages <span className="admin-tabs__count">{pages.length}</span>
-        </Link>
-        <Link
-          className={
-            tab === "media"
-              ? "admin-tabs__item admin-tabs__item--active"
-              : "admin-tabs__item"
-          }
-          href={`/workspace/site-content?world=${worldKey}&tab=media`}
-        >
-          Médiathèque <span className="admin-tabs__count">{media.length}</span>
-        </Link>
+        {(
+          [
+            ["overview", "Vue d’ensemble"],
+            ["pages", "Pages"],
+            ["media", "Médiathèque"],
+          ] as const
+        ).map(([id, label]) => (
+          <Link
+            key={id}
+            className={
+              tab === id
+                ? "admin-tabs__item admin-tabs__item--active"
+                : "admin-tabs__item"
+            }
+            href={`/workspace/site-content?world=${worldKey}&tab=${id}`}
+          >
+            {label}
+            {id === "pages" ? (
+              <span className="admin-tabs__count">{pages.length}</span>
+            ) : null}
+            {id === "media" ? (
+              <span className="admin-tabs__count">{media.length}</span>
+            ) : null}
+          </Link>
+        ))}
       </div>
 
-      {tab === "media" ? (
+      {tab === "overview" ? (
+        <OverviewPanel
+          worldKey={worldKey}
+          pages={pages}
+          publishedCount={publishedPages.length}
+          draftCount={draftPages.length}
+          mediaCount={media.length}
+          publishedServices={publishedServices}
+          enquiryCount={enquiryCount}
+        />
+      ) : tab === "media" ? (
         <MediaPanel worldKey={worldKey} media={media} />
       ) : selectedPage ? (
-        <PageEditor worldKey={worldKey} page={selectedPage} />
+        <PageEditor worldKey={worldKey} page={selectedPage} media={media} />
       ) : (
         <PagesPanel worldKey={worldKey} pages={pages} />
       )}
     </>
+  );
+}
+
+function OverviewPanel({
+  worldKey,
+  pages,
+  publishedCount,
+  draftCount,
+  mediaCount,
+  publishedServices,
+  enquiryCount,
+}: {
+  worldKey: string;
+  pages: Awaited<ReturnType<typeof prisma.page.findMany>>;
+  publishedCount: number;
+  draftCount: number;
+  mediaCount: number;
+  publishedServices: number;
+  enquiryCount: number;
+}) {
+  const recent = pages.slice(0, 6);
+  const homePage = pages.find((page) => page.slug === "accueil");
+  return (
+    <div className="cms-overview">
+      <section className="dashboard-metrics cms-overview__metrics">
+        <GlanceCard
+          tone="accent"
+          icon={<Globe size={20} />}
+          label="Pages publiées"
+          value={publishedCount}
+          href={`/workspace/site-content?world=${worldKey}&tab=pages`}
+        />
+        <GlanceCard
+          tone="info"
+          icon={<FileText size={20} />}
+          label="Brouillons"
+          value={draftCount}
+          href={`/workspace/site-content?world=${worldKey}&tab=pages`}
+        />
+        <GlanceCard
+          tone="violet"
+          icon={<ImageIcon size={20} />}
+          label="Médias"
+          value={mediaCount}
+          href={`/workspace/site-content?world=${worldKey}&tab=media`}
+        />
+        <GlanceCard
+          tone="success"
+          icon={<Layers size={20} />}
+          label="Services en ligne"
+          value={publishedServices}
+          href={`/workspace/services?world=${worldKey}`}
+        />
+      </section>
+
+      <div className="cms-overview__grid">
+        <section className="dashboard-panel">
+          <h2>Dernières pages modifiées</h2>
+          {recent.length === 0 ? (
+            <p className="admin-empty">
+              Aucune page. Créez la page « accueil » pour piloter le contenu du
+              site public depuis le Workspace.
+            </p>
+          ) : (
+            <ul>
+              {recent.map((page) => (
+                <li key={page.id}>
+                  <strong>
+                    <Link
+                      href={`/workspace/site-content?world=${worldKey}&tab=pages&page=${page.id}`}
+                    >
+                      {page.title}
+                    </Link>
+                  </strong>
+                  <span>
+                    /{page.slug} · <LifecycleBadge lifecycle={page.lifecycle} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="dashboard-panel">
+          <h2>Actions rapides</h2>
+          <ul className="cms-quick-actions">
+            <li>
+              <PlusCircle size={16} />
+              <Link
+                href={`/workspace/site-content?world=${worldKey}&tab=pages`}
+              >
+                Créer ou éditer une page
+              </Link>
+            </li>
+            <li>
+              <UploadCloud size={16} />
+              <Link
+                href={`/workspace/site-content?world=${worldKey}&tab=media`}
+              >
+                Ajouter un média
+              </Link>
+            </li>
+            <li>
+              <Layers size={16} />
+              <Link href={`/workspace/services?world=${worldKey}`}>
+                Gérer le catalogue de services
+              </Link>
+            </li>
+            <li>
+              <Globe size={16} />
+              <a
+                href={worldKey === "kwaliti-print" ? "/kwaliti-print" : "/"}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Voir le site public
+              </a>
+            </li>
+          </ul>
+          <p className="admin-table__note">
+            {homePage
+              ? `La page « accueil » pilote le hero et l’appel à l’action du site ${worldKey === "kwaliti-print" ? "Kwaliti Print" : "Pixel&Digital"}.`
+              : "Astuce : une page publiée avec le slug « accueil » remplace les textes du hero et du bloc final du site public."}{" "}
+            {enquiryCount > 0
+              ? `${enquiryCount} demande${enquiryCount > 1 ? "s" : ""} de contact reçue${enquiryCount > 1 ? "s" : ""} via le site.`
+              : ""}
+          </p>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function GlanceCard({
+  tone,
+  icon,
+  label,
+  value,
+  href,
+}: {
+  tone: string;
+  icon: ReactNode;
+  label: string;
+  value: number;
+  href: string;
+}) {
+  return (
+    <Link href={href} className="dashboard-metric-card">
+      <span className={`metric-icon metric-icon--${tone}`}>{icon}</span>
+      <span className="dashboard-metric-card__body">
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </span>
+    </Link>
   );
 }
 
@@ -135,6 +329,9 @@ function PagesPanel({
         <button className="admin-table__action" type="submit">
           Créer la page
         </button>
+        <p className="section__note">
+          Le slug « accueil » pilote le hero du site public de l’univers.
+        </p>
       </form>
       <section className="cms-list-panel">
         <h2>Pages de l’univers</h2>
@@ -148,7 +345,6 @@ function PagesPanel({
                   <th>Titre</th>
                   <th>Slug</th>
                   <th>Cycle</th>
-                  <th>Sections</th>
                   <th></th>
                 </tr>
               </thead>
@@ -160,7 +356,6 @@ function PagesPanel({
                     <td>
                       <LifecycleBadge lifecycle={page.lifecycle} />
                     </td>
-                    <td>—</td>
                     <td>
                       <Link
                         className="admin-table__action"
@@ -185,14 +380,16 @@ type EditablePage = Prisma.PageGetPayload<{ include: { sections: true } }>;
 function PageEditor({
   worldKey,
   page,
+  media,
 }: {
   worldKey: string;
   page: EditablePage;
+  media: readonly MediaAsset[];
 }) {
   return (
     <div className="cms-editor">
       <div className="cms-editor__top">
-        <Link href={`/workspace/site-content?world=${worldKey}`}>
+        <Link href={`/workspace/site-content?world=${worldKey}&tab=pages`}>
           ← Toutes les pages
         </Link>
         <LifecycleBadge lifecycle={page.lifecycle} />
@@ -221,66 +418,148 @@ function PageEditor({
       <h2>Sections</h2>
       <div className="cms-sections">
         {page.sections.map((section) => (
-          <form
-            action={saveSectionAction}
-            className="admin-form-card cms-section-card"
+          <SectionEditor
             key={section.id}
-          >
-            <input type="hidden" name="id" value={section.id} />
-            <input type="hidden" name="pageId" value={page.id} />
-            <div className="admin-form-grid">
-              <label>
-                Type
-                <select name="sectionType" defaultValue={section.sectionType}>
-                  {SECTION_TYPES.map((type) => (
-                    <option key={type}>{type}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Ordre
-                <input
-                  type="number"
-                  name="order"
-                  min="0"
-                  defaultValue={section.order}
-                />
-              </label>
-            </div>
-            <label>
-              Contenu JSON
-              <textarea
-                name="payload"
-                rows={8}
-                defaultValue={JSON.stringify(section.payload, null, 2)}
-              />
-            </label>
-            <div className="admin-table__actions">
-              <button
-                className="admin-table__action"
-                disabled={page.lifecycle !== "DRAFT"}
-              >
-                Mettre à jour
-              </button>
-            </div>
-          </form>
+            page={page}
+            section={section}
+            media={media}
+          />
         ))}
         {page.lifecycle === "DRAFT" ? (
           <NewSectionForm pageId={page.id} order={page.sections.length} />
         ) : null}
       </div>
-      {page.lifecycle === "DRAFT" && page.sections.length > 0 ? (
-        <div className="cms-delete-list">
-          {page.sections.map((section) => (
-            <form action={deleteSectionAction} key={section.id}>
-              <input type="hidden" name="id" value={section.id} />
-              <button className="admin-table__action" type="submit">
-                Supprimer {section.sectionType} #{section.order}
-              </button>
-            </form>
-          ))}
-        </div>
+    </div>
+  );
+}
+
+function SectionEditor({
+  page,
+  section,
+  media,
+}: {
+  page: EditablePage;
+  section: EditablePage["sections"][number];
+  media: readonly MediaAsset[];
+}) {
+  const payload = section.payload as Record<string, unknown>;
+  const value = (key: string) =>
+    typeof payload[key] === "string" ? (payload[key] as string) : "";
+  const disabled = page.lifecycle !== "DRAFT";
+  const typed = TYPED_SECTION_TYPES.has(section.sectionType);
+  const images = media.filter((asset) => asset.mimeType.startsWith("image/"));
+
+  return (
+    <div className="admin-form-card cms-section-card">
+      <header className="cms-section-card__head">
+        <h3>
+          {section.sectionType} · position {section.order}
+        </h3>
+        {!disabled ? (
+          <form action={deleteSectionAction}>
+            <input type="hidden" name="id" value={section.id} />
+            <button className="admin-table__action" type="submit">
+              Supprimer
+            </button>
+          </form>
+        ) : null}
+      </header>
+
+      {typed ? (
+        <form action={saveSectionFieldsAction}>
+          <input type="hidden" name="id" value={section.id} />
+          <input type="hidden" name="pageId" value={page.id} />
+          <input type="hidden" name="sectionType" value={section.sectionType} />
+          <div className="admin-form-grid">
+            <label>
+              Ordre
+              <input
+                type="number"
+                name="order"
+                min="0"
+                defaultValue={section.order}
+              />
+            </label>
+            <label>
+              Sur-titre
+              <input name="eyebrow" defaultValue={value("eyebrow")} />
+            </label>
+          </div>
+          <label>
+            Titre{" "}
+            {section.sectionType === "HERO"
+              ? "(une ligne par retour à la ligne)"
+              : ""}
+            <textarea name="title" rows={3} defaultValue={value("title")} />
+          </label>
+          <label>
+            Texte
+            <textarea name="text" rows={3} defaultValue={value("text")} />
+          </label>
+          <div className="admin-form-grid">
+            <label>
+              Libellé du bouton
+              <input name="label" defaultValue={value("label")} />
+            </label>
+            <label>
+              Lien du bouton
+              <input name="href" defaultValue={value("href")} />
+            </label>
+          </div>
+          <label>
+            Image
+            <select name="mediaId" defaultValue={value("mediaId")}>
+              <option value="">Aucune image</option>
+              {images.map((asset) => (
+                <option key={asset.id} value={asset.id}>
+                  {asset.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="admin-table__action" disabled={disabled}>
+            Mettre à jour
+          </button>
+        </form>
       ) : null}
+
+      <details className="admin-user-card__details">
+        <summary>{typed ? "Mode avancé (JSON)" : "Contenu (JSON)"}</summary>
+        <form action={saveSectionAction}>
+          <input type="hidden" name="id" value={section.id} />
+          <input type="hidden" name="pageId" value={page.id} />
+          <div className="admin-form-grid">
+            <label>
+              Type
+              <select name="sectionType" defaultValue={section.sectionType}>
+                {SECTION_TYPES.map((type) => (
+                  <option key={type}>{type}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Ordre
+              <input
+                type="number"
+                name="order"
+                min="0"
+                defaultValue={section.order}
+              />
+            </label>
+          </div>
+          <label>
+            Contenu JSON
+            <textarea
+              name="payload"
+              rows={8}
+              defaultValue={JSON.stringify(section.payload, null, 2)}
+            />
+          </label>
+          <button className="admin-table__action" disabled={disabled}>
+            Mettre à jour le JSON
+          </button>
+        </form>
+      </details>
     </div>
   );
 }
@@ -313,7 +592,7 @@ function NewSectionForm({ pageId, order }: { pageId: string; order: number }) {
           name="payload"
           rows={8}
           defaultValue={
-            '{\n  "eyebrow": "",\n  "title": "",\n  "text": "",\n  "mediaId": null\n}'
+            '{\n  "eyebrow": "",\n  "title": "",\n  "text": "",\n  "label": "",\n  "href": "",\n  "mediaId": ""\n}'
           }
         />
       </label>
@@ -354,7 +633,7 @@ function MediaPanel({
   media,
 }: {
   worldKey: string;
-  media: Awaited<ReturnType<typeof prisma.mediaAsset.findMany>>;
+  media: readonly MediaAsset[];
 }) {
   return (
     <div className="cms-layout">
@@ -386,37 +665,43 @@ function MediaPanel({
           <input name="tags" placeholder="équipe, campagne, print" />
         </label>
         <button className="admin-table__action" type="submit">
-          Envoyer vers Supabase
+          Envoyer vers la médiathèque
         </button>
-        <p className="section__note">
-          Variables requises : SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY.
-        </p>
       </form>
       <section className="cms-list-panel">
         <h2>Médiathèque</h2>
-        <div className="cms-media-grid">
-          {media.map((asset) => (
-            <article className="cms-media-card" key={asset.id}>
-              {asset.mimeType.startsWith("image/") ? (
-                <img src={asset.publicUrl} alt={asset.altText} />
-              ) : (
-                <div className="cms-media-card__file">{asset.mimeType}</div>
-              )}
-              <div>
-                <strong>{asset.title}</strong>
-                <p>{asset.altText}</p>
-                <code>{asset.objectPath}</code>
-              </div>
-              <form action={deleteMediaAction}>
-                <input type="hidden" name="id" value={asset.id} />
-                <button className="admin-table__action">Supprimer</button>
-              </form>
-            </article>
-          ))}
-        </div>
         {media.length === 0 ? (
-          <p className="admin-empty">Aucun média enregistré.</p>
-        ) : null}
+          <p className="admin-empty">
+            Aucun média. Les images ajoutées ici deviennent utilisables dans les
+            sections des pages (hero, blocs médias…).
+          </p>
+        ) : (
+          <div className="cms-gallery">
+            {media.map((asset) => (
+              <article className="cms-gallery__tile" key={asset.id}>
+                {asset.mimeType.startsWith("image/") ? (
+                  <img src={asset.publicUrl} alt={asset.altText} />
+                ) : (
+                  <div className="cms-gallery__file">
+                    {asset.mimeType.split("/")[1] ?? asset.mimeType}
+                  </div>
+                )}
+                <div className="cms-gallery__overlay">
+                  <strong>{asset.title}</strong>
+                  <input
+                    readOnly
+                    value={asset.publicUrl}
+                    aria-label={`URL de ${asset.title}`}
+                  />
+                  <form action={deleteMediaAction}>
+                    <input type="hidden" name="id" value={asset.id} />
+                    <button className="admin-table__action">Supprimer</button>
+                  </form>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
