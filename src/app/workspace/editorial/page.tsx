@@ -8,6 +8,7 @@ import {
   advanceEditorialWorkflowAction,
   createProfessionalEditorialItemAction,
 } from "./professional-actions";
+import { EditorialPipeline, type PipelineItem } from "./pipeline-board";
 import {
   addDays,
   formatISODate,
@@ -44,12 +45,15 @@ const CONTENT_LABEL: Readonly<Record<string, string>> = {
 
 export default async function WorkspaceEditorialPage({
   searchParams,
-}: Readonly<{ searchParams: Promise<{ world?: string; week?: string }> }>) {
+}: Readonly<{
+  searchParams: Promise<{ world?: string; week?: string; view?: string }>;
+}>) {
   const context = await getWorkspaceRequestContext();
   if (!context) redirect("/login");
 
-  const { world, week } = await searchParams;
+  const { world, week, view } = await searchParams;
   const worldKey = world ?? "pixel-digital";
+  const activeView = view === "pipeline" ? "pipeline" : "week";
   const now = context.clock.now();
   const weekStart = parseISODate(week, now);
   const weekEnd = addDays(weekStart, 6);
@@ -101,104 +105,163 @@ export default async function WorkspaceEditorialPage({
         </span>
       </div>
 
-      <div className="editorial-week-nav">
-        <Link href={previousWeekHref} className="admin-table__action">
-          Semaine précédente
+      <div className="admin-tabs" role="tablist">
+        <Link
+          href={`/workspace/editorial?world=${worldKey}&view=week`}
+          role="tab"
+          aria-selected={activeView === "week"}
+          className={
+            activeView === "week"
+              ? "admin-tabs__item admin-tabs__item--active"
+              : "admin-tabs__item"
+          }
+        >
+          Semaine
         </Link>
-        <span className="editorial-week-nav__label">
-          Semaine du {formatDayLabel(weekStart)} au {formatDayLabel(weekEnd)}
-        </span>
-        <Link href={nextWeekHref} className="admin-table__action">
-          Semaine suivante
+        <Link
+          href={`/workspace/editorial?world=${worldKey}&view=pipeline`}
+          role="tab"
+          aria-selected={activeView === "pipeline"}
+          className={
+            activeView === "pipeline"
+              ? "admin-tabs__item admin-tabs__item--active"
+              : "admin-tabs__item"
+          }
+        >
+          Pipeline
         </Link>
       </div>
-      <div className="editorial-board">
-        {days.map((day, index) => {
-          const key = formatISODate(day);
-          const dayItems = itemsByDay.get(key) ?? [];
-          return (
-            <section key={key} className="editorial-board__day">
-              <div className="editorial-board__day-header">
-                <span>{WEEKDAY_LABELS[index]}</span>
-                <span className="editorial-board__day-date">
-                  {formatDayLabel(day)}
-                </span>
-              </div>
-              {dayItems.length === 0 ? (
-                <p className="editorial-board__empty">Rien de prévu</p>
-              ) : (
-                dayItems.map((item) => (
-                  <article
-                    key={item.id}
-                    className="editorial-card editorial-card--professional"
-                  >
-                    <span
-                      className={`status-badge status-badge--${item.status.toLowerCase()}`}
-                    >
-                      {STATUS_LABEL[item.status]}
+
+      {activeView === "pipeline" ? (
+        <EditorialPipeline
+          items={items
+            .filter((item) => item.status !== "CANCELLED")
+            .map((item): PipelineItem => ({
+              id: item.id,
+              title: item.title,
+              status: item.status,
+              clientName: item.client?.name ?? item.clientLabel,
+              contentType: CONTENT_LABEL[item.contentType] ?? item.contentType,
+              channel: item.channel,
+              scheduledFor: formatDayLabel(item.scheduledFor),
+              ownerName:
+                item.owner?.displayName ?? item.owner?.normalizedEmail ?? null,
+            }))}
+          canMutate={canMutate}
+        />
+      ) : null}
+
+      {activeView === "week" ? (
+        <>
+          <div className="editorial-week-nav">
+            <Link href={previousWeekHref} className="admin-table__action">
+              Semaine précédente
+            </Link>
+            <span className="editorial-week-nav__label">
+              Semaine du {formatDayLabel(weekStart)} au{" "}
+              {formatDayLabel(weekEnd)}
+            </span>
+            <Link href={nextWeekHref} className="admin-table__action">
+              Semaine suivante
+            </Link>
+          </div>
+          <div className="editorial-board">
+            {days.map((day, index) => {
+              const key = formatISODate(day);
+              const dayItems = itemsByDay.get(key) ?? [];
+              return (
+                <section key={key} className="editorial-board__day">
+                  <div className="editorial-board__day-header">
+                    <span>{WEEKDAY_LABELS[index]}</span>
+                    <span className="editorial-board__day-date">
+                      {formatDayLabel(day)}
                     </span>
-                    <p className="editorial-card__title">{item.title}</p>
-                    <p className="editorial-card__meta">
-                      {item.client?.name ?? item.clientLabel} ·{" "}
-                      {CONTENT_LABEL[item.contentType]} · {item.channel}
-                    </p>
-                    {item.project ? (
-                      <p className="editorial-card__meta">
-                        Projet : {item.project.name}
-                      </p>
-                    ) : null}
-                    {item.owner ? (
-                      <p className="editorial-card__meta">
-                        Responsable :{" "}
-                        {item.owner.displayName ?? item.owner.normalizedEmail}
-                      </p>
-                    ) : null}
-                    {item.brief ? (
-                      <p className="editorial-card__brief">{item.brief}</p>
-                    ) : null}
-                    {canMutate &&
-                    item.status !== "PUBLISHED" &&
-                    item.status !== "CANCELLED" ? (
-                      <form
-                        action={advanceEditorialWorkflowAction}
-                        className="editorial-card__workflow"
+                  </div>
+                  {dayItems.length === 0 ? (
+                    <p className="editorial-board__empty">Rien de prévu</p>
+                  ) : (
+                    dayItems.map((item) => (
+                      <article
+                        key={item.id}
+                        className="editorial-card editorial-card--professional"
                       >
-                        <input type="hidden" name="itemId" value={item.id} />
-                        <input
-                          type="hidden"
-                          name="expectedVersion"
-                          value={item.version}
-                        />
-                        <select name="status" defaultValue={item.status}>
-                          <option value="DRAFT">Brouillon</option>
-                          <option value="INTERNAL_REVIEW">
-                            Validation interne
-                          </option>
-                          <option value="CLIENT_REVIEW">
-                            Validation client
-                          </option>
-                          <option value="APPROVED">Approuvé</option>
-                          <option value="SCHEDULED">Programmé</option>
-                          <option value="PUBLISHED">Publié</option>
-                          <option value="CANCELLED">Annulé</option>
-                        </select>
-                        <input
-                          name="proofUrl"
-                          type="url"
-                          placeholder="Lien de publication"
-                        />
-                        <button type="submit" className="admin-table__action">
-                          Mettre à jour
-                        </button>
-                      </form>
-                    ) : null}
-                  </article>
-                ))
-              )}
-            </section>
-          );
-        })}
-      </div>
+                        <span
+                          className={`status-badge status-badge--${item.status.toLowerCase()}`}
+                        >
+                          {STATUS_LABEL[item.status]}
+                        </span>
+                        <p className="editorial-card__title">{item.title}</p>
+                        <p className="editorial-card__meta">
+                          {item.client?.name ?? item.clientLabel} ·{" "}
+                          {CONTENT_LABEL[item.contentType]} · {item.channel}
+                        </p>
+                        {item.project ? (
+                          <p className="editorial-card__meta">
+                            Projet : {item.project.name}
+                          </p>
+                        ) : null}
+                        {item.owner ? (
+                          <p className="editorial-card__meta">
+                            Responsable :{" "}
+                            {item.owner.displayName ??
+                              item.owner.normalizedEmail}
+                          </p>
+                        ) : null}
+                        {item.brief ? (
+                          <p className="editorial-card__brief">{item.brief}</p>
+                        ) : null}
+                        {canMutate &&
+                        item.status !== "PUBLISHED" &&
+                        item.status !== "CANCELLED" ? (
+                          <form
+                            action={advanceEditorialWorkflowAction}
+                            className="editorial-card__workflow"
+                          >
+                            <input
+                              type="hidden"
+                              name="itemId"
+                              value={item.id}
+                            />
+                            <input
+                              type="hidden"
+                              name="expectedVersion"
+                              value={item.version}
+                            />
+                            <select name="status" defaultValue={item.status}>
+                              <option value="DRAFT">Brouillon</option>
+                              <option value="INTERNAL_REVIEW">
+                                Validation interne
+                              </option>
+                              <option value="CLIENT_REVIEW">
+                                Validation client
+                              </option>
+                              <option value="APPROVED">Approuvé</option>
+                              <option value="SCHEDULED">Programmé</option>
+                              <option value="PUBLISHED">Publié</option>
+                              <option value="CANCELLED">Annulé</option>
+                            </select>
+                            <input
+                              name="proofUrl"
+                              type="url"
+                              placeholder="Lien de publication"
+                            />
+                            <button
+                              type="submit"
+                              className="admin-table__action"
+                            >
+                              Mettre à jour
+                            </button>
+                          </form>
+                        ) : null}
+                      </article>
+                    ))
+                  )}
+                </section>
+              );
+            })}
+          </div>
+        </>
+      ) : null}
 
       {canMutate ? (
         <form

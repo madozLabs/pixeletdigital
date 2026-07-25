@@ -72,6 +72,61 @@ export async function createProfessionalEditorialItemAction(
   });
   revalidatePath("/workspace/editorial");
 }
+const PIPELINE_STATUSES = [
+  "DRAFT",
+  "INTERNAL_REVIEW",
+  "CLIENT_REVIEW",
+  "APPROVED",
+  "SCHEDULED",
+  "PUBLISHED",
+] as const;
+
+/**
+ * Drag-and-drop move on the pipeline board. Only touches status and the
+ * matching workflow timestamps -- same side effects as
+ * advanceEditorialWorkflowAction but callable directly from a client
+ * component with plain arguments.
+ */
+export async function moveEditorialItemAction(
+  itemId: string,
+  status: string,
+): Promise<void> {
+  const context = await getWorkspaceRequestContext();
+  if (!context?.actor || !canMutate(context.actor.role)) return;
+  if (
+    !PIPELINE_STATUSES.includes(status as (typeof PIPELINE_STATUSES)[number])
+  ) {
+    return;
+  }
+
+  const item = await prisma.editorialItem.findUnique({
+    where: { id: itemId },
+    select: { worldKey: true, version: true, status: true },
+  });
+  if (!item || item.status === "CANCELLED") return;
+  requireWorldAccess(context.actor, item.worldKey);
+
+  const now = context.clock.now();
+  const data: Record<string, unknown> = {
+    status,
+    version: { increment: 1 },
+    updatedAt: now,
+  };
+  if (status === "APPROVED") data.internalApprovedAt = now;
+  if (status === "SCHEDULED") data.clientApprovedAt = now;
+  if (status === "PUBLISHED") data.realizedAt = now;
+
+  try {
+    await prisma.editorialItem.update({
+      where: { id: itemId, version: item.version },
+      data,
+    });
+  } catch {
+    return;
+  }
+  revalidatePath("/workspace/editorial");
+}
+
 export async function advanceEditorialWorkflowAction(
   formData: FormData,
 ): Promise<void> {
