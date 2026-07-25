@@ -1,4 +1,4 @@
-# Pixel&Digital â€” Service Catalogue Intake Template
+# Pixel&Digital — Service Catalogue Intake Template
 
 Use one copy per proposed launch service. Record unknowns as gaps. Do not infer scope, outcomes, price, timing, availability or capability. Studio and Training are excluded: teaser/foundation only.
 

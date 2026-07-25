@@ -1,4 +1,4 @@
-# Owner Review Packet â€” Service Taxonomy and Page Mapping
+# Owner Review Packet — Service Taxonomy and Page Mapping
 
 Status: Provisional review instrument; owner action required; not approved for publication
 Review rule: Select exactly one disposition for each major decision: **Approve**, **Revise**, **Defer** or **Reject**. Approval applies only to the explicit proposed editorial decision; it does not approve unstated scope, availability, claims, evidence, prices, dates, legal facts or publication.
@@ -7,10 +7,10 @@ Review rule: Select exactly one disposition for each major decision: **Approve**
 
 For every item, mark one field and complete the required note:
 
-- Approve: `[ ]` â€” approver, rationale and review date required.
-- Revise: `[ ]` â€” replacement wording/grouping and rationale required.
-- Defer: `[ ]` â€” blocking input, next owner and review trigger required.
-- Reject: `[ ]` â€” rationale and downstream removal/change required.
+- Approve: `[ ]` — approver, rationale and review date required.
+- Revise: `[ ]` — replacement wording/grouping and rationale required.
+- Defer: `[ ]` — blocking input, next owner and review trigger required.
+- Reject: `[ ]` — rationale and downstream removal/change required.
 
 ## Recommended review order
 
@@ -23,7 +23,7 @@ For every item, mark one field and complete the required note:
 7. Close cross-cutting publication dependencies: positioning, pricing, languages, geography, legal/privacy and file guidance.
 8. Perform a final contradiction check across all approved answers before any content is promoted beyond draft.
 
-## Decision 1 â€” Pixel&Digital launch service set
+## Decision 1 — Pixel&Digital launch service set
 
 **Proposal:** Review these owner-stated candidates individually for launch: Social Media Management; Website Creation; Digital Advertising grounded only in Facebook advertising; Graphic Design; Motion Design; Video Editing; Content Creation; Audiovisual Production.
 
@@ -34,7 +34,7 @@ For every item, mark one field and complete the required note:
 - Conversion implication: Only retained and evidenced services may receive service-specific enquiry context.
 - Publication gate: ODR-002 plus evidence, rights, conversion, legal and privacy gates.
 
-Disposition â€” Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
+Disposition — Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
 
 Per-service status and wording: ________________________________________________
 
@@ -42,9 +42,9 @@ Rationale / blocker / downstream action: ______________________________________
 
 Approver and review date: _____________________________________________________
 
-## Decision 2 â€” Pixel&Digital family: Digital presence and promotion
+## Decision 2 — Pixel&Digital family: Digital presence and promotion
 
-**Proposal:** Provisionally group Social Media Management, Website Creation and Digital Advertising under â€œDigital presence and promotion.â€ This is not a bundle.
+**Proposal:** Provisionally group Social Media Management, Website Creation and Digital Advertising under “Digital presence and promotion.” This is not a bundle.
 
 - Owner-stated fact: The three services and their limited source statements are recorded in the service draft.
 - Proposed editorial grouping: The family label and membership above.
@@ -53,7 +53,7 @@ Approver and review date: _____________________________________________________
 - Conversion implication: Family discovery to service detail and contextual project enquiry.
 - Publication gate: ODR-002 and all applicable evidence and enquiry approvals.
 
-Disposition â€” Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
+Disposition — Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
 
 Replacement label/membership if revised: ______________________________________
 
@@ -61,9 +61,9 @@ Rationale / blocker / downstream action: ______________________________________
 
 Approver and review date: _____________________________________________________
 
-## Decision 3 â€” Pixel&Digital family: Design and content
+## Decision 3 — Pixel&Digital family: Design and content
 
-**Proposal:** Provisionally group Graphic Design, Motion Design, Video Editing and Content Creation under â€œDesign and content.â€ This is not a bundle.
+**Proposal:** Provisionally group Graphic Design, Motion Design, Video Editing and Content Creation under “Design and content.” This is not a bundle.
 
 - Owner-stated fact: The four services are recorded in the service draft.
 - Proposed editorial grouping: The family label and membership above.
@@ -72,7 +72,7 @@ Approver and review date: _____________________________________________________
 - Conversion implication: Family discovery to service detail and contextual project enquiry.
 - Publication gate: ODR-002 and all applicable evidence and enquiry approvals.
 
-Disposition â€” Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
+Disposition — Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
 
 Replacement label/membership if revised: ______________________________________
 
@@ -80,7 +80,7 @@ Rationale / blocker / downstream action: ______________________________________
 
 Approver and review date: _____________________________________________________
 
-## Decision 4 â€” Pixel&Digital family: Audiovisual production
+## Decision 4 — Pixel&Digital family: Audiovisual production
 
 **Proposal:** Retain Audiovisual Production as a provisional standalone Pixel&Digital family, distinct from the future Studio teaser.
 
@@ -91,7 +91,7 @@ Approver and review date: _____________________________________________________
 - Conversion implication: Agency project enquiry only; no Studio catalogue, availability, schedule or pricing.
 - Publication gate: ODR-002 and evidence gates; Studio remains governed by ODR-008 and ODR-009.
 
-Disposition â€” Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
+Disposition — Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
 
 Replacement treatment if revised: _____________________________________________
 
@@ -99,7 +99,7 @@ Rationale / blocker / downstream action: ______________________________________
 
 Approver and review date: _____________________________________________________
 
-## Decision 5 â€” Kwaliti Print current launch capability set
+## Decision 5 — Kwaliti Print current launch capability set
 
 **Proposal:** Treat Personalized Gadgets as the only candidate current category. Keep Banner Printing, Vinyl Printing and 3D Lettering/CNC outside the current set because all three are owner-stated future capabilities.
 
@@ -110,7 +110,7 @@ Approver and review date: _____________________________________________________
 - Conversion implication: Only approved current categories may lead to capability-specific quotation.
 - Publication gate: ODR-003, ODR-014, ODR-015 and ODR-022 plus applicable cross-cutting gates.
 
-Disposition â€” Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
+Disposition — Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
 
 Per-capability status and wording: _____________________________________________
 
@@ -118,7 +118,7 @@ Rationale / blocker / downstream action: ______________________________________
 
 Approver and review date: _____________________________________________________
 
-## Decision 6 â€” 3D Lettering future treatment
+## Decision 6 — 3D Lettering future treatment
 
 **Proposal:** Keep Banner Printing, Vinyl Printing and 3D Lettering/CNC as unpublished future capability records; do not present any of them as available. Consider limited general-information mentions only if separately approved.
 
@@ -129,7 +129,7 @@ Approver and review date: _____________________________________________________
 - Conversion implication: No capability-specific quotation while unresolved; general information only if explicitly approved.
 - Publication gate: ODR-003 and complete operational, evidence, rights and conversion review.
 
-Disposition â€” Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
+Disposition — Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
 
 Approved status treatment or blocker for each future capability: ______________
 
@@ -137,7 +137,7 @@ Rationale / downstream action: ________________________________________________
 
 Approver and review date: _____________________________________________________
 
-## Decision 7 â€” Production and fabrication guidance
+## Decision 7 — Production and fabrication guidance
 
 **Proposal:** Treat materials, formats, finishing and file-preparation guidance only as supporting content attached to approved Kwaliti Print capabilities, not as a separate offer.
 
@@ -148,7 +148,7 @@ Approver and review date: _____________________________________________________
 - Conversion implication: Reduce ambiguity before quotation without implying inventory, feasibility, capacity or lead time.
 - Publication gate: Parent capability approval, operational validation and ODR-022.
 
-Disposition â€” Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
+Disposition — Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
 
 Replacement treatment if revised: _____________________________________________
 
@@ -156,7 +156,7 @@ Rationale / blocker / downstream action: ______________________________________
 
 Approver and review date: _____________________________________________________
 
-## Decision 8 â€” Pixel&Digital page model
+## Decision 8 — Pixel&Digital page model
 
 **Proposal:** Use a home capability overview, provisional family pages where useful, one detail page per approved launch service, and service-linked work only when evidence is approved.
 
@@ -167,7 +167,7 @@ Approver and review date: _____________________________________________________
 - Conversion implication: Progressive discovery and evaluation with source-aware enquiry; no unsupported promise.
 - Publication gate: ODR-001, ODR-002, ODR-005, ODR-014 and ODR-015 plus applicable cross-cutting gates.
 
-Disposition â€” Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
+Disposition — Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
 
 Required page-model revision: __________________________________________________
 
@@ -175,7 +175,7 @@ Rationale / blocker / downstream action: ______________________________________
 
 Approver and review date: _____________________________________________________
 
-## Decision 9 â€” Kwaliti Print page model
+## Decision 9 — Kwaliti Print page model
 
 **Proposal:** Use a home capability overview, one detail page per approved current capability, supporting guidance tied to parent capabilities, evidence-linked examples and a contextual quotation request.
 
@@ -186,7 +186,7 @@ Approver and review date: _____________________________________________________
 - Conversion implication: Better-qualified quotation without promising feasibility, price, capacity, lead time or response time.
 - Publication gate: ODR-003, ODR-004, ODR-005, ODR-014, ODR-015, ODR-019 and ODR-022 plus applicable gates.
 
-Disposition â€” Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
+Disposition — Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
 
 Required page-model revision: __________________________________________________
 
@@ -194,9 +194,9 @@ Rationale / blocker / downstream action: ______________________________________
 
 Approver and review date: _____________________________________________________
 
-## Decision 10 â€” Studio teaser boundary
+## Decision 10 — Studio teaser boundary
 
-**Proposal:** Keep Studio as one foundation-only â€œOur worldsâ€ teaser with approved provisional descriptor, purpose, status and general information/contact action.
+**Proposal:** Keep Studio as one foundation-only “Our worlds” teaser with approved provisional descriptor, purpose, status and general information/contact action.
 
 - Owner-stated fact: An existing photo/video studio supports Audiovisual Production; final name and identity remain unresolved.
 - Proposed editorial grouping: Teaser separate from the Pixel&Digital service catalogue.
@@ -205,7 +205,7 @@ Approver and review date: _____________________________________________________
 - Conversion implication: General information only; no catalogue, schedule, availability, pricing or launch claim.
 - Publication gate: ODR-008; expansion requires explicit ODR-009 scope change.
 
-Disposition â€” Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
+Disposition — Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
 
 Approved/revised teaser inputs: ________________________________________________
 
@@ -213,9 +213,9 @@ Rationale / blocker / downstream action: ______________________________________
 
 Approver and review date: _____________________________________________________
 
-## Decision 11 â€” Training teaser boundary
+## Decision 11 — Training teaser boundary
 
-**Proposal:** Keep Training as one foundation-only â€œOur worldsâ€ teaser with approved provisional descriptor, purpose, status and general information/contact action.
+**Proposal:** Keep Training as one foundation-only “Our worlds” teaser with approved provisional descriptor, purpose, status and general information/contact action.
 
 - Owner-stated fact: Training is an identified future unit; no offer, schedule, registration, pricing or availability is approved in the reviewed drafts.
 - Proposed editorial grouping: Teaser separate from live service and capability catalogues.
@@ -224,7 +224,7 @@ Approver and review date: _____________________________________________________
 - Conversion implication: General information only; no catalogue, schedule, registration, availability, pricing or launch claim.
 - Publication gate: ODR-010; expansion requires explicit ODR-011 scope change.
 
-Disposition â€” Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
+Disposition — Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
 
 Approved/revised teaser inputs: ________________________________________________
 
@@ -232,7 +232,7 @@ Rationale / blocker / downstream action: ______________________________________
 
 Approver and review date: _____________________________________________________
 
-## Decision 12 â€” Conversion route policy
+## Decision 12 — Conversion route policy
 
 **Proposal:** Preserve universe, source page and selected service/capability context; route Pixel&Digital needs to an approved project/general enquiry and Kwaliti Print needs to an approved quotation journey. Teasers use general information/contact only.
 
@@ -243,7 +243,7 @@ Approver and review date: _____________________________________________________
 - Conversion implication: Clear next action without promising price, response time, availability or result.
 - Publication gate: ODR-004, ODR-005, ODR-018, ODR-019 and ODR-022 where applicable.
 
-Disposition â€” Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
+Disposition — Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
 
 Approved/revised route policy: _________________________________________________
 
@@ -251,7 +251,7 @@ Rationale / blocker / downstream action: ______________________________________
 
 Approver and review date: _____________________________________________________
 
-## Decision 13 â€” Evidence and publication policy
+## Decision 13 — Evidence and publication policy
 
 **Proposal:** Publish no service, capability, case study, example, outcome, testimonial or media until its source, accuracy, attribution, rights, mobile/accessibility treatment and conversion use are approved.
 
@@ -262,7 +262,7 @@ Approver and review date: _____________________________________________________
 - Conversion implication: Proof may precede a related enquiry; absence of measurable results must remain explicit.
 - Publication gate: Item-level ODR-014 and ODR-015 approval.
 
-Disposition â€” Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
+Disposition — Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
 
 Available evidence and authorization owner: ___________________________________
 
@@ -270,7 +270,7 @@ Rationale / blocker / downstream action: ______________________________________
 
 Approver and review date: _____________________________________________________
 
-## Decision 14 â€” Cross-cutting publication dependencies
+## Decision 14 — Cross-cutting publication dependencies
 
 **Proposal:** Keep all taxonomy and mappings provisional until relevant decisions are closed for positioning, pricing visibility, consultation, launch languages, geography, evidence/media, legal identity, privacy/retention and Kwaliti Print file guidance.
 
@@ -281,7 +281,7 @@ Approver and review date: _____________________________________________________
 - Conversion implication: Calls to action remain non-promissory until route and handling are approved.
 - Publication gate: No affected content may pass to publication while its applicable decision remains open.
 
-Disposition â€” Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
+Disposition — Approve `[ ]` Revise `[ ]` Defer `[ ]` Reject `[ ]`
 
 Dependencies approved now / still open: _______________________________________
 
@@ -291,7 +291,7 @@ Approver and review date: _____________________________________________________
 
 ## Final review sign-off
 
-This sign-off confirms only that the recorded dispositions are complete and internally consistent. It is not a publication approval unless every itemâ€™s publication gate is separately satisfied.
+This sign-off confirms only that the recorded dispositions are complete and internally consistent. It is not a publication approval unless every item’s publication gate is separately satisfied.
 
 - All 14 major decisions have exactly one disposition: Yes `[ ]` No `[ ]`
 - Revisions include replacement wording/grouping: Yes `[ ]` No `[ ]` Not applicable `[ ]`

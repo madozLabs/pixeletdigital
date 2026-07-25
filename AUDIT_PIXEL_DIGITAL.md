@@ -127,6 +127,8 @@ Bon point d'ingénierie : un seul composant `ContactForm` partagé et paramétr�
 
 Le mécanisme technique de thématisation est réel et propre (`[data-brand="kwaliti-print"]`, deux polices Google distinctes, palette magenta). Mais le brand bible décrit une identité "**majoritairement blanche**... accents neutres profonds... gros plans sur matières, surfaces, encres et tranches... photographie produit de haute qualité... repères techniques et de mesure" (`BRAND_ARCHITECTURE.md` §5). Ce qui est livré est l'inverse : fond noir, formes géométriques plates façon poster CMYK, zéro photographie produit ou matière. La structure de page (hero → bandeau → groupes de capacités → bande qualité → CTA final) et les composants (`Reveal`, `HeroParallax`, `MagneticButton`, formes de boutons) sont identiques à Pixel&Digital, simplement recolorés. Combiné à l'absence de rythme de mouvement distinct (3.3), l'impression nette est celle d'un habillage du même gabarit, contredisant directement la frontière fixée par le brief de direction artistique lui-même (§6).
 
+> **Mise à jour du 25 juillet 2026 (C3 traité) :** vérification faite directement sur `src/app/(marketing)/page.tsx` : le fichier source est aujourd'hui propre, aucun octet corrompu. `mobile-home.png`/`home-check-2.png` sont des captures **antérieures** à un correctif déjà appliqué dans une session précédente (`scripts/fix-home.py`, qui a corrigé `'lexécution'` → `'l'exécution'`) ; `mobile-home-final.png` montre l'état correct actuel. Une recherche exhaustive de motifs de mojibake (`Ã©`, `â€™`, `Ã¢â‚¬...`, etc.) sur tout `src/` confirme zéro occurrence — le bug n'est **pas** en vie dans le code applicatif. En revanche, la même classe de corruption (encodage UTF-8 relu comme Windows-1252, parfois deux fois de suite) était bien réelle et active dans quatre documents de gouvernance : `docs/04-content/drafts/OWNER_REVIEW_PACKET.md`, `docs/04-content/drafts/CONTENT_TO_PAGE_MAPPING_DRAFT.md`, `docs/04-content/drafts/SERVICE_TAXONOMY_DRAFT.md` (corrompu deux fois de suite) et `docs/04-content/PIXEL_DIGITAL_SERVICE_CATALOGUE_TEMPLATE.md`/`KWALITI_PRINT_CAPABILITY_CATALOGUE_TEMPLATE.md` — corrigés par restauration ciblée des octets d'origine (vérifiée ligne à ligne via `git diff`, aucune perte). `scripts/fix-home.py` est maintenant obsolète (son correctif est déjà dans le fichier) et a été supprimé. Les captures d'écran périmées (`home-check*.png`, `mobile-home.png`, `kwaliti-check.png`, etc.) restent dans le dépôt et datent d'un état antérieur du site — à régénérer avant de les réutiliser comme preuve, elles ne reflètent plus l'état actuel de `page.tsx`. Le reste de la section 3.6 (hiérarchie mobile, etc.) reste valable, seule la lecture "bug d'encodage en direct" est corrigée.
+
 ### 3.6. Mobile — et un bug concret de rendu
 
 Hiérarchie mobile globalement bien construite (`mobile-contact.png` : pile linéaire propre, cibles tactiles confortables). Mais deux captures du même dépôt, `mobile-home.png` et `mobile-home-final.png`, montrent **la même phrase avec deux rendus différents** : l'une en mojibake ("crÃ©dibles... Ã oublier de la stratÃ©gie Ã lexÃ©cution"), l'autre correcte ("crédibles... à oublier de la stratégie à l'exécution"). Preuve directe et reproductible d'un bug d'encodage intermittent — cohérent avec ce que révèle déjà `scripts/fix-home.py` (voir 1.6), qui rafistole un cas précis de corruption sans traiter la cause. Le bandeau défilant du hero (construit à partir d'entités HTML nommées plutôt que de caractères UTF-8 littéraux, `page.tsx:109`) montre la même corruption sur `home-check-2.png` ("RATÃ%GIE" pour "STRATÉGIE"). Sur un site francophone dont la promesse de marque est la précision, un texte français cassé et visible à l'écran est un défaut qui se voit immédiatement par n'importe quel visiteur.
@@ -143,32 +145,32 @@ Recherche exhaustive : aucun type de section "témoignage" ou "étude de cas" n'
 
 ## 4. Recommandations — synthèse priorisée
 
-| # | Recommandation | Priorité | Domaine |
-|---|---|---|---|
-| C1 | Combler le trou de traçabilité d'audit (publication, facturation, accès) | Critique | Sécurité/Archi |
-| C2 | Trancher la dérive de périmètre architecturale (Organisation/Projets/Tâches/Facturation) | Critique | Archi/Gouvernance |
-| C3 | Corriger le bug d'encodage UTF-8 (mojibake FR) | Critique | Qualité/Brand |
-| C4 | Introduire la pagination bornée sur toutes les listes | Critique | Archi/Perf |
-| C5 | Compléter le pipeline Leads/Enquiries (qualification → conversion) | Critique | Produit/UX |
-| C6 | Retour utilisateur explicite sur chaque mutation (fin des échecs silencieux) | Critique | UX |
-| C7 | Résilience du site public face à l'indisponibilité base de données | Critique | Archi/Fiabilité |
-| C8 | Réparer la navigation mobile Kwaliti Print (menu, ancre, retour marque mère) | Critique | UX public |
-| I1 | Command Palette + recherche globale (Cmd+K) | Important | UX Workspace |
-| I2 | Dashboard personnalisé par rôle ("mon travail" plutôt que mur de métriques) | Important | UX Workspace |
-| I3 | Unifier les formulaires (un seul standard, confirmations sur actions sensibles) | Important | UX Workspace |
-| I4 | Isoler les accès Prisma dans des Query Services + centraliser badges/dates | Important | Archi |
-| I5 | Module de preuve sociale (réalisations/témoignages) côté public | Important | Produit/UX public |
-| I6 | Refonte de l'identité visuelle Kwaliti Print conforme à son brand bible | Important | Brand/UX public |
-| I7 | `next/image`, sitemap, JSON-LD, métadonnées cohérentes | Important | Perf/SEO |
-| A1 | Brancher `KineticHeading` + transitions immersives entre univers | Amélioration | UX public |
-| A2 | États de chargement/succès systématiques (skeletons, toasts) | Amélioration | UX Workspace |
-| A3 | Formulaire devis Kwaliti Print avec champs métier structurés | Amélioration | Produit/UX public |
-| A4 | Modularisation de `globals.css` | Amélioration | Archi |
-| N1 | Command Palette IA à commandes en langage naturel | Innovation | UX Workspace |
-| N2 | Copilote contextuel invisible (triage leads, pré-remplissage devis) | Innovation | Produit/IA |
-| N3 | Transition immersive inter-univers (View Transitions) | Innovation | UX public |
-| N4 | Présence collaborative temps réel dans le Workspace | Innovation | UX Workspace |
-| N5 | Module de preuve interactif pour Kwaliti Print (matières, survol vidéo) | Innovation | UX public |
+| # | Recommandation | Priorité | Domaine | Statut |
+|---|---|---|---|---|
+| C1 | Combler le trou de traçabilité d'audit (publication, facturation, accès) | Critique | Sécurité/Archi | Ouvert |
+| C2 | Trancher la dérive de périmètre architecturale (Organisation/Projets/Tâches/Facturation) | Critique | Archi/Gouvernance | ✅ décision documentée (ODR-025), tranche propriétaire en attente |
+| C3 | Corriger le bug d'encodage UTF-8 (mojibake FR) | Critique | Qualité/Brand | ✅ traité 2026-07-25 |
+| C4 | Introduire la pagination bornée sur toutes les listes | Critique | Archi/Perf | Ouvert |
+| C5 | Compléter le pipeline Leads/Enquiries (qualification → conversion) | Critique | Produit/UX | Ouvert |
+| C6 | Retour utilisateur explicite sur chaque mutation (fin des échecs silencieux) | Critique | UX | Ouvert |
+| C7 | Résilience du site public face à l'indisponibilité base de données | Critique | Archi/Fiabilité | Ouvert |
+| C8 | Réparer la navigation mobile Kwaliti Print (menu, ancre, retour marque mère) | Critique | UX public | Ouvert |
+| I1 | Command Palette + recherche globale (Cmd+K) | Important | UX Workspace | Ouvert |
+| I2 | Dashboard personnalisé par rôle ("mon travail" plutôt que mur de métriques) | Important | UX Workspace | Ouvert |
+| I3 | Unifier les formulaires (un seul standard, confirmations sur actions sensibles) | Important | UX Workspace | Ouvert |
+| I4 | Isoler les accès Prisma dans des Query Services + centraliser badges/dates | Important | Archi | Ouvert |
+| I5 | Module de preuve sociale (réalisations/témoignages) côté public | Important | Produit/UX public | Ouvert |
+| I6 | Refonte de l'identité visuelle Kwaliti Print conforme à son brand bible | Important | Brand/UX public | Ouvert |
+| I7 | `next/image`, sitemap, JSON-LD, métadonnées cohérentes | Important | Perf/SEO | Ouvert |
+| A1 | Brancher `KineticHeading` + transitions immersives entre univers | Amélioration | UX public | Ouvert |
+| A2 | États de chargement/succès systématiques (skeletons, toasts) | Amélioration | UX Workspace | Ouvert |
+| A3 | Formulaire devis Kwaliti Print avec champs métier structurés | Amélioration | Produit/UX public | Ouvert |
+| A4 | Modularisation de `globals.css` | Amélioration | Archi | Ouvert |
+| N1 | Command Palette IA à commandes en langage naturel | Innovation | UX Workspace | Ouvert |
+| N2 | Copilote contextuel invisible (triage leads, pré-remplissage devis) | Innovation | Produit/IA | Ouvert |
+| N3 | Transition immersive inter-univers (View Transitions) | Innovation | UX public | Ouvert |
+| N4 | Présence collaborative temps réel dans le Workspace | Innovation | UX Workspace | Ouvert |
+| N5 | Module de preuve interactif pour Kwaliti Print (matières, survol vidéo) | Innovation | UX public | Ouvert |
 
 ---
 
@@ -217,7 +219,7 @@ Contraintes :
 Résultat attendu : Un document de décision exploitable par le propriétaire produit et le CTO pour trancher formellement, avant toute nouvelle fonctionnalité sur Projets/Tâches/Facturation/Organisation.
 ```
 
-**C3 — Corriger le bug d'encodage UTF-8**
+**C3 — Corriger le bug d'encodage UTF-8** — ✅ traité le 25 juillet 2026 : `src/app/(marketing)/page.tsx` était déjà propre (correctif d'une session antérieure) ; la corruption réelle et active se trouvait dans quatre documents de gouvernance (`docs/04-content/**`), corrigés par restauration ciblée des octets d'origine ; `scripts/fix-home.py` supprimé (obsolète). Voir la mise à jour en section 3.6. Prompt d'origine conservé ci-dessous pour mémoire — ne pas ré-exécuter tel quel.
 ```text
 Contexte : Deux captures d'écran présentes dans le dépôt (mobile-home.png vs mobile-home-final.png) montrent la même phrase du contenu public rendue différemment : une fois en mojibake ("crÃ©dibles... stratÃ©gie Ã lexÃ©cution"), une fois correctement ("crédibles... stratégie à l'exécution"). Le bandeau défilant du hero (src/app/(marketing)/page.tsx ligne ~109, construit avec des entités HTML nommées) montre la même corruption sur la capture home-check-2.png. scripts/fix-home.py existe déjà dans le dépôt et documente un rafistolage ponctuel de ce même type de bug (réencodage latin1→utf-8 d'un fichier) sans corriger la cause racine.
 

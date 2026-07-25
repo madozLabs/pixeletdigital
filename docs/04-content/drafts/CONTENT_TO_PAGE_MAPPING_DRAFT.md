@@ -9,10 +9,10 @@ The mapping uses only owner-stated services and capabilities from the reviewed d
 
 ## Pixel&Digital page mappings
 
-### Pixel&Digital home â€” capability overview
+### Pixel&Digital home — capability overview
 
 - **Owner-stated fact:** Social Media Management; Website Creation; Facebook advertising; Graphic Design; Motion Design; Video Editing; Content Creation; Audiovisual Production supported by an existing photo/video studio.
-- **Proposed editorial grouping:** Present a concise overview through the provisional families â€œDigital presence and promotion,â€ â€œDesign and contentâ€ and â€œAudiovisual production,â€ linking onward to approved family or service details.
+- **Proposed editorial grouping:** Present a concise overview through the provisional families “Digital presence and promotion,” “Design and content” and “Audiovisual production,” linking onward to approved family or service details.
 - **Unresolved decision:** Official positioning; family labels; launch services; order and prominence; whether sufficient approved evidence exists for the selected overview.
 - **Evidence needed:** Approved scope for every named service; permissioned representative proof; attributable outcomes where available; approved positioning and media rights.
 - **Conversion implication:** The overview should support discovery and lead to the relevant service context or primary project enquiry without promising results, price, timing or availability.
@@ -21,7 +21,7 @@ The mapping uses only owner-stated services and capabilities from the reviewed d
 ### Pixel&Digital service-family pages
 
 - **Owner-stated fact:** The eight Pixel&Digital services listed above are owner-stated; no bundle or family is owner-approved.
-- **Proposed editorial grouping:** One provisional family page for each taxonomy family: â€œDigital presence and promotion,â€ â€œDesign and contentâ€ and â€œAudiovisual production.â€ Required content order remains user problem/outcome, approved scope, relevant proof, approach, useful qualification, related services and enquiry.
+- **Proposed editorial grouping:** One provisional family page for each taxonomy family: “Digital presence and promotion,” “Design and content” and “Audiovisual production.” Required content order remains user problem/outcome, approved scope, relevant proof, approach, useful qualification, related services and enquiry.
 - **Unresolved decision:** Approve family labels and membership; decide whether standalone Audiovisual Production needs a family page, direct detail page or both; approve problem, outcome, approach and relationships without inventing claims.
 - **Evidence needed:** Approved scopes, exclusions, relationships and approach; relevant permissioned work; attributable outcomes where available; mobile short/typical/long content.
 - **Conversion implication:** Each family page should route to an approved service detail and contextual project enquiry after sufficient evidence. It must distinguish facts from broad capability language.
@@ -47,7 +47,7 @@ The mapping uses only owner-stated services and capabilities from the reviewed d
 
 ## Kwaliti Print page mappings
 
-### Kwaliti Print home â€” capability overview
+### Kwaliti Print home — capability overview
 
 - **Owner-stated fact:** Personalized Gadgets is currently stated as available. Banner Printing, Vinyl Printing and 3D Lettering using a CNC cutter are future capabilities.
 - **Proposed editorial grouping:** Present only Personalized Gadgets as a candidate current capability. Keep Banner Printing, Vinyl Printing and 3D Lettering/CNC outside the current-capability overview unless the owner separately approves carefully limited future-status mentions.
@@ -106,7 +106,7 @@ The mapping uses only owner-stated services and capabilities from the reviewed d
 ### Studio teaser
 
 - **Owner-stated fact:** An existing photo/video studio supports Pixel&Digital Audiovisual Production; final Studio name and identity are unresolved.
-- **Proposed editorial grouping:** One concise â€œOur worldsâ€ teaser/foundation entry, not a service or full destination.
+- **Proposed editorial grouping:** One concise “Our worlds” teaser/foundation entry, not a service or full destination.
 - **Unresolved decision:** Final name, identity, provisional descriptor, purpose, status and general information/contact action.
 - **Evidence needed:** Owner-approved wording/status and rights-cleared identity/media inputs.
 - **Conversion implication:** General information/contact only; no catalogue, schedule, availability, pricing or launch claim.
@@ -115,7 +115,7 @@ The mapping uses only owner-stated services and capabilities from the reviewed d
 ### Training teaser
 
 - **Owner-stated fact:** Training is an identified future unit; the reviewed drafts state no approved offer, schedule, registration, pricing or availability.
-- **Proposed editorial grouping:** One concise â€œOur worldsâ€ teaser/foundation entry, not a service or full destination.
+- **Proposed editorial grouping:** One concise “Our worlds” teaser/foundation entry, not a service or full destination.
 - **Unresolved decision:** Final name, identity, provisional descriptor, purpose, status and general information/contact action.
 - **Evidence needed:** Owner-approved wording/status and rights-cleared identity/media inputs.
 - **Conversion implication:** General information/contact only; no catalogue, schedule, registration, availability, pricing or launch claim.
