@@ -4595,14 +4595,25 @@ a.world-switcher__item:focus-visible {
 .admin-table th {
   background: color-mix(in srgb, var(--ink) 3%, var(--wk-card));
   border-color: var(--wk-border);
+  padding: 0.7em 1.1em;
+  font-size: 0.72rem;
 }
 
 .admin-table td {
   border-color: var(--wk-border);
+  padding: 0.85em 1.1em;
+}
+
+.admin-table tbody tr {
+  transition: background var(--duration-fast);
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .admin-table tbody tr:hover {
-  background: color-mix(in srgb, var(--ink) 3%, var(--wk-card));
+  background: color-mix(in srgb, var(--accent) 4%, var(--wk-card));
 }
 
 /* --- Status badges: soft tinted pills -------------------------------- */
