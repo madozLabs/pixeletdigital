@@ -224,28 +224,35 @@ export default async function WorkspaceBillingPage({
               />
             </label>
             {[1, 2, 3].map((index) => (
-              <label key={index}>
-                Ligne {index}
-                <input
-                  name={`lineLabel${index}`}
-                  placeholder="Libellé"
-                  list="billing-catalogue-labels"
-                />
-                <input
-                  name={`lineQuantity${index}`}
-                  type="number"
-                  min={1}
-                  defaultValue={1}
-                  placeholder="Quantité"
-                />
-                <input
-                  name={`lineUnitPrice${index}`}
-                  type="number"
-                  min={0}
-                  step={1}
-                  placeholder="Prix unitaire XOF"
-                />
-              </label>
+              <div className="billing-line-row" key={index}>
+                <span className="billing-line-row__eyebrow">Ligne {index}</span>
+                <label>
+                  Libellé
+                  <input
+                    name={`lineLabel${index}`}
+                    placeholder="Ex. Création de logo"
+                    list="billing-catalogue-labels"
+                  />
+                </label>
+                <label>
+                  Quantité
+                  <input
+                    name={`lineQuantity${index}`}
+                    type="number"
+                    min={1}
+                    defaultValue={1}
+                  />
+                </label>
+                <label>
+                  Prix unitaire (XOF)
+                  <input
+                    name={`lineUnitPrice${index}`}
+                    type="number"
+                    min={0}
+                    step={1}
+                  />
+                </label>
+              </div>
             ))}
             <label>
               Notes

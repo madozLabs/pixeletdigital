@@ -1226,11 +1226,9 @@ a.world-switcher__item:focus-visible {
   padding: 0.6em 0.75em;
 }
 
-.editorial-form label:has(input[name^="line"]) {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 0.35rem;
-  align-items: end;
+.editorial-form label:has(textarea),
+.editorial-form > button[type="submit"] {
+  grid-column: 1 / -1;
 }
 
 .invoice-print {
@@ -4711,6 +4709,34 @@ a.world-switcher__item:focus-visible {
 }
 
 /* --- Billing cards ----------------------------------------------------- */
+
+.billing-line-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 6rem repeat(3, minmax(8rem, 1fr));
+  gap: var(--space-2);
+  align-items: end;
+}
+
+.billing-line-row__eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  padding-bottom: 0.7em;
+}
+
+@media (max-width: 40rem) {
+  .billing-line-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .billing-line-row__eyebrow {
+    grid-column: 1 / -1;
+    padding-bottom: 0;
+  }
+}
 
 .billing-card-grid {
   display: grid;
