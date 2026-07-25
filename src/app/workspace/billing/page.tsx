@@ -149,42 +149,45 @@ export default async function WorkspaceBillingPage({
                     Valide jusqu’au{" "}
                     {quote.validUntil?.toLocaleDateString("fr-FR") ?? "—"}
                   </p>
-                  <form
-                    action={updateQuoteStatusAction}
-                    className="billing-inline-form"
-                  >
-                    <input type="hidden" name="quoteId" value={quote.id} />
-                    <input
-                      type="hidden"
-                      name="expectedVersion"
-                      value={quote.version}
-                    />
-                    <select name="status" defaultValue={quote.status}>
-                      {Object.entries(QUOTE_STATUS_LABEL)
-                        .filter(([key]) => key !== "CONVERTED")
-                        .map(([key, label]) => (
-                          <option key={key} value={key}>
-                            {label}
-                          </option>
-                        ))}
-                    </select>
-                    <button className="admin-table__action" type="submit">
-                      Mettre à jour
-                    </button>
-                  </form>
-                  {quote.status === "ACCEPTED" && !quote.invoice ? (
-                    <form action={convertQuoteToInvoiceAction}>
+                  <details className="billing-card__actions">
+                    <summary>Actions</summary>
+                    <form
+                      action={updateQuoteStatusAction}
+                      className="billing-inline-form"
+                    >
                       <input type="hidden" name="quoteId" value={quote.id} />
                       <input
                         type="hidden"
                         name="expectedVersion"
                         value={quote.version}
                       />
+                      <select name="status" defaultValue={quote.status}>
+                        {Object.entries(QUOTE_STATUS_LABEL)
+                          .filter(([key]) => key !== "CONVERTED")
+                          .map(([key, label]) => (
+                            <option key={key} value={key}>
+                              {label}
+                            </option>
+                          ))}
+                      </select>
                       <button className="admin-table__action" type="submit">
-                        Convertir en facture
+                        Mettre à jour
                       </button>
                     </form>
-                  ) : null}
+                    {quote.status === "ACCEPTED" && !quote.invoice ? (
+                      <form action={convertQuoteToInvoiceAction}>
+                        <input type="hidden" name="quoteId" value={quote.id} />
+                        <input
+                          type="hidden"
+                          name="expectedVersion"
+                          value={quote.version}
+                        />
+                        <button className="admin-table__action" type="submit">
+                          Convertir en facture
+                        </button>
+                      </form>
+                    ) : null}
+                  </details>
                 </article>
               );
             })}
@@ -299,66 +302,72 @@ export default async function WorkspaceBillingPage({
                   >
                     Imprimer
                   </Link>
-                  {invoice.status === "DRAFT" ? (
-                    <form action={markInvoiceSentAction}>
-                      <input type="hidden" name="id" value={invoice.id} />
-                      <input
-                        type="hidden"
-                        name="expectedVersion"
-                        value={invoice.version}
-                      />
-                      <button className="admin-table__action" type="submit">
-                        Envoyer
-                      </button>
-                    </form>
-                  ) : null}
-                  {invoice.status !== "PAID" &&
-                  invoice.status !== "CANCELLED" ? (
-                    <form action={cancelInvoiceAction}>
-                      <input type="hidden" name="id" value={invoice.id} />
-                      <input
-                        type="hidden"
-                        name="expectedVersion"
-                        value={invoice.version}
-                      />
-                      <button className="admin-table__action" type="submit">
-                        Annuler
-                      </button>
-                    </form>
-                  ) : null}
                 </div>
                 {invoice.status !== "PAID" && invoice.status !== "CANCELLED" ? (
-                  <form
-                    action={recordPaymentAction}
-                    className="billing-inline-form"
-                  >
-                    <input type="hidden" name="invoiceId" value={invoice.id} />
-                    <input
-                      type="hidden"
-                      name="expectedVersion"
-                      value={invoice.version}
-                    />
-                    <input
-                      name="amount"
-                      type="number"
-                      min={1}
-                      step={1}
-                      placeholder="Montant XOF"
-                      required
-                    />
-                    <select name="method" defaultValue="MOBILE_MONEY">
-                      <option value="MOBILE_MONEY">Mobile Money</option>
-                      <option value="BANK_TRANSFER">Virement</option>
-                      <option value="CASH">Espèces</option>
-                      <option value="CARD">Carte</option>
-                      <option value="CHEQUE">Chèque</option>
-                      <option value="OTHER">Autre</option>
-                    </select>
-                    <input name="reference" placeholder="Référence" />
-                    <button className="admin-table__action" type="submit">
-                      Enregistrer paiement
-                    </button>
-                  </form>
+                  <details className="billing-card__actions">
+                    <summary>Actions</summary>
+                    <form
+                      action={recordPaymentAction}
+                      className="billing-inline-form"
+                    >
+                      <input
+                        type="hidden"
+                        name="invoiceId"
+                        value={invoice.id}
+                      />
+                      <input
+                        type="hidden"
+                        name="expectedVersion"
+                        value={invoice.version}
+                      />
+                      <input
+                        name="amount"
+                        type="number"
+                        min={1}
+                        step={1}
+                        placeholder="Montant XOF"
+                        required
+                      />
+                      <select name="method" defaultValue="MOBILE_MONEY">
+                        <option value="MOBILE_MONEY">Mobile Money</option>
+                        <option value="BANK_TRANSFER">Virement</option>
+                        <option value="CASH">Espèces</option>
+                        <option value="CARD">Carte</option>
+                        <option value="CHEQUE">Chèque</option>
+                        <option value="OTHER">Autre</option>
+                      </select>
+                      <input name="reference" placeholder="Référence" />
+                      <button className="admin-table__action" type="submit">
+                        Enregistrer paiement
+                      </button>
+                    </form>
+                    <div className="admin-table__actions">
+                      {invoice.status === "DRAFT" ? (
+                        <form action={markInvoiceSentAction}>
+                          <input type="hidden" name="id" value={invoice.id} />
+                          <input
+                            type="hidden"
+                            name="expectedVersion"
+                            value={invoice.version}
+                          />
+                          <button className="admin-table__action" type="submit">
+                            Envoyer
+                          </button>
+                        </form>
+                      ) : null}
+                      <form action={cancelInvoiceAction}>
+                        <input type="hidden" name="id" value={invoice.id} />
+                        <input
+                          type="hidden"
+                          name="expectedVersion"
+                          value={invoice.version}
+                        />
+                        <button className="admin-table__action" type="submit">
+                          Annuler
+                        </button>
+                      </form>
+                    </div>
+                  </details>
                 ) : null}
               </article>
             );

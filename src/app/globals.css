@@ -3960,6 +3960,35 @@ a.world-switcher__item:focus-visible {
   flex: 1 1 8rem;
 }
 
+.billing-card__actions {
+  border-top: 1px solid var(--wk-border);
+  padding-top: 0.6rem;
+}
+
+.billing-card__actions summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  list-style: none;
+}
+
+.billing-card__actions summary::-webkit-details-marker {
+  display: none;
+}
+
+.billing-card__actions summary::after {
+  content: " ▾";
+}
+
+.billing-card__actions[open] summary::after {
+  content: " ▴";
+}
+
+.billing-card__actions > :not(summary) {
+  margin-top: 0.6rem;
+}
+
 @media (max-width: 42rem) {
   .billing-card-grid {
     grid-template-columns: 1fr;
