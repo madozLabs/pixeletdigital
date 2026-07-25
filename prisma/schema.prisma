@@ -96,6 +96,33 @@ enum EnquiryAbuseStatus {
   FLAGGED
 }
 
+enum LeadStatus {
+  NEW
+  IN_REVIEW
+  QUALIFIED
+  UNQUALIFIED
+  CLOSED
+}
+
+enum LeadActivityType {
+  CREATED
+  STATUS_CHANGED
+  ASSIGNED
+  NOTE_ADDED
+  NEXT_ACTION_SET
+  NEXT_ACTION_COMPLETED
+}
+
+enum NextActionStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum LeadNoteVisibility {
+  INTERNAL
+}
+
 enum EditorialItemStatus {
   DRAFT
   INTERNAL_REVIEW
@@ -212,27 +239,32 @@ model World {
   quotes          Quote[]
   invoices        Invoice[]
   mediaAssets     MediaAsset[]
+  leads           Lead[]
 
   @@map("worlds")
 }
 
 model User {
-  id              String             @id @default(cuid())
-  displayName     String?
-  normalizedEmail String?            @unique
-  status          UserStatus
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  authAccounts    AuthAccount[]
-  roleAssignments RoleAssignment[]
+  id                String           @id @default(cuid())
+  displayName       String?
+  normalizedEmail   String?          @unique
+  status            UserStatus
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  authAccounts      AuthAccount[]
+  roleAssignments   RoleAssignment[]
   memberships       TeamMembership[]
-  managedClients     Client[]          @relation("ClientAccountManager")
-  commercialClients Client[]          @relation("ClientCommercialOwner")
-  managedProjects    Project[]         @relation("ProjectManager")
-  assignedTasks      Task[]            @relation("TaskAssignee")
-  createdTasks       Task[]            @relation("TaskCreator")
-  editorialItems     EditorialItem[]    @relation("EditorialOwner")
-  reviewedItems      EditorialItem[]    @relation("EditorialReviewer")
+  managedClients    Client[]         @relation("ClientAccountManager")
+  commercialClients Client[]         @relation("ClientCommercialOwner")
+  managedProjects   Project[]        @relation("ProjectManager")
+  assignedTasks     Task[]           @relation("TaskAssignee")
+  createdTasks      Task[]           @relation("TaskCreator")
+  editorialItems    EditorialItem[]  @relation("EditorialOwner")
+  reviewedItems     EditorialItem[]  @relation("EditorialReviewer")
+  ownedLeads        Lead[]           @relation("LeadOwner")
+  authoredLeadNotes LeadNote[]       @relation("LeadNoteAuthor")
+  ownedNextActions  NextAction[]     @relation("NextActionOwner")
+  leadActivities    LeadActivity[]   @relation("LeadActivityActor")
 
   @@map("users")
 }
@@ -403,21 +435,21 @@ model PageSection {
 }
 
 model MediaAsset {
-  id          String   @id @default(cuid())
-  worldKey    String
-  world       World    @relation(fields: [worldKey], references: [key], onDelete: Restrict)
-  bucket      String
-  objectPath  String
-  publicUrl   String
-  title       String
-  altText     String
-  mimeType    String
-  sizeBytes   Int
-  width       Int?
-  height      Int?
-  tags        String[] @default([])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  worldKey   String
+  world      World    @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  bucket     String
+  objectPath String
+  publicUrl  String
+  title      String
+  altText    String
+  mimeType   String
+  sizeBytes  Int
+  width      Int?
+  height     Int?
+  tags       String[] @default([])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@unique([bucket, objectPath])
   @@index([worldKey, createdAt])
@@ -452,22 +484,23 @@ model Service {
 }
 
 model Enquiry {
-  id             String              @id
+  id             String             @id
   type           EnquiryType
   worldKey       String
-  world          World               @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  world          World              @relation(fields: [worldKey], references: [key], onDelete: Restrict)
   serviceId      String?
-  service        Service?            @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  service        Service?           @relation(fields: [serviceId], references: [id], onDelete: Restrict)
   name           String
   email          String
   phone          String?
   message        String
   sourcePage     String
-  idempotencyKey String              @unique
+  idempotencyKey String             @unique
   abuseStatus    EnquiryAbuseStatus
   submittedAt    DateTime
 
-  consent ConsentRecord?
+  consent  ConsentRecord?
+  leadLink LeadEnquiry?
 
   @@index([worldKey, email, submittedAt])
   @@index([worldKey, submittedAt])
@@ -485,6 +518,89 @@ model ConsentRecord {
   capturedAt DateTime
 
   @@map("consent_records")
+}
+
+model Lead {
+  id            String     @id
+  worldKey      String
+  world         World      @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  name          String
+  email         String
+  phone         String?
+  source        String
+  status        LeadStatus @default(NEW)
+  ownerUserId   String?
+  owner         User?      @relation("LeadOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  closedOutcome String?
+  version       Int        @default(1)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  enquiryLink LeadEnquiry?
+  notes       LeadNote[]
+  nextActions NextAction[]
+  activities  LeadActivity[]
+
+  @@index([worldKey, status])
+  @@index([worldKey, email])
+  @@index([ownerUserId])
+  @@map("leads")
+}
+
+model LeadEnquiry {
+  id        String   @id
+  leadId    String   @unique
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  enquiryId String   @unique
+  enquiry   Enquiry  @relation(fields: [enquiryId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+
+  @@map("lead_enquiries")
+}
+
+model LeadNote {
+  id         String             @id
+  leadId     String
+  lead       Lead               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User               @relation("LeadNoteAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  body       String
+  visibility LeadNoteVisibility @default(INTERNAL)
+  createdAt  DateTime           @default(now())
+
+  @@index([leadId, createdAt])
+  @@map("lead_notes")
+}
+
+model NextAction {
+  id          String           @id
+  leadId      String
+  lead        Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  ownerUserId String
+  owner       User             @relation("NextActionOwner", fields: [ownerUserId], references: [id], onDelete: Restrict)
+  description String
+  dueDate     DateTime
+  status      NextActionStatus @default(PENDING)
+  completedAt DateTime?
+  createdAt   DateTime         @default(now())
+
+  @@index([leadId])
+  @@index([ownerUserId, status, dueDate])
+  @@map("next_actions")
+}
+
+model LeadActivity {
+  id         String           @id
+  leadId     String
+  lead       Lead             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type       LeadActivityType
+  actorId    String?
+  actor      User?            @relation("LeadActivityActor", fields: [actorId], references: [id], onDelete: SetNull)
+  detail     String?
+  occurredAt DateTime         @default(now())
+
+  @@index([leadId, occurredAt])
+  @@map("lead_activities")
 }
 
 model ServiceFamily {
@@ -506,33 +622,33 @@ model ServiceFamily {
 }
 
 model EditorialItem {
-  id                String               @id
-  worldKey          String
-  clientId          String?
-  projectId         String?
-  ownerId           String?
-  reviewerId        String?
-  clientLabel       String
-  channel           String
-  contentType       EditorialContentType @default(POST)
-  title             String
-  brief             String?
-  productionDueAt   DateTime?
-  scheduledFor      DateTime
-  status            EditorialItemStatus
+  id                 String               @id
+  worldKey           String
+  clientId           String?
+  projectId          String?
+  ownerId            String?
+  reviewerId         String?
+  clientLabel        String
+  channel            String
+  contentType        EditorialContentType @default(POST)
+  title              String
+  brief              String?
+  productionDueAt    DateTime?
+  scheduledFor       DateTime
+  status             EditorialItemStatus
   internalApprovedAt DateTime?
-  clientApprovedAt  DateTime?
-  proofUrl          String?
-  notes             String?
-  realizedAt        DateTime?
-  version           Int
-  createdAt         DateTime
-  updatedAt         DateTime
-  world             World                @relation(fields: [worldKey], references: [key], onDelete: Restrict)
-  client            Client?              @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  project           Project?             @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  owner             User?                @relation("EditorialOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  reviewer          User?                @relation("EditorialReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+  clientApprovedAt   DateTime?
+  proofUrl           String?
+  notes              String?
+  realizedAt         DateTime?
+  version            Int
+  createdAt          DateTime
+  updatedAt          DateTime
+  world              World                @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  client             Client?              @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  project            Project?             @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  owner              User?                @relation("EditorialOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  reviewer           User?                @relation("EditorialReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
 
   @@index([worldKey, scheduledFor])
   @@index([worldKey, status])
@@ -543,9 +659,9 @@ model EditorialItem {
 }
 
 model Client {
-  id                String       @id
+  id                String          @id
   worldKey          String
-  world             World        @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  world             World           @relation(fields: [worldKey], references: [key], onDelete: Restrict)
   name              String
   legalName         String?
   email             String?
@@ -562,9 +678,9 @@ model Client {
   version           Int
   createdAt         DateTime
   updatedAt         DateTime
-  accountManager    User?        @relation("ClientAccountManager", fields: [accountManagerId], references: [id], onDelete: Restrict)
-  commercialOwner   User?        @relation("ClientCommercialOwner", fields: [commercialOwnerId], references: [id], onDelete: Restrict)
-  team              Team?        @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  accountManager    User?           @relation("ClientAccountManager", fields: [accountManagerId], references: [id], onDelete: Restrict)
+  commercialOwner   User?           @relation("ClientCommercialOwner", fields: [commercialOwnerId], references: [id], onDelete: Restrict)
+  team              Team?           @relation(fields: [teamId], references: [id], onDelete: Restrict)
   contacts          ClientContact[]
   projects          Project[]
   editorialItems    EditorialItem[]
@@ -676,24 +792,24 @@ model CatalogueItem {
 }
 
 model Quote {
-  id             String      @id @default(cuid())
-  worldKey       String
-  clientId       String
-  number         String
-  status         QuoteStatus @default(DRAFT)
-  issuedAt       DateTime    @default(now())
-  validUntil     DateTime?
-  discountCents  Int         @default(0)
-  taxRateBps     Int         @default(0)
-  notes          String?
-  convertedAt    DateTime?
-  version        Int         @default(1)
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  world          World       @relation(fields: [worldKey], references: [key], onDelete: Restrict)
-  client         Client      @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  lines          QuoteLine[]
-  invoice        Invoice?
+  id            String      @id @default(cuid())
+  worldKey      String
+  clientId      String
+  number        String
+  status        QuoteStatus @default(DRAFT)
+  issuedAt      DateTime    @default(now())
+  validUntil    DateTime?
+  discountCents Int         @default(0)
+  taxRateBps    Int         @default(0)
+  notes         String?
+  convertedAt   DateTime?
+  version       Int         @default(1)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  world         World       @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  client        Client      @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  lines         QuoteLine[]
+  invoice       Invoice?
 
   @@unique([worldKey, number])
   @@index([worldKey, status])
@@ -715,26 +831,26 @@ model QuoteLine {
 }
 
 model Invoice {
-  id             String        @id
-  worldKey       String
-  clientId       String
-  quoteId        String?       @unique
-  number         String
-  status         InvoiceStatus
-  issuedAt       DateTime
-  dueAt          DateTime?
-  discountCents  Int           @default(0)
-  taxRateBps     Int           @default(0)
-  notes          String?
-  paidAt         DateTime?
-  version        Int
-  createdAt      DateTime
-  updatedAt      DateTime
-  world          World         @relation(fields: [worldKey], references: [key], onDelete: Restrict)
-  client         Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  quote          Quote?        @relation(fields: [quoteId], references: [id], onDelete: Restrict)
-  lines          InvoiceLine[]
-  payments       Payment[]
+  id            String        @id
+  worldKey      String
+  clientId      String
+  quoteId       String?       @unique
+  number        String
+  status        InvoiceStatus
+  issuedAt      DateTime
+  dueAt         DateTime?
+  discountCents Int           @default(0)
+  taxRateBps    Int           @default(0)
+  notes         String?
+  paidAt        DateTime?
+  version       Int
+  createdAt     DateTime
+  updatedAt     DateTime
+  world         World         @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  client        Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  quote         Quote?        @relation(fields: [quoteId], references: [id], onDelete: Restrict)
+  lines         InvoiceLine[]
+  payments      Payment[]
 
   @@unique([worldKey, number])
   @@index([worldKey, status])

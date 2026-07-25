@@ -4,6 +4,8 @@ import { prisma } from "@/infrastructure/shared/prisma-client";
 import { PrismaServiceRepository } from "@/modules/content/infrastructure/prisma-service-repository";
 import { submitGeneralContact } from "@/modules/enquiries/application/submit-general-contact";
 import { PrismaEnquiryRepository } from "@/modules/enquiries/infrastructure/prisma-enquiry-repository";
+import { createLeadFromEnquiry } from "@/modules/leads/application/lead-use-cases";
+import { PrismaLeadRepository } from "@/modules/leads/infrastructure/prisma-lead-repository";
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
 
 export type ContactFormState =
@@ -74,6 +76,14 @@ export async function submitContactAction(
   });
 
   if (result.ok) {
+    await createLeadSafely({
+      enquiryId: result.value.receiptId,
+      worldKey,
+      name: text(formData, "name"),
+      email: text(formData, "email"),
+      phone: text(formData, "phone").trim() || null,
+      source: text(formData, "sourcePage") || "/contact",
+    });
     return { status: "success", receiptId: result.value.receiptId };
   }
 
@@ -111,4 +121,28 @@ export async function submitContactAction(
       : "Votre demande n'a pas pu être envoyée. Merci de vérifier le formulaire.",
     fieldErrors: fieldError ? { [fieldError.field]: fieldError.message } : {},
   };
+}
+
+// A Lead is a Workspace-side convenience derived from the submission, not
+// part of the public contact contract -- a failure here must never surface
+// to the visitor or affect the receipt already recorded (DOMAIN_BOUNDARIES.md
+// §2: "notification failure cannot erase the submission").
+async function createLeadSafely(
+  input: Readonly<{
+    enquiryId: string;
+    worldKey: string;
+    name: string;
+    email: string;
+    phone: string | null;
+    source: string;
+  }>,
+): Promise<void> {
+  try {
+    await createLeadFromEnquiry(
+      { leads: new PrismaLeadRepository(prisma) },
+      { ...input, now: new Date() },
+    );
+  } catch (error) {
+    console.error("Failed to create lead from enquiry", input.enquiryId, error);
+  }
 }

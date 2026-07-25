@@ -31,7 +31,10 @@ export function Pagination({
           Précédent
         </Link>
       ) : (
-        <span className="admin-table__action admin-table__action--disabled" aria-disabled="true">
+        <span
+          className="admin-table__action admin-table__action--disabled"
+          aria-disabled="true"
+        >
           Précédent
         </span>
       )}
@@ -43,7 +46,10 @@ export function Pagination({
           Suivant
         </Link>
       ) : (
-        <span className="admin-table__action admin-table__action--disabled" aria-disabled="true">
+        <span
+          className="admin-table__action admin-table__action--disabled"
+          aria-disabled="true"
+        >
           Suivant
         </span>
       )}

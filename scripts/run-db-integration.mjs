@@ -83,7 +83,17 @@ async function runIntegrationTests(connectionString) {
     [npmCli, "run", "test:integration:db:raw"],
     {
       cwd: root,
-      env: { ...process.env, TEST_DATABASE_URL: connectionString },
+      env: {
+        ...process.env,
+        TEST_DATABASE_URL: connectionString,
+        // The integration suite runs every *.integration.test.ts file
+        // sequentially in one worker (fileParallelism: false); each file
+        // boots its own PGlite instance and the accumulated heap across an
+        // increasing number of files can exceed Node's default young-space
+        // sizing. Raise it here rather than in vitest.integration.config.ts,
+        // since only this child process needs the larger heap.
+        NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --max-old-space-size=4096`.trim(),
+      },
       stdio: "inherit",
     },
   );

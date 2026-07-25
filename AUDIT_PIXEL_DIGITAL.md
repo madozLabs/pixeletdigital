@@ -151,7 +151,7 @@ Recherche exhaustive : aucun type de section "témoignage" ou "étude de cas" n'
 | C2 | Trancher la dérive de périmètre architecturale (Organisation/Projets/Tâches/Facturation) | Critique | Archi/Gouvernance | ✅ décision documentée (ODR-025), tranche propriétaire en attente |
 | C3 | Corriger le bug d'encodage UTF-8 (mojibake FR) | Critique | Qualité/Brand | ✅ traité 2026-07-25 |
 | C4 | Introduire la pagination bornée sur toutes les listes | Critique | Archi/Perf | ✅ traité 2026-07-25 (listes principales) |
-| C5 | Compléter le pipeline Leads/Enquiries (qualification → conversion) | Critique | Produit/UX | Ouvert |
+| C5 | Compléter le pipeline Leads/Enquiries (qualification → conversion) | Critique | Produit/UX | ✅ traité 2026-07-25 |
 | C6 | Retour utilisateur explicite sur chaque mutation (fin des échecs silencieux) | Critique | UX | Ouvert |
 | C7 | Résilience du site public face à l'indisponibilité base de données | Critique | Archi/Fiabilité | Ouvert |
 | C8 | Réparer la navigation mobile Kwaliti Print (menu, ancre, retour marque mère) | Critique | UX public | Ouvert |
@@ -265,7 +265,15 @@ Contraintes :
 Résultat attendu : Plus aucune liste du Workspace ne charge un nombre non borné de lignes, avec un composant de pagination réutilisé de façon cohérente.
 ```
 
-**C5 — Compléter le pipeline Leads/Enquiries**
+**C5 — Compléter le pipeline Leads/Enquiries** — ✅ traité le 25 juillet 2026 :
+- Nouveau module `src/modules/leads/` complet (domain/application/infrastructure), respectant strictement la frontière `DOMAIN_BOUNDARIES.md` §2 : Leads ne mute jamais l'Enquiry d'origine, cycle `NEW → IN_REVIEW → QUALIFIED/UNQUALIFIED → CLOSED` (un seul aller, clôture définitive), assignation de propriétaire, notes, prochaines actions (créer/compléter/annuler), journal d'activité append-only.
+- Migration Prisma `20260725130000_add_leads` (`Lead`, `LeadEnquiry`, `LeadNote`, `NextAction`, `LeadActivity` + 3 enums) — générée par diff schéma-à-schéma (sans dépendre d'une base vivante), appliquée et vérifiée sur une base PostgreSQL réelle (pglite), et rejouée avec succès par la suite d'intégration officielle du projet (`npm run test:integration:db`, 16 fichiers / 86 tests).
+- Un formulaire public (contact général ou devis Kwaliti Print) crée désormais automatiquement un Lead `NEW` lié à l'Enquiry — idempotent (une resoumission ne duplique pas), et un échec de cette création ne bloque jamais l'accusé de réception au visiteur (conforme à la règle DOMAIN_BOUNDARIES.md : « notification failure cannot erase the submission »).
+- Page `workspace/enquiries` enrichie : colonne statut du lead, panneau de détail (`?lead=<id>`) avec changement de statut, assignation, ajout de note, planification/complétion de prochaine action, historique d'activité — tout passe par la couche application (autorisation + `expectedVersion` vérifiés côté serveur), aucun accès Prisma direct depuis la page.
+- Vérifié : `tsc` propre, `eslint` propre, 50 nouveaux tests unitaires (domaine + cas d'usage) + 8 tests d'intégration Prisma réels, suite complète du projet toujours verte (537 tests unitaires, 86 tests d'intégration).
+- Non fait dans ce lot (hors périmètre C5) : écriture d'un événement d'audit générique pour les actions sur un lead (dépend de C1, non traité) ; dé-duplication floue par email (l'audit du domaine mentionne un dédoublonnage conservateur au-delà du simple lien par enquiryId — resterait à faire si un besoin réel apparaît) ; page dédiée `/workspace/leads` (le pipeline vit pour l'instant dans la page Enquiries, un choix délibéré pour garder le lien enquête↔lead visible).
+
+Prompt d'origine conservé ci-dessous pour mémoire — le périmètre réellement couvert diffère (voir ci-dessus).
 ```text
 Contexte : src/modules/enquiries n'implémente que deux cas d'usage : list et submit (voir src/modules/enquiries/application). La page workspace/enquiries/page.tsx est un tableau strictement en lecture seule (lignes 53-82). Or "traiter une demande commerciale" est explicitement l'un des parcours prioritaires du CTO (docs/03-ux/ADMIN_JOURNEYS.md ligne 118, détaillé lignes 49-60), qui décrit un cycle qualification → assignation → note/prochaine action → conversion.
 

@@ -82,7 +82,11 @@ export default async function SiteContentPage({
     enquiryCount,
   ] = await Promise.all([
     prisma.page
-      .findMany({ where: { worldKey }, orderBy: { updatedAt: "desc" }, take: 6 })
+      .findMany({
+        where: { worldKey },
+        orderBy: { updatedAt: "desc" },
+        take: 6,
+      })
       .catch(() => []),
     prisma.page
       .findFirst({ where: { worldKey, slug: "accueil" } })
