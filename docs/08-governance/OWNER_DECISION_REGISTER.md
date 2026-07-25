@@ -1,6 +1,6 @@
 # Owner Decision Register
 
-Status: Mixed — 8 of 23 decisions approved or deferred as of 2026-07-22; remaining decisions open for Phase 1
+Status: Mixed — 8 of 24 decisions approved or deferred as of 2026-07-22; remaining decisions open for Phase 1; ODR-025 added 2026-07-25
 Owner: Project owner
 Rule: Pixel&Digital and Kwaliti Print are live MVP worlds. Studio and Training remain teaser/foundation only unless the owner explicitly approves a future scope change.
 
@@ -36,6 +36,7 @@ Record the approved answer, rationale, approver and review date when a decision 
 | ODR-022 | Approve file-acceptance guidance for Kwaliti Print requests | Mobile forms, privacy, customer instructions and operations | Final quotation journey and release | Do not promise accepted formats or handling | Project owner | Open | Blocks stated gate |
 | ODR-023 | Approve Kwaliti Print final logo assets, endorsement wording and relationship to Pixel&Digital | Identity assets, launch collateral and cross-world orientation | Final brand/content approval | Preserve the three repository Kwaliti Print PNG files as raster-only inputs; do not infer missing variants, rules or rights | Project owner | Approved | Closed 2026-07-22 for interim use: current raster PNGs authorized for production use now; architecture must allow swapping in vector masters later without code changes. Endorsement wording and rights authority remain unresolved and are not required to block interim use |
 | ODR-024 | Approve Kwaliti Print colour palette and type | Brand system, theming, contrast testing and production | Visual design and accessibility approval | Preserve directional CMYK-striped intent only; no exact values/fonts | Project owner | Approved | Closed 2026-07-22; see section 4. Confirms the colours already sampled from the repository logo rasters in `docs/01-brand/KWALITI_PRINT_LOGO_REGISTER.md` |
+| ODR-025 | Ratify, freeze or extract the Organization/Projects/Tasks/Billing domains, built beyond the `DOMAIN_BOUNDARIES.md` §5 deferred-domain boundary and `MVP_SCOPE.md` §4/§12 exclusions | MVP scope definition, architecture baseline, engineering effort allocation, security posture of live `Invoice`/`Payment` records | Before further feature work on these four areas | Treat these domains as not yet approved; do not expand them further | Project owner | Open | Blocks stated gate — see `docs/08-governance/ARCHITECTURE_DOMAIN_SCOPE_DECISION.md` for full evidence and options |
 
 ## 3. Decision quality gate
 
