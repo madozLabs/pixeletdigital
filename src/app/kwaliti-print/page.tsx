@@ -8,6 +8,8 @@ import { PrismaServiceFamilyRepository } from "@/modules/content/infrastructure/
 import { PrismaServiceRepository } from "@/modules/content/infrastructure/prisma-service-repository";
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
 
+import { HeroParallax } from "@/app/_components/hero-parallax";
+import { MagneticButton } from "@/app/_components/magnetic-button";
 import { Reveal } from "@/app/_components/reveal";
 import { getCmsHomeContent } from "@/app/_lib/cms-home";
 import { groupServicesByFamily } from "@/app/_lib/group-services-by-family";
@@ -68,12 +70,12 @@ export default async function KwalitiPrintHomePage() {
           </Reveal>
           <Reveal delay={0.24}>
             <div className="kp-hero__actions">
-              <Link
+              <MagneticButton
                 href={cms.hero?.ctaHref ?? "/kwaliti-print/devis"}
                 className="button button--kwaliti"
               >
                 {cms.hero?.ctaLabel ?? "Demander un devis"}
-              </Link>
+              </MagneticButton>
               <a href="#capacites-kp" className="kp-text-link">
                 Voir les possibilités
               </a>
@@ -83,17 +85,19 @@ export default async function KwalitiPrintHomePage() {
 
         <Reveal delay={0.12}>
           <div className="kp-hero__visual" aria-hidden="true">
-            {cms.hero?.imageUrl ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                className="kp-hero__photo"
-                src={cms.hero.imageUrl}
-                alt={cms.hero.imageAlt}
-              />
-            ) : null}
-            <span className="kp-shape kp-shape--cyan" />
-            <span className="kp-shape kp-shape--yellow" />
-            <span className="kp-shape kp-shape--magenta" />
+            <HeroParallax className="kp-hero__parallax" strength={16}>
+              {cms.hero?.imageUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  className="kp-hero__photo"
+                  src={cms.hero.imageUrl}
+                  alt={cms.hero.imageAlt}
+                />
+              ) : null}
+              <span className="kp-shape kp-shape--cyan" />
+              <span className="kp-shape kp-shape--yellow" />
+              <span className="kp-shape kp-shape--magenta" />
+            </HeroParallax>
             <strong>KP</strong>
           </div>
         </Reveal>
@@ -167,12 +171,12 @@ export default async function KwalitiPrintHomePage() {
           {cms.closing?.title ??
             "On vous aide à choisir la bonne manière de l’imprimer."}
         </h2>
-        <Link
+        <MagneticButton
           href={cms.closing?.ctaHref ?? "/kwaliti-print/devis"}
           className="button button--kwaliti"
         >
           {cms.closing?.ctaLabel ?? "Obtenir un devis"}
-        </Link>
+        </MagneticButton>
       </section>
     </main>
   );

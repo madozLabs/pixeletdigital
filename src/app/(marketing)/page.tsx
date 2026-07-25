@@ -7,6 +7,8 @@ import { PrismaServiceFamilyRepository } from "@/modules/content/infrastructure/
 import { PrismaServiceRepository } from "@/modules/content/infrastructure/prisma-service-repository";
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
 
+import { HeroParallax } from "@/app/_components/hero-parallax";
+import { MagneticButton } from "@/app/_components/magnetic-button";
 import { Reveal } from "@/app/_components/reveal";
 import { getCmsHomeContent } from "@/app/_lib/cms-home";
 import { groupServicesByFamily } from "@/app/_lib/group-services-by-family";
@@ -69,12 +71,12 @@ export default async function HomePage() {
             </Reveal>
             <Reveal delay={0.25}>
               <div className="home-hero__actions">
-                <Link
+                <MagneticButton
                   href={cms.hero?.ctaHref ?? "/contact"}
                   className="button button--primary"
                 >
                   {cms.hero?.ctaLabel ?? "Lancer un projet"}
-                </Link>
+                </MagneticButton>
                 <Link href="#capacites" className="home-hero__secondary-link">
                   Voir nos expertises
                 </Link>
@@ -84,16 +86,18 @@ export default async function HomePage() {
 
           <Reveal delay={0.1}>
             <div className="home-hero__visual" aria-hidden="true">
-              {cms.hero?.imageUrl ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  className="home-hero__photo"
-                  src={cms.hero.imageUrl}
-                  alt={cms.hero.imageAlt}
-                />
-              ) : null}
-              <div className="home-hero__orb home-hero__orb--red" />
-              <div className="home-hero__orb home-hero__orb--black" />
+              <HeroParallax className="home-hero__parallax" strength={22}>
+                {cms.hero?.imageUrl ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    className="home-hero__photo"
+                    src={cms.hero.imageUrl}
+                    alt={cms.hero.imageAlt}
+                  />
+                ) : null}
+                <div className="home-hero__orb home-hero__orb--red" />
+                <div className="home-hero__orb home-hero__orb--black" />
+              </HeroParallax>
               <div className="home-hero__stamp">P&D</div>
               <div className="home-hero__caption">
                 Stratégie · Identité · Contenu · Digital · Production
@@ -196,9 +200,12 @@ export default async function HomePage() {
           <h2>
             Kwaliti Print transforme vos idées en objets qu&rsquo;on remarque.
           </h2>
-          <Link href="/kwaliti-print" className="button button--kwaliti">
+          <MagneticButton
+            href="/kwaliti-print"
+            className="button button--kwaliti"
+          >
             Découvrir Kwaliti Print
-          </Link>
+          </MagneticButton>
         </div>
       </section>
 
@@ -212,12 +219,12 @@ export default async function HomePage() {
             {cms.closing?.title ??
               "Faisons quelque chose qu’on ne peut pas ignorer."}
           </h2>
-          <Link
+          <MagneticButton
             href={cms.closing?.ctaHref ?? "/contact"}
             className="button button--primary"
           >
             {cms.closing?.ctaLabel ?? "Parler à Pixel&Digital"}
-          </Link>
+          </MagneticButton>
         </Reveal>
       </section>
     </main>

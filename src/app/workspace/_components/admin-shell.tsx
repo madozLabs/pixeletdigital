@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   CalendarDays,
   FolderKanban,
@@ -11,6 +11,8 @@ import {
   LayoutDashboard,
   Layers,
   Network,
+  PanelLeftClose,
+  PanelLeftOpen,
   ReceiptText,
   SquareKanban,
   UserCog,
@@ -41,6 +43,12 @@ const ROLE_LABEL: Readonly<Record<string, string>> = {
 };
 
 const ICON_SIZE = 17;
+const SIDEBAR_COLLAPSE_KEY = "wk-sidebar-collapsed";
+
+function readStoredCollapsed(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === "1";
+}
 
 function buildNavGroups(role: string | null): readonly NavGroup[] {
   const isSuperAdmin = role === "SUPER_ADMIN";
@@ -151,6 +159,19 @@ export function AdminShell({
   const worldKey = searchParams.get("world") ?? WORLDS[0].key;
   const navGroups = buildNavGroups(role);
   const roleLabel = role ? (ROLE_LABEL[role] ?? role) : null;
+  // Lazy initializer: reads localStorage once on the client's actual first
+  // render, same rationale/pattern as ThemeToggle's readStoredTheme().
+  const [collapsed, setCollapsed] = useState<boolean>(() =>
+    readStoredCollapsed(),
+  );
+
+  function toggleCollapsed() {
+    setCollapsed((prev) => {
+      const next = !prev;
+      window.localStorage.setItem(SIDEBAR_COLLAPSE_KEY, next ? "1" : "0");
+      return next;
+    });
+  }
 
   function handleWorldChange(event: React.ChangeEvent<HTMLSelectElement>) {
     const params = new URLSearchParams(searchParams);
@@ -159,14 +180,44 @@ export function AdminShell({
   }
 
   return (
-    <div className="admin-shell" data-world={worldKey}>
+    <div
+      className="admin-shell"
+      data-world={worldKey}
+      data-sidebar-collapsed={collapsed}
+      suppressHydrationWarning
+    >
       <a href="#main-content" className="skip-link">
         Aller au contenu principal
       </a>
       <aside className="admin-sidebar">
-        <Link href="/workspace" className="admin-sidebar__mark">
-          Pixel<span className="admin-sidebar__mark-accent">&</span>Digital
-        </Link>
+        <div className="admin-sidebar__top">
+          <Link href="/workspace" className="admin-sidebar__mark">
+            <span className="admin-sidebar__mark-full">
+              Pixel<span className="admin-sidebar__mark-accent">&</span>
+              Digital
+            </span>
+            <span className="admin-sidebar__mark-mini" aria-hidden="true">
+              P<span className="admin-sidebar__mark-accent">&</span>D
+            </span>
+          </Link>
+          <button
+            type="button"
+            className="admin-sidebar__collapse-toggle"
+            onClick={toggleCollapsed}
+            aria-label={
+              collapsed
+                ? "Déplier la barre latérale"
+                : "Réduire la barre latérale"
+            }
+            title={collapsed ? "Déplier" : "Réduire"}
+          >
+            {collapsed ? (
+              <PanelLeftOpen size={17} />
+            ) : (
+              <PanelLeftClose size={17} />
+            )}
+          </button>
+        </div>
 
         <select
           className="admin-sidebar__world"
@@ -196,9 +247,10 @@ export function AdminShell({
                       ? "admin-nav__item admin-nav__item--active"
                       : "admin-nav__item"
                   }
+                  title={collapsed ? item.label : undefined}
                 >
                   <span className="admin-nav__icon">{item.icon}</span>
-                  {item.label}
+                  <span className="admin-nav__label">{item.label}</span>
                 </Link>
               ))}
             </div>
@@ -207,9 +259,9 @@ export function AdminShell({
 
         <div className="admin-sidebar__footer">
           {roleLabel ? (
-            <span className="admin-sidebar__user">
+            <span className="admin-sidebar__user" title={roleLabel}>
               <Avatar name={roleLabel} size="sm" />
-              <span>{roleLabel}</span>
+              <span className="admin-sidebar__user-label">{roleLabel}</span>
             </span>
           ) : null}
           <ThemeToggle />

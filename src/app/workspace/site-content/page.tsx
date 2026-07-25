@@ -50,6 +50,7 @@ export default async function SiteContentPage({
 }) {
   const context = await getWorkspaceRequestContext();
   if (!context) redirect("/login");
+  const now = context.clock.now();
   const params = await searchParams;
   const worldKey = params.world ?? "pixel-digital";
   const tab = params.tab ?? "overview";
@@ -131,7 +132,7 @@ export default async function SiteContentPage({
           enquiryCount={enquiryCount}
         />
       ) : tab === "media" ? (
-        <MediaPanel worldKey={worldKey} media={media} />
+        <MediaPanel worldKey={worldKey} media={media} now={now} />
       ) : selectedPage ? (
         <PageEditor worldKey={worldKey} page={selectedPage} media={media} />
       ) : (
@@ -506,17 +507,44 @@ function SectionEditor({
               <input name="href" defaultValue={value("href")} />
             </label>
           </div>
-          <label>
-            Image
-            <select name="mediaId" defaultValue={value("mediaId")}>
-              <option value="">Aucune image</option>
+          <span className="cms-picker-label">Image</span>
+          {images.length === 0 ? (
+            <p className="admin-empty">
+              Aucun média disponible.{" "}
+              <Link
+                href={`/workspace/site-content?world=${page.worldKey}&tab=media`}
+              >
+                Ajoutez-en un dans la médiathèque
+              </Link>
+              , il apparaîtra ici.
+            </p>
+          ) : (
+            <div className="cms-image-picker" role="radiogroup">
+              <label className="cms-image-picker__tile cms-image-picker__tile--empty">
+                <input
+                  type="radio"
+                  name="mediaId"
+                  value=""
+                  defaultChecked={value("mediaId") === ""}
+                  disabled={disabled}
+                />
+                <span>Aucune image</span>
+              </label>
               {images.map((asset) => (
-                <option key={asset.id} value={asset.id}>
-                  {asset.title}
-                </option>
+                <label className="cms-image-picker__tile" key={asset.id}>
+                  <input
+                    type="radio"
+                    name="mediaId"
+                    value={asset.id}
+                    defaultChecked={value("mediaId") === asset.id}
+                    disabled={disabled}
+                  />
+                  <img src={asset.publicUrl} alt={asset.altText} />
+                  <span>{asset.title}</span>
+                </label>
               ))}
-            </select>
-          </label>
+            </div>
+          )}
           <button className="admin-table__action" disabled={disabled}>
             Mettre à jour
           </button>
@@ -631,9 +659,11 @@ function PageWorkflow({ page }: { page: EditablePage }) {
 function MediaPanel({
   worldKey,
   media,
+  now,
 }: {
   worldKey: string;
   media: readonly MediaAsset[];
+  now: Date;
 }) {
   return (
     <div className="cms-layout">
@@ -667,6 +697,11 @@ function MediaPanel({
         <button className="admin-table__action" type="submit">
           Envoyer vers la médiathèque
         </button>
+        <p className="section__note">
+          Une fois envoyée, l’image apparaît ci-contre et devient sélectionnable
+          dans le champ « Image » de n’importe quelle section (Pages → Éditer →
+          section HERO/MEDIA/CTA).
+        </p>
       </form>
       <section className="cms-list-panel">
         <h2>Médiathèque</h2>
@@ -677,29 +712,48 @@ function MediaPanel({
           </p>
         ) : (
           <div className="cms-gallery">
-            {media.map((asset) => (
-              <article className="cms-gallery__tile" key={asset.id}>
-                {asset.mimeType.startsWith("image/") ? (
-                  <img src={asset.publicUrl} alt={asset.altText} />
-                ) : (
-                  <div className="cms-gallery__file">
-                    {asset.mimeType.split("/")[1] ?? asset.mimeType}
+            {media.map((asset, index) => {
+              const isRecent =
+                index === 0 &&
+                now.getTime() - asset.createdAt.getTime() < 5 * 60 * 1000;
+              return (
+                <article className="cms-gallery__tile" key={asset.id}>
+                  <div className="cms-gallery__thumb">
+                    {asset.mimeType.startsWith("image/") ? (
+                      <img src={asset.publicUrl} alt={asset.altText} />
+                    ) : (
+                      <div className="cms-gallery__file">
+                        {asset.mimeType.split("/")[1] ?? asset.mimeType}
+                      </div>
+                    )}
+                    {isRecent ? (
+                      <span className="cms-gallery__new-badge">Nouveau</span>
+                    ) : null}
                   </div>
-                )}
-                <div className="cms-gallery__overlay">
-                  <strong>{asset.title}</strong>
-                  <input
-                    readOnly
-                    value={asset.publicUrl}
-                    aria-label={`URL de ${asset.title}`}
-                  />
-                  <form action={deleteMediaAction}>
-                    <input type="hidden" name="id" value={asset.id} />
-                    <button className="admin-table__action">Supprimer</button>
-                  </form>
-                </div>
-              </article>
-            ))}
+                  <div className="cms-gallery__caption">
+                    <strong>{asset.title}</strong>
+                    <details className="cms-gallery__details">
+                      <summary>Détails</summary>
+                      <label className="cms-gallery__url-field">
+                        URL publique
+                        <input
+                          readOnly
+                          value={asset.publicUrl}
+                          onFocus={(event) => event.currentTarget.select()}
+                          aria-label={`URL de ${asset.title}`}
+                        />
+                      </label>
+                      <form action={deleteMediaAction}>
+                        <input type="hidden" name="id" value={asset.id} />
+                        <button className="admin-table__action">
+                          Supprimer
+                        </button>
+                      </form>
+                    </details>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
       </section>
