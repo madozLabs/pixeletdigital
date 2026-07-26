@@ -116,13 +116,22 @@ export async function assignMemberAction(
   }
 }
 
-export async function endMembershipAction(formData: FormData): Promise<void> {
-  if (!(await requireSuperAdmin())) return;
+export async function endMembershipAction(
+  _state: OrganizationActionState,
+  formData: FormData,
+): Promise<OrganizationActionState> {
+  void _state;
+  if (!(await requireSuperAdmin())) return error("Action non autorisée.");
   const id = text(formData, "membershipId");
-  if (!id) return;
-  await prisma.teamMembership.update({
-    where: { id },
-    data: { endedAt: new Date(), isPrimary: false },
-  });
-  revalidatePath("/workspace/organization");
+  if (!id) return error("Affectation introuvable.");
+  try {
+    await prisma.teamMembership.update({
+      where: { id },
+      data: { endedAt: new Date(), isPrimary: false },
+    });
+    revalidatePath("/workspace/organization");
+    return { status: "success", message: "Collaborateur retiré de l'équipe." };
+  } catch {
+    return error("Cette affectation n'a pas pu être retirée.");
+  }
 }

@@ -4,7 +4,6 @@ import { randomUUID } from "node:crypto";
 
 import { revalidatePath } from "next/cache";
 
-import { prisma } from "@/infrastructure/shared/prisma-client";
 import {
   archiveCatalogueItem,
   createCatalogueItem,
@@ -24,7 +23,9 @@ import { PrismaInvoiceRepository } from "@/modules/billing/infrastructure/prisma
 import { PrismaPaymentRepository } from "@/modules/billing/infrastructure/prisma-payment-repository";
 import { PrismaQuoteRepository } from "@/modules/billing/infrastructure/prisma-quote-repository";
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
+import { prisma } from "@/infrastructure/shared/prisma-client";
 
+import type { ActionState } from "../_components/feedback";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 
 function worldDependencies() {
@@ -36,11 +37,23 @@ function xofToCents(value: FormDataEntryValue | null): number {
   return Number.isFinite(amount) && amount > 0 ? Math.round(amount * 100) : 0;
 }
 
+// Every billing use case returns Result<T, { code, message, ... }>; this
+// turns that already-typed error into the ActionState the forms render,
+// instead of only logging it server-side and leaving the user guessing.
+function toActionState(
+  result: Readonly<{ ok: true } | { ok: false; error: { message: string } }>,
+  successMessage: string,
+): ActionState {
+  if (result.ok) return { status: "success", message: successMessage };
+  return { status: "error", message: result.error.message };
+}
+
 export async function createCatalogueItemAction(
+  _state: ActionState,
   formData: FormData,
-): Promise<void> {
+): Promise<ActionState> {
   const context = await getWorkspaceRequestContext();
-  if (!context) return;
+  if (!context) return { status: "error", message: "Session expirée." };
 
   const result = await createCatalogueItem(
     {
@@ -58,13 +71,15 @@ export async function createCatalogueItemAction(
   );
   if (!result.ok) console.error("createCatalogueItem failed", result.error);
   revalidatePath("/workspace/billing");
+  return toActionState(result, "Ajouté au catalogue.");
 }
 
 export async function archiveCatalogueItemAction(
+  _state: ActionState,
   formData: FormData,
-): Promise<void> {
+): Promise<ActionState> {
   const context = await getWorkspaceRequestContext();
-  if (!context) return;
+  if (!context) return { status: "error", message: "Session expirée." };
 
   const result = await archiveCatalogueItem(
     {
@@ -79,6 +94,7 @@ export async function archiveCatalogueItemAction(
   );
   if (!result.ok) console.error("archiveCatalogueItem failed", result.error);
   revalidatePath("/workspace/billing");
+  return toActionState(result, "Élément archivé.");
 }
 
 function quoteLinesFromForm(formData: FormData) {
@@ -99,9 +115,12 @@ function quoteLinesFromForm(formData: FormData) {
   });
 }
 
-export async function createQuoteAction(formData: FormData): Promise<void> {
+export async function createQuoteAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const context = await getWorkspaceRequestContext();
-  if (!context) return;
+  if (!context) return { status: "error", message: "Session expirée." };
 
   const validUntil = String(formData.get("validUntil") ?? "").trim();
   const taxRate = Number(formData.get("taxRate"));
@@ -124,13 +143,15 @@ export async function createQuoteAction(formData: FormData): Promise<void> {
   );
   if (!result.ok) console.error("createDraftQuote failed", result.error);
   revalidatePath("/workspace/billing");
+  return toActionState(result, "Devis créé.");
 }
 
 export async function updateQuoteStatusAction(
+  _state: ActionState,
   formData: FormData,
-): Promise<void> {
+): Promise<ActionState> {
   const context = await getWorkspaceRequestContext();
-  if (!context) return;
+  if (!context) return { status: "error", message: "Session expirée." };
 
   const result = await updateQuoteStatus(
     { quotes: new PrismaQuoteRepository(prisma), ...worldDependencies() },
@@ -143,13 +164,15 @@ export async function updateQuoteStatusAction(
   );
   if (!result.ok) console.error("updateQuoteStatus failed", result.error);
   revalidatePath("/workspace/billing");
+  return toActionState(result, "Statut du devis mis à jour.");
 }
 
 export async function convertQuoteToInvoiceAction(
+  _state: ActionState,
   formData: FormData,
-): Promise<void> {
+): Promise<ActionState> {
   const context = await getWorkspaceRequestContext();
-  if (!context) return;
+  if (!context) return { status: "error", message: "Session expirée." };
 
   const result = await convertQuoteToInvoice(
     {
@@ -166,11 +189,15 @@ export async function convertQuoteToInvoiceAction(
   );
   if (!result.ok) console.error("convertQuoteToInvoice failed", result.error);
   revalidatePath("/workspace/billing");
+  return toActionState(result, "Devis converti en facture.");
 }
 
-export async function markInvoiceSentAction(formData: FormData): Promise<void> {
+export async function markInvoiceSentAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const context = await getWorkspaceRequestContext();
-  if (!context) return;
+  if (!context) return { status: "error", message: "Session expirée." };
 
   const result = await markInvoiceSent(
     { invoices: new PrismaInvoiceRepository(prisma), ...worldDependencies() },
@@ -182,11 +209,15 @@ export async function markInvoiceSentAction(formData: FormData): Promise<void> {
   );
   if (!result.ok) console.error("markInvoiceSent failed", result.error);
   revalidatePath("/workspace/billing");
+  return toActionState(result, "Facture envoyée.");
 }
 
-export async function cancelInvoiceAction(formData: FormData): Promise<void> {
+export async function cancelInvoiceAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const context = await getWorkspaceRequestContext();
-  if (!context) return;
+  if (!context) return { status: "error", message: "Session expirée." };
 
   const result = await cancelInvoice(
     { invoices: new PrismaInvoiceRepository(prisma), ...worldDependencies() },
@@ -198,11 +229,15 @@ export async function cancelInvoiceAction(formData: FormData): Promise<void> {
   );
   if (!result.ok) console.error("cancelInvoice failed", result.error);
   revalidatePath("/workspace/billing");
+  return toActionState(result, "Facture annulée.");
 }
 
-export async function recordPaymentAction(formData: FormData): Promise<void> {
+export async function recordPaymentAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
   const context = await getWorkspaceRequestContext();
-  if (!context) return;
+  if (!context) return { status: "error", message: "Session expirée." };
 
   const amountCents = xofToCents(formData.get("amount"));
   const result = await recordInvoicePayment(
@@ -222,4 +257,5 @@ export async function recordPaymentAction(formData: FormData): Promise<void> {
   if (!result.ok) console.error("recordInvoicePayment failed", result.error);
   revalidatePath("/workspace/billing");
   revalidatePath("/workspace");
+  return toActionState(result, "Paiement enregistré.");
 }

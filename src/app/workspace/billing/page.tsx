@@ -7,15 +7,12 @@ import { Pagination } from "../_components/pagination";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import { formatXof } from "./_lib/money";
 import {
-  archiveCatalogueItemAction,
-  cancelInvoiceAction,
-  convertQuoteToInvoiceAction,
-  createCatalogueItemAction,
-  createQuoteAction,
-  markInvoiceSentAction,
-  recordPaymentAction,
-  updateQuoteStatusAction,
-} from "./actions";
+  ArchiveCatalogueItemForm,
+  CreateCatalogueItemForm,
+  CreateQuoteForm,
+  InvoiceActionsForm,
+  QuoteActionsForm,
+} from "./billing-forms";
 
 const BILLING_ROLES = ["SUPER_ADMIN", "ADMIN", "WORLD_MANAGER"] as const;
 const TABS = [
@@ -190,42 +187,12 @@ export default async function WorkspaceBillingPage({
                   </p>
                   <details className="billing-card__actions">
                     <summary>Actions</summary>
-                    <form
-                      action={updateQuoteStatusAction}
-                      className="billing-inline-form"
-                    >
-                      <input type="hidden" name="quoteId" value={quote.id} />
-                      <input
-                        type="hidden"
-                        name="expectedVersion"
-                        value={quote.version}
-                      />
-                      <select name="status" defaultValue={quote.status}>
-                        {Object.entries(QUOTE_STATUS_LABEL)
-                          .filter(([key]) => key !== "CONVERTED")
-                          .map(([key, label]) => (
-                            <option key={key} value={key}>
-                              {label}
-                            </option>
-                          ))}
-                      </select>
-                      <button className="admin-table__action" type="submit">
-                        Mettre à jour
-                      </button>
-                    </form>
-                    {quote.status === "ACCEPTED" && !quote.invoice ? (
-                      <form action={convertQuoteToInvoiceAction}>
-                        <input type="hidden" name="quoteId" value={quote.id} />
-                        <input
-                          type="hidden"
-                          name="expectedVersion"
-                          value={quote.version}
-                        />
-                        <button className="admin-table__action" type="submit">
-                          Convertir en facture
-                        </button>
-                      </form>
-                    ) : null}
+                    <QuoteActionsForm
+                      quoteId={quote.id}
+                      version={quote.version}
+                      status={quote.status}
+                      canConvert={quote.status === "ACCEPTED" && !quote.invoice}
+                    />
                   </details>
                 </article>
               );
@@ -239,75 +206,14 @@ export default async function WorkspaceBillingPage({
             total={totalQuotes}
           />
           <h2 className="admin-content__subtitle">Nouveau devis</h2>
-          <form action={createQuoteAction} className="editorial-form">
-            <input type="hidden" name="worldKey" value={worldKey} />
-            <label>
-              Client
-              <select name="clientId" required>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Valide jusqu’au
-              <input type="date" name="validUntil" />
-            </label>
-            <label>
-              Remise (XOF)
-              <input type="number" name="discount" min={0} step={1} />
-            </label>
-            <label>
-              Taxe (%)
-              <input
-                type="number"
-                name="taxRate"
-                min={0}
-                max={100}
-                step="0.01"
-              />
-            </label>
-            {[1, 2, 3].map((index) => (
-              <div className="billing-line-row" key={index}>
-                <span className="billing-line-row__eyebrow">Ligne {index}</span>
-                <label>
-                  Libellé
-                  <input
-                    name={`lineLabel${index}`}
-                    placeholder="Ex. Création de logo"
-                    list="billing-catalogue-labels"
-                  />
-                </label>
-                <label>
-                  Quantité
-                  <input
-                    name={`lineQuantity${index}`}
-                    type="number"
-                    min={1}
-                    defaultValue={1}
-                  />
-                </label>
-                <label>
-                  Prix unitaire (XOF)
-                  <input
-                    name={`lineUnitPrice${index}`}
-                    type="number"
-                    min={0}
-                    step={1}
-                  />
-                </label>
-              </div>
-            ))}
-            <label>
-              Notes
-              <textarea name="notes" maxLength={1000} />
-            </label>
-            <button className="admin-table__action" type="submit">
-              Créer le devis
-            </button>
-          </form>
+          <CreateQuoteForm
+            worldKey={worldKey}
+            clients={clients.map((client) => ({
+              id: client.id,
+              label: client.name,
+            }))}
+            catalogueDatalistId="billing-catalogue-labels"
+          />
           <datalist id="billing-catalogue-labels">
             {catalogue.map((item) => (
               <option key={item.id} value={item.label} />
@@ -359,67 +265,11 @@ export default async function WorkspaceBillingPage({
                 {invoice.status !== "PAID" && invoice.status !== "CANCELLED" ? (
                   <details className="billing-card__actions">
                     <summary>Actions</summary>
-                    <form
-                      action={recordPaymentAction}
-                      className="billing-inline-form"
-                    >
-                      <input
-                        type="hidden"
-                        name="invoiceId"
-                        value={invoice.id}
-                      />
-                      <input
-                        type="hidden"
-                        name="expectedVersion"
-                        value={invoice.version}
-                      />
-                      <input
-                        name="amount"
-                        type="number"
-                        min={1}
-                        step={1}
-                        placeholder="Montant XOF"
-                        required
-                      />
-                      <select name="method" defaultValue="MOBILE_MONEY">
-                        <option value="MOBILE_MONEY">Mobile Money</option>
-                        <option value="BANK_TRANSFER">Virement</option>
-                        <option value="CASH">Espèces</option>
-                        <option value="CARD">Carte</option>
-                        <option value="CHEQUE">Chèque</option>
-                        <option value="OTHER">Autre</option>
-                      </select>
-                      <input name="reference" placeholder="Référence" />
-                      <button className="admin-table__action" type="submit">
-                        Enregistrer paiement
-                      </button>
-                    </form>
-                    <div className="admin-table__actions">
-                      {invoice.status === "DRAFT" ? (
-                        <form action={markInvoiceSentAction}>
-                          <input type="hidden" name="id" value={invoice.id} />
-                          <input
-                            type="hidden"
-                            name="expectedVersion"
-                            value={invoice.version}
-                          />
-                          <button className="admin-table__action" type="submit">
-                            Envoyer
-                          </button>
-                        </form>
-                      ) : null}
-                      <form action={cancelInvoiceAction}>
-                        <input type="hidden" name="id" value={invoice.id} />
-                        <input
-                          type="hidden"
-                          name="expectedVersion"
-                          value={invoice.version}
-                        />
-                        <button className="admin-table__action" type="submit">
-                          Annuler
-                        </button>
-                      </form>
-                    </div>
+                    <InvoiceActionsForm
+                      invoiceId={invoice.id}
+                      version={invoice.version}
+                      status={invoice.status}
+                    />
                   </details>
                 ) : null}
               </article>
@@ -487,17 +337,10 @@ export default async function WorkspaceBillingPage({
                       <td>{item.kind === "SERVICE" ? "Service" : "Produit"}</td>
                       <td>{formatXof(item.unitPriceCents)}</td>
                       <td>
-                        <form action={archiveCatalogueItemAction}>
-                          <input type="hidden" name="id" value={item.id} />
-                          <input
-                            type="hidden"
-                            name="expectedVersion"
-                            value={item.version}
-                          />
-                          <button className="admin-table__action" type="submit">
-                            Archiver
-                          </button>
-                        </form>
+                        <ArchiveCatalogueItemForm
+                          itemId={item.id}
+                          version={item.version}
+                        />
                       </td>
                     </tr>
                   ))
@@ -509,27 +352,7 @@ export default async function WorkspaceBillingPage({
           <h2 className="admin-content__subtitle">
             Ajouter un service ou produit
           </h2>
-          <form action={createCatalogueItemAction} className="editorial-form">
-            <input type="hidden" name="worldKey" value={worldKey} />
-            <label>
-              Libellé
-              <input type="text" name="label" required maxLength={160} />
-            </label>
-            <label>
-              Type
-              <select name="kind" defaultValue="SERVICE">
-                <option value="SERVICE">Service</option>
-                <option value="PRODUCT">Produit</option>
-              </select>
-            </label>
-            <label>
-              Prix unitaire (XOF)
-              <input type="number" name="unitPrice" required min={0} step={1} />
-            </label>
-            <button type="submit" className="admin-table__action">
-              Ajouter au catalogue
-            </button>
-          </form>
+          <CreateCatalogueItemForm worldKey={worldKey} />
         </>
       ) : null}
     </>

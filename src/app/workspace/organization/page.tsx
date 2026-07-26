@@ -2,9 +2,9 @@ import { redirect } from "next/navigation";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
-import { endMembershipAction } from "./actions";
 import {
   DepartmentForm,
+  EndMembershipForm,
   MembershipForm,
   PositionForm,
   TeamForm,
@@ -118,19 +118,7 @@ export default async function OrganizationPage() {
                                 ? " · Équipe principale"
                                 : ""}
                             </span>
-                            <form action={endMembershipAction}>
-                              <input
-                                type="hidden"
-                                name="membershipId"
-                                value={membership.id}
-                              />
-                              <button
-                                type="submit"
-                                className="admin-table__action"
-                              >
-                                Retirer
-                              </button>
-                            </form>
+                            <EndMembershipForm membershipId={membership.id} />
                           </li>
                         ))}
                       </ul>

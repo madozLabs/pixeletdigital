@@ -1,42 +1,27 @@
 "use client";
 
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
 
+import {
+  Feedback,
+  IDLE_ACTION_STATE,
+  SubmitButton,
+} from "../_components/feedback";
 import {
   assignMemberAction,
   createDepartmentAction,
   createPositionAction,
   createTeamAction,
-  type OrganizationActionState,
+  endMembershipAction,
 } from "./actions";
-
-const initialState: OrganizationActionState = { status: "idle" };
 
 type Option = Readonly<{ value: string; label: string }>;
 
-function Feedback({ state }: Readonly<{ state: OrganizationActionState }>) {
-  if (!state.message || state.status === "idle") return null;
-  return (
-    <p
-      className={`admin-feedback admin-feedback--${state.status}`}
-      role={state.status === "error" ? "alert" : "status"}
-    >
-      {state.message}
-    </p>
-  );
-}
-function SubmitButton({ children }: Readonly<{ children: string }>) {
-  const { pending } = useFormStatus();
-  return (
-    <button className="admin-table__action" type="submit" disabled={pending}>
-      {pending ? "Traitement…" : children}
-    </button>
-  );
-}
-
 export function DepartmentForm() {
-  const [state, action] = useActionState(createDepartmentAction, initialState);
+  const [state, action] = useActionState(
+    createDepartmentAction,
+    IDLE_ACTION_STATE,
+  );
   return (
     <form action={action} className="admin-form-card">
       <h2 className="admin-content__subtitle">Nouveau département</h2>
@@ -57,7 +42,10 @@ export function DepartmentForm() {
 }
 
 export function PositionForm() {
-  const [state, action] = useActionState(createPositionAction, initialState);
+  const [state, action] = useActionState(
+    createPositionAction,
+    IDLE_ACTION_STATE,
+  );
   return (
     <form action={action} className="admin-form-card">
       <h2 className="admin-content__subtitle">Nouveau poste</h2>
@@ -78,7 +66,7 @@ export function PositionForm() {
 }
 
 export function TeamForm({ departments }: Readonly<{ departments: Option[] }>) {
-  const [state, action] = useActionState(createTeamAction, initialState);
+  const [state, action] = useActionState(createTeamAction, IDLE_ACTION_STATE);
   return (
     <form action={action} className="admin-form-card">
       <h2 className="admin-content__subtitle">Nouvelle équipe</h2>
@@ -112,7 +100,7 @@ export function MembershipForm({
   teams,
   positions,
 }: Readonly<{ users: Option[]; teams: Option[]; positions: Option[] }>) {
-  const [state, action] = useActionState(assignMemberAction, initialState);
+  const [state, action] = useActionState(assignMemberAction, IDLE_ACTION_STATE);
   return (
     <form action={action} className="admin-form-card">
       <h2 className="admin-content__subtitle">Affecter un collaborateur</h2>
@@ -154,6 +142,22 @@ export function MembershipForm({
       </label>
       <Feedback state={state} />
       <SubmitButton>Affecter</SubmitButton>
+    </form>
+  );
+}
+
+export function EndMembershipForm({
+  membershipId,
+}: Readonly<{ membershipId: string }>) {
+  const [state, action] = useActionState(
+    endMembershipAction,
+    IDLE_ACTION_STATE,
+  );
+  return (
+    <form action={action}>
+      <input type="hidden" name="membershipId" value={membershipId} />
+      <SubmitButton>Retirer</SubmitButton>
+      <Feedback state={state} />
     </form>
   );
 }
