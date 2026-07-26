@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { WorldTransitionLink } from "@/app/_components/world-transition";
 
 const NavigationLinks = () => (
   <>
     <Link href="/kwaliti-print/#capacites-kp">Possibilités</Link>
-    <Link href="/">Pixel&amp;Digital</Link>
+    <WorldTransitionLink href="/" label="Pixel&Digital">
+      Pixel&amp;Digital
+    </WorldTransitionLink>
     <Link href="/kwaliti-print/devis" className="button button--kwaliti">
       Demander un devis
     </Link>

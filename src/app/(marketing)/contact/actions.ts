@@ -3,6 +3,7 @@
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import { PrismaServiceRepository } from "@/modules/content/infrastructure/prisma-service-repository";
 import { submitGeneralContact } from "@/modules/enquiries/application/submit-general-contact";
+import { buildKwalitiQuoteMessage } from "@/modules/enquiries/application/kwaliti-quote-details";
 import { PrismaEnquiryRepository } from "@/modules/enquiries/infrastructure/prisma-enquiry-repository";
 import { createLeadFromEnquiry } from "@/modules/leads/application/lead-use-cases";
 import { PrismaLeadRepository } from "@/modules/leads/infrastructure/prisma-lead-repository";
@@ -59,6 +60,25 @@ export async function submitContactAction(
 ): Promise<ContactFormState> {
   const serviceSlug = text(formData, "serviceSlug").trim() || null;
   const worldKey = text(formData, "worldKey").trim() || "pixel-digital";
+  const rawMessage = text(formData, "message");
+  const quoteMessage =
+    worldKey === "kwaliti-print"
+      ? buildKwalitiQuoteMessage(rawMessage, {
+          quantity: text(formData, "quantity"),
+          format: text(formData, "format"),
+          material: text(formData, "material"),
+          desiredDeadline: text(formData, "desiredDeadline"),
+          finishing: text(formData, "finishing"),
+        })
+      : { ok: true as const, value: rawMessage };
+
+  if (!quoteMessage.ok) {
+    return {
+      status: "error",
+      message: "Merci de corriger les champs indiqués.",
+      fieldErrors: quoteMessage.fieldErrors,
+    };
+  }
 
   const result = await submitGeneralContact(dependencies(), {
     id: crypto.randomUUID(),
@@ -68,7 +88,7 @@ export async function submitContactAction(
     name: text(formData, "name"),
     email: text(formData, "email"),
     phone: text(formData, "phone").trim() || null,
-    message: text(formData, "message"),
+    message: quoteMessage.value,
     sourcePage: text(formData, "sourcePage") || "/contact",
     idempotencyKey: text(formData, "idempotencyKey"),
     consentGiven: formData.get("consent") === "on",

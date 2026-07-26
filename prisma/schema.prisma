@@ -275,6 +275,7 @@ model User {
   authoredLeadNotes LeadNote[]       @relation("LeadNoteAuthor")
   ownedNextActions  NextAction[]     @relation("NextActionOwner")
   leadActivities    LeadActivity[]   @relation("LeadActivityActor")
+  editPresences     EditPresence[]
 
   @@map("users")
 }
@@ -734,6 +735,7 @@ model Project {
   startDate        DateTime?
   dueDate          DateTime?
   progress         Int             @default(0)
+  version          Int             @default(1)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   world            World           @relation(fields: [worldKey], references: [key], onDelete: Restrict)
@@ -749,6 +751,19 @@ model Project {
   @@index([teamId])
   @@index([dueDate])
   @@map("projects")
+}
+
+model EditPresence {
+  id         String   @id @default(cuid())
+  userId     String
+  entityType String
+  entityId   String
+  lastSeenAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, entityType, entityId])
+  @@index([entityType, entityId, lastSeenAt])
+  @@map("edit_presences")
 }
 
 model Task {

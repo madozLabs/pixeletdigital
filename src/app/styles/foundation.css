@@ -1,0 +1,168 @@
+:root {
+  --pd-red: #e71e2d;
+  --pd-red-dark: #981d2a;
+  --kp-cyan: #2ca0da;
+  --kp-magenta: #e5078a;
+  --kp-magenta-dark: #b3066b;
+  --kp-yellow: #fbe20a;
+  --color-black: #000000;
+  --color-white: #ffffff;
+  /* Back-compat aliases: existing rules reference --color-red directly. */
+  --color-red: var(--pd-red);
+  --color-red-dark: var(--pd-red-dark);
+
+  /* Semantic accent — brand-switchable via [data-brand="kwaliti-print"] */
+  --accent: var(--pd-red);
+  --accent-dark: var(--pd-red-dark);
+
+  --ink: var(--color-black);
+  --ink-soft: rgb(0 0 0 / 62%);
+  --ink-faint: rgb(0 0 0 / 56%);
+  --surface: var(--color-white);
+  --surface-inverted: var(--color-black);
+  --ink-inverted: var(--color-white);
+  --ink-inverted-soft: rgb(255 255 255 / 66%);
+  --hairline: rgb(0 0 0 / 12%);
+  --hairline-inverted: rgb(255 255 255 / 18%);
+
+  --font-display: var(--font-outfit), system-ui, sans-serif;
+  --font-kwaliti: var(--font-manrope), system-ui, sans-serif;
+  --font-kwaliti-mono: var(--font-baloo), system-ui, sans-serif;
+  --step-1: clamp(0.875rem, 0.83rem + 0.2vw, 1rem);
+  --step-2: clamp(1.125rem, 1.05rem + 0.35vw, 1.375rem);
+  --step-3: clamp(1.5rem, 1.3rem + 0.9vw, 2.25rem);
+  --step-4: clamp(2.25rem, 1.8rem + 2vw, 3.75rem);
+  --step-5: clamp(3rem, 2.1rem + 4vw, 6.5rem);
+
+  --space-1: 0.5rem;
+  --space-2: 1rem;
+  --space-3: 1.75rem;
+  --space-4: 3rem;
+  --space-5: 5rem;
+  --space-6: 8rem;
+
+  --content-width: 78rem;
+  --radius-pill: 999px;
+  --radius-control: 0.5rem;
+  --ease-editorial: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 0.2s;
+  --duration-base: 0.25s;
+  --duration-entrance: 0.6s;
+  --duration-kinetic: 0.7s;
+
+  color-scheme: light;
+  --wk-bg: #f4f5f8;
+  --wk-card: #ffffff;
+  --wk-border: rgb(18 22 33 / 9%);
+  --wk-shadow: 0 1px 2px rgb(18 22 33 / 5%), 0 2px 8px rgb(18 22 33 / 4%);
+  --wk-shadow-lift: 0 8px 22px rgb(18 22 33 / 12%);
+  --wk-radius: 0.75rem;
+  --accent-soft: color-mix(in srgb, var(--accent) 11%, var(--wk-card));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: var(--color-white);
+    --ink-soft: rgb(255 255 255 / 66%);
+    --ink-faint: rgb(255 255 255 / 50%);
+    --surface: var(--color-black);
+    --surface-inverted: var(--color-white);
+    --ink-inverted: var(--color-black);
+    --ink-inverted-soft: rgb(0 0 0 / 62%);
+    --hairline: rgb(255 255 255 / 16%);
+    --hairline-inverted: rgb(0 0 0 / 14%);
+
+    color-scheme: dark;
+  }
+}
+
+/* Kwaliti Print theme scope — white field, magenta accent, opt in via [data-brand] */
+[data-brand="kwaliti-print"] {
+  --accent: var(--kp-magenta-dark);
+  --accent-dark: var(--kp-magenta-dark);
+  --kp-paper: #f8f7f3;
+  --kp-paper-deep: #eeece5;
+  --kp-neutral: #171817;
+  --kp-neutral-soft: #545752;
+  --kp-rule: #c9cbc5;
+  --ink: var(--color-black);
+  --ink-soft: rgb(0 0 0 / 62%);
+  --ink-faint: rgb(0 0 0 / 56%);
+  --surface: var(--color-white);
+  --surface-inverted: var(--color-black);
+  --ink-inverted: var(--color-white);
+  --ink-inverted-soft: rgb(255 255 255 / 66%);
+  --hairline: rgb(0 0 0 / 12%);
+  --hairline-inverted: rgb(255 255 255 / 18%);
+}
+
+/* Workspace explicit theme scope — overrides system preference either way */
+[data-theme="light"] {
+  --ink: var(--color-black);
+  --ink-soft: rgb(0 0 0 / 62%);
+  --ink-faint: rgb(0 0 0 / 56%);
+  --surface: var(--color-white);
+  --surface-inverted: var(--color-black);
+  --ink-inverted: var(--color-white);
+  --ink-inverted-soft: rgb(255 255 255 / 66%);
+  --hairline: rgb(0 0 0 / 12%);
+  --hairline-inverted: rgb(255 255 255 / 18%);
+}
+
+[data-theme="dark"] {
+  --ink: var(--color-white);
+  --ink-soft: rgb(255 255 255 / 66%);
+  --ink-faint: rgb(255 255 255 / 50%);
+  --surface: #0c0c0d;
+  --surface-inverted: var(--color-white);
+  --ink-inverted: var(--color-black);
+  --ink-inverted-soft: rgb(0 0 0 / 62%);
+  --hairline: rgb(255 255 255 / 14%);
+  --hairline-inverted: rgb(0 0 0 / 14%);
+  --wk-bg: #0f1013;
+  --wk-card: #17181d;
+  --wk-border: rgb(255 255 255 / 9%);
+  --wk-shadow: 0 1px 2px rgb(0 0 0 / 45%);
+  --wk-shadow-lift: 0 10px 24px rgb(0 0 0 / 55%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-display);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--step-1);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p,
+figure {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

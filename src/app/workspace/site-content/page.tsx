@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
+import { EditPresence } from "../_components/edit-presence";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import {
@@ -413,6 +414,7 @@ function PageEditor({
 }) {
   return (
     <div className="cms-editor">
+      <EditPresence entityType="PAGE" entityId={page.id} />
       <div className="cms-editor__top">
         <Link href={`/workspace/site-content?world=${worldKey}&tab=pages`}>
           ← Toutes les pages
@@ -473,6 +475,7 @@ function SectionEditor({
       {typed ? (
         <SectionFieldsForm
           sectionId={section.id}
+          version={section.version}
           pageId={page.id}
           sectionType={section.sectionType}
           order={section.order}
@@ -493,6 +496,7 @@ function SectionEditor({
         <summary>{typed ? "Mode avancé (JSON)" : "Contenu (JSON)"}</summary>
         <SectionJsonForm
           sectionId={section.id}
+          version={section.version}
           pageId={page.id}
           sectionType={section.sectionType}
           order={section.order}

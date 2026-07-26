@@ -130,6 +130,7 @@ type ImageOption = Readonly<{
 
 export function SectionFieldsForm({
   sectionId,
+  version,
   pageId,
   sectionType,
   order,
@@ -145,6 +146,7 @@ export function SectionFieldsForm({
   evidencePayload,
 }: Readonly<{
   sectionId: string;
+  version: number;
   pageId: string;
   sectionType: string;
   order: number;
@@ -166,6 +168,7 @@ export function SectionFieldsForm({
   return (
     <form action={action}>
       <input type="hidden" name="id" value={sectionId} />
+      <input type="hidden" name="expectedVersion" value={version} />
       <input type="hidden" name="pageId" value={pageId} />
       <input type="hidden" name="sectionType" value={sectionType} />
       {sectionType === "CASE_STUDY" || sectionType === "TESTIMONIAL" ? (
@@ -401,6 +404,7 @@ function EvidenceFields({
 
 export function SectionJsonForm({
   sectionId,
+  version,
   pageId,
   sectionType,
   order,
@@ -408,6 +412,7 @@ export function SectionJsonForm({
   editable,
 }: Readonly<{
   sectionId?: string;
+  version?: number;
   pageId: string;
   sectionType?: string;
   order: number;
@@ -425,6 +430,9 @@ export function SectionJsonForm({
     >
       {isNew ? <h3>Ajouter une section</h3> : null}
       {sectionId ? <input type="hidden" name="id" value={sectionId} /> : null}
+      {sectionId ? (
+        <input type="hidden" name="expectedVersion" value={version} />
+      ) : null}
       <input type="hidden" name="pageId" value={pageId} />
       <div className="admin-form-grid">
         <label>

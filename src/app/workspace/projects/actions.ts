@@ -94,7 +94,7 @@ export async function updateProjectAction(
   try {
     const project = await prisma.project.findUnique({
       where: { id: projectId },
-      select: { worldKey: true },
+      select: { worldKey: true, version: true },
     });
     if (!project) {
       return { status: "error", message: "Ce projet n'existe plus." };
@@ -102,8 +102,9 @@ export async function updateProjectAction(
     requireWorldAccess(context.actor, project.worldKey);
 
     const progress = Number(formData.get("progress"));
-    await prisma.project.update({
-      where: { id: projectId },
+    const expectedVersion = Number(formData.get("expectedVersion"));
+    const updated = await prisma.project.updateMany({
+      where: { id: projectId, version: expectedVersion },
       data: {
         status: text(formData, "status") as
           "PLANNED" | "ACTIVE" | "ON_HOLD" | "COMPLETED" | "CANCELLED",
@@ -111,8 +112,16 @@ export async function updateProjectAction(
           ? Math.min(100, Math.max(0, progress))
           : 0,
         updatedAt: context.clock.now(),
+        version: { increment: 1 },
       },
     });
+    if (updated.count === 0) {
+      return {
+        status: "error",
+        message:
+          "Ce projet a été modifié par quelqu’un d’autre. Rechargez la page avant de réessayer.",
+      };
+    }
     revalidatePath("/workspace/projects");
     return { status: "success", message: "Projet mis à jour." };
   } catch (error) {

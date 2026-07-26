@@ -11,6 +11,7 @@ import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-wo
 
 import { HeroParallax } from "@/app/_components/hero-parallax";
 import { MagneticButton } from "@/app/_components/magnetic-button";
+import { KineticHeading } from "@/app/_components/kinetic-heading";
 import { Reveal } from "@/app/_components/reveal";
 import { getCmsHomeContent } from "@/app/_lib/cms-home";
 import { groupServicesByFamily } from "@/app/_lib/group-services-by-family";
@@ -81,15 +82,15 @@ export default async function HomePage() {
         </div>
         <div className="home-hero__grid">
           <div className="home-hero__copy">
-            <Reveal>
-              <h1 className="home-hero__title">
-                {heroLines[0]}
-                {heroLines[1] ? <span>{heroLines[1]}</span> : null}
-                {heroLines.length > 2 ? (
-                  <strong>{heroLines.slice(2).join(" ")}</strong>
-                ) : null}
-              </h1>
-            </Reveal>
+            <KineticHeading
+              className="home-hero__title"
+              text={
+                heroLines.length > 2
+                  ? [heroLines[0], heroLines[1], heroLines.slice(2).join(" ")]
+                  : heroLines
+              }
+              accentLastLine={heroLines.length > 2}
+            />
             <Reveal delay={0.15}>
               <p className="home-hero__lede">
                 {cms.hero?.lede ??

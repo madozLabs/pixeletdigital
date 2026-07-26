@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
+import { WorldTransitionLink } from "@/app/_components/world-transition";
 
 const WORLDS = [
   { label: "Pixel&Digital", href: "/", disabled: false },
@@ -56,15 +56,16 @@ export function WorldSwitcher() {
                 <span className="world-switcher__tag">Bientôt</span>
               </span>
             ) : (
-              <Link
+              <WorldTransitionLink
                 key={world.label}
                 href={world.href}
+                label={world.label}
                 role="menuitem"
                 className="world-switcher__item"
-                onClick={() => setOpen(false)}
+                onNavigate={() => setOpen(false)}
               >
                 {world.label}
-              </Link>
+              </WorldTransitionLink>
             ),
           )}
         </div>

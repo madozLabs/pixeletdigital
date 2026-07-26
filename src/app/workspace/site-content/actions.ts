@@ -57,6 +57,8 @@ const ERROR_MESSAGE: Readonly<Record<string, string>> = {
   EVIDENCE_NOT_PUBLISHABLE:
     "Publication impossible : une preuve sociale est incomplète ou non approuvée.",
   FILE_REQUIRED: "Merci de sélectionner un fichier.",
+  EDIT_CONFLICT:
+    "Cet élément a été modifié par quelqu’un d’autre. Rechargez la page avant de réessayer.",
   SUPABASE_STORAGE_NOT_CONFIGURED:
     "Le stockage média n'est pas configuré sur cet environnement.",
 };
@@ -224,27 +226,37 @@ export async function saveSectionAction(
     const id = text(formData, "id") || randomUUID();
     const now = new Date();
     const payload = parsePayload(text(formData, "payload"));
-    await prisma.pageSection.upsert({
-      where: { id },
-      create: {
-        id,
-        pageId,
-        sectionType: text(formData, "sectionType").toUpperCase(),
-        order: Number(formData.get("order")),
-        payload: payload as Prisma.InputJsonValue,
-        payloadSchemaVersion: 1,
-        version: 1,
-        createdAt: now,
-        updatedAt: now,
-      },
-      update: {
-        sectionType: text(formData, "sectionType").toUpperCase(),
-        order: Number(formData.get("order")),
-        payload: payload as Prisma.InputJsonValue,
-        version: { increment: 1 },
-        updatedAt: now,
-      },
-    });
+    const existingId = text(formData, "id");
+    if (!existingId) {
+      await prisma.pageSection.create({
+        data: {
+          id,
+          pageId,
+          sectionType: text(formData, "sectionType").toUpperCase(),
+          order: Number(formData.get("order")),
+          payload: payload as Prisma.InputJsonValue,
+          payloadSchemaVersion: 1,
+          version: 1,
+          createdAt: now,
+          updatedAt: now,
+        },
+      });
+    } else {
+      const updated = await prisma.pageSection.updateMany({
+        where: {
+          id: existingId,
+          version: Number(formData.get("expectedVersion")),
+        },
+        data: {
+          sectionType: text(formData, "sectionType").toUpperCase(),
+          order: Number(formData.get("order")),
+          payload: payload as Prisma.InputJsonValue,
+          version: { increment: 1 },
+          updatedAt: now,
+        },
+      });
+      if (updated.count === 0) throw new Error("EDIT_CONFLICT");
+    }
     revalidatePath("/workspace/site-content");
     return { status: "success", message: "Section enregistrée." };
   } catch (error) {
@@ -306,26 +318,35 @@ export async function saveSectionFieldsAction(
       else delete payload[key];
     }
     const now = new Date();
-    await prisma.pageSection.upsert({
-      where: { id },
-      create: {
-        id,
-        pageId,
-        sectionType: text(formData, "sectionType").toUpperCase(),
-        order: Number(formData.get("order")),
-        payload: payload as Prisma.InputJsonValue,
-        payloadSchemaVersion: 1,
-        version: 1,
-        createdAt: now,
-        updatedAt: now,
-      },
-      update: {
-        order: Number(formData.get("order")),
-        payload: payload as Prisma.InputJsonValue,
-        version: { increment: 1 },
-        updatedAt: now,
-      },
-    });
+    if (!existing) {
+      await prisma.pageSection.create({
+        data: {
+          id,
+          pageId,
+          sectionType: text(formData, "sectionType").toUpperCase(),
+          order: Number(formData.get("order")),
+          payload: payload as Prisma.InputJsonValue,
+          payloadSchemaVersion: 1,
+          version: 1,
+          createdAt: now,
+          updatedAt: now,
+        },
+      });
+    } else {
+      const updated = await prisma.pageSection.updateMany({
+        where: {
+          id,
+          version: Number(formData.get("expectedVersion")),
+        },
+        data: {
+          order: Number(formData.get("order")),
+          payload: payload as Prisma.InputJsonValue,
+          version: { increment: 1 },
+          updatedAt: now,
+        },
+      });
+      if (updated.count === 0) throw new Error("EDIT_CONFLICT");
+    }
     revalidatePath("/workspace/site-content");
     return { status: "success", message: "Section enregistrée." };
   } catch (error) {

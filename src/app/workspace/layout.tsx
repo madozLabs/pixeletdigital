@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { AdminShell } from "./_components/admin-shell";
+import { ToastProvider } from "./_components/toast";
 import { getWorkspaceRequestContext } from "./get-workspace-context";
 
 export const metadata: Metadata = {
@@ -16,5 +17,9 @@ export default async function WorkspaceLayout({
   const context = await getWorkspaceRequestContext();
   if (!context) redirect("/login");
 
-  return <AdminShell role={context.actor?.role ?? null}>{children}</AdminShell>;
+  return (
+    <ToastProvider>
+      <AdminShell role={context.actor?.role ?? null}>{children}</AdminShell>
+    </ToastProvider>
+  );
 }

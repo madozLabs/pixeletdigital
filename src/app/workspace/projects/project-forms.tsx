@@ -8,6 +8,7 @@ import {
   SubmitButton,
 } from "../_components/feedback";
 import { ConfirmAction } from "../_components/confirm-action";
+import { EditPresence } from "../_components/edit-presence";
 import { createProjectAction, updateProjectAction } from "./actions";
 
 type Option = Readonly<{ value: string; label: string }>;
@@ -104,15 +105,34 @@ export function UpdateProjectForm({
   projectId,
   status,
   progress,
-}: Readonly<{ projectId: string; status: string; progress: number }>) {
+  version,
+}: Readonly<{
+  projectId: string;
+  status: string;
+  progress: number;
+  version: number;
+}>) {
   const [state, action] = useActionState(
     updateProjectAction,
     IDLE_ACTION_STATE,
   );
   const [nextStatus, setNextStatus] = useState(status);
+  const [editing, setEditing] = useState(false);
   return (
-    <form action={action} className="project-card__controls">
+    <form
+      action={action}
+      className="project-card__controls"
+      onFocusCapture={() => setEditing(true)}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget))
+          setEditing(false);
+      }}
+    >
+      {editing ? (
+        <EditPresence entityType="PROJECT" entityId={projectId} />
+      ) : null}
       <input type="hidden" name="projectId" value={projectId} />
+      <input type="hidden" name="expectedVersion" value={version} />
       <select
         name="status"
         value={nextStatus}

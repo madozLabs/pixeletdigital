@@ -21,6 +21,7 @@ export function ContactForm({
   const [state, formAction] = useActionState(submitContactAction, initialState);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const fieldErrors = state.status === "error" ? state.fieldErrors : {};
+  const isKwalitiQuote = worldKey === "kwaliti-print";
 
   if (state.status === "success") {
     return (
@@ -61,6 +62,71 @@ export function ContactForm({
         ) : null}
       </label>
 
+      {isKwalitiQuote ? (
+        <fieldset className="contact-form__quote-details">
+          <legend>Précisions du devis (optionnelles)</legend>
+          <p>
+            Renseignez ce que vous connaissez déjà. Nous vous conseillerons pour
+            le reste.
+          </p>
+          <div className="contact-form__quote-grid">
+            <QuoteField
+              label="Quantité"
+              name="quantity"
+              error={fieldErrors.quantity}
+            >
+              <input
+                name="quantity"
+                type="number"
+                min="1"
+                max="1000000"
+                step="1"
+                inputMode="numeric"
+              />
+            </QuoteField>
+            <QuoteField label="Format" name="format" error={fieldErrors.format}>
+              <input
+                name="format"
+                type="text"
+                maxLength={160}
+                placeholder="Dimensions ou format souhaité"
+              />
+            </QuoteField>
+            <QuoteField
+              label="Matière"
+              name="material"
+              error={fieldErrors.material}
+            >
+              <input
+                name="material"
+                type="text"
+                maxLength={160}
+                placeholder="Si connue"
+              />
+            </QuoteField>
+            <QuoteField
+              label="Délai souhaité"
+              name="desiredDeadline"
+              error={fieldErrors.desiredDeadline}
+            >
+              <input name="desiredDeadline" type="date" />
+            </QuoteField>
+            <QuoteField
+              label="Finition"
+              name="finishing"
+              error={fieldErrors.finishing}
+            >
+              <input
+                name="finishing"
+                type="text"
+                maxLength={160}
+                placeholder="Si connue"
+              />
+            </QuoteField>
+          </div>
+        </fieldset>
+      ) : null}
+
       <label className="contact-form__field">
         <span>E-mail</span>
         <input name="email" type="email" required maxLength={254} />
@@ -79,7 +145,12 @@ export function ContactForm({
 
       <label className="contact-form__field">
         <span>Votre message</span>
-        <textarea name="message" required maxLength={4000} rows={6} />
+        <textarea
+          name="message"
+          required
+          maxLength={isKwalitiQuote ? 3200 : 4000}
+          rows={6}
+        />
         {fieldErrors.message ? (
           <span className="contact-form__field-error">
             {fieldErrors.message}
@@ -106,6 +177,31 @@ export function ContactForm({
 
       <SubmitButton label={submitLabel} />
     </form>
+  );
+}
+
+function QuoteField({
+  label,
+  name,
+  error,
+  children,
+}: Readonly<{
+  label: string;
+  name: string;
+  error?: string;
+  children: React.ReactNode;
+}>) {
+  const errorId = `${name}-error`;
+  return (
+    <label className="contact-form__field">
+      <span>{label}</span>
+      {error ? (
+        <span id={errorId} className="contact-form__field-error">
+          {error}
+        </span>
+      ) : null}
+      {children}
+    </label>
   );
 }
 

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import "./globals.css";
 import { getSiteUrl } from "./_lib/site-url";
+import { WorldTransitionProvider } from "./_components/world-transition";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -35,7 +36,9 @@ export default function RootLayout({
 }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="fr" className={outfit.variable}>
-      <body>{children}</body>
+      <body>
+        <WorldTransitionProvider>{children}</WorldTransitionProvider>
+      </body>
     </html>
   );
 }

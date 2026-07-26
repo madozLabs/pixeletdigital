@@ -141,6 +141,7 @@ export default async function ProjectsPage({
               projectId={project.id}
               status={project.status}
               progress={project.progress}
+              version={project.version}
             />
           </article>
         ))}
