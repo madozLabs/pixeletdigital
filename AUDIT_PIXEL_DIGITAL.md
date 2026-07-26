@@ -152,7 +152,7 @@ Recherche exhaustive : aucun type de section "témoignage" ou "étude de cas" n'
 | C3 | Corriger le bug d'encodage UTF-8 (mojibake FR) | Critique | Qualité/Brand | ✅ traité 2026-07-25 |
 | C4 | Introduire la pagination bornée sur toutes les listes | Critique | Archi/Perf | ✅ traité 2026-07-25 (listes principales) |
 | C5 | Compléter le pipeline Leads/Enquiries (qualification → conversion) | Critique | Produit/UX | ✅ traité 2026-07-25 |
-| C6 | Retour utilisateur explicite sur chaque mutation (fin des échecs silencieux) | Critique | UX | Ouvert |
+| C6 | Retour utilisateur explicite sur chaque mutation (fin des échecs silencieux) | Critique | UX | ✅ traité 2026-07-26 (8/8 pages) |
 | C7 | Résilience du site public face à l'indisponibilité base de données | Critique | Archi/Fiabilité | Ouvert |
 | C8 | Réparer la navigation mobile Kwaliti Print (menu, ancre, retour marque mère) | Critique | UX public | Ouvert |
 | I1 | Command Palette + recherche globale (Cmd+K) | Important | UX Workspace | Ouvert |
@@ -292,7 +292,15 @@ Contraintes :
 Résultat attendu : Une enquête peut être qualifiée, assignée, commentée et marquée convertie/fermée depuis le Workspace, avec autorisation, traçabilité et tests couvrant chaque transition.
 ```
 
-**C6 — Retour utilisateur explicite sur chaque mutation**
+**C6 — Retour utilisateur explicite sur chaque mutation** — ✅ traité le 26 juillet 2026, 8/8 pages Workspace, en 5 commits séquentiels (un par page ou paire de pages) :
+- Composant partagé `src/app/workspace/_components/feedback.tsx` (`Feedback`, `SubmitButton`, `ActionState`) — remplace les copies locales dupliquées dans `clients/client-forms.tsx` et `access/access-forms.tsx`.
+- **Projects, Tasks, Editorial** : actions converties de `void` vers `useActionState`, avec `try/catch` ajouté là où il manquait. Les déplacements en glisser-déposer (`moveTaskAction`, `moveEditorialItemAction`) retournent maintenant un résultat exploitable au lieu de `void` — un échec de déplacement affiche un message au lieu de silencieusement revenir en arrière sans explication.
+- **Billing, Services** : les cas d'usage applicatifs renvoyaient déjà un `Result<T, error>` typé — les actions ne faisaient que `console.error` et jetaient l'information. Corrigé pour renvoyer ce message déjà calculé à l'utilisateur.
+- **Organization** : 4 des 5 actions avaient déjà le motif ; seule `endMembershipAction` restait silencieuse — corrigée, plus migration des doublons locaux `Feedback`/`SubmitButton` vers le composant partagé.
+- **Site-content** : le fichier le plus à risque du lot — `actorFor()` et plusieurs règles métier (page pas en brouillon, JSON de section invalide, fichier manquant, échec Supabase) levaient une exception jamais interceptée nulle part, donc **plantaient** dans l'écran d'erreur par défaut de Next.js au lieu d'échouer proprement. Les 8 actions attrapent maintenant l'erreur et la traduisent en message clair.
+- Chaque page validée séparément (`tsc`, `eslint`, suite complète) avant de passer à la suivante ; suite complète (537 tests) verte à la fin, aucune régression.
+
+Prompt d'origine conservé ci-dessous pour mémoire — le périmètre réellement couvert (8/8 pages, remontée d'erreur typée plutôt que template générique) dépasse ce qui était esquissé initialement.
 ```text
 Contexte : La majorité des formulaires du Workspace (projects, tasks, editorial, billing, organization, services, site-content) sont de simples <form action={...}> serveur, sans aucun état "en cours" ni confirmation visible de succès/échec — contrairement à clients/client-forms.tsx et access/access-forms.tsx qui utilisent useActionState + un composant Feedback partagé. Une mutation échouée dans organization/actions.ts, projects/actions.ts, etc. retourne silencieusement, sans que l'utilisateur ne voie jamais l'échec.
 
