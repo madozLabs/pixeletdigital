@@ -7,6 +7,7 @@ import {
   IDLE_ACTION_STATE,
   SubmitButton,
 } from "../_components/feedback";
+import { ConfirmAction } from "../_components/confirm-action";
 import {
   archiveServiceAction,
   publishServiceAction,
@@ -71,7 +72,9 @@ export function ServiceLifecycleActions({
       <form action={archiveAction}>
         <input type="hidden" name="id" value={serviceId} />
         <input type="hidden" name="expectedVersion" value={version} />
-        <SubmitButton>Archiver</SubmitButton>
+        <ConfirmAction consequence="Le service sera retiré des contenus publiés.">
+          Archiver
+        </ConfirmAction>
         <Feedback state={archiveState} />
       </form>
     );

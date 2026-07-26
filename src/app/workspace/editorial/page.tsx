@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import type { ApprovedRole } from "@/shared/request-context";
+import { formatShortDate } from "@/shared/format";
+import { StatusBadge } from "../_components/status-badge";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import {
   CreateEditorialItemForm,
@@ -23,15 +25,6 @@ const MUTATE_ROLES: readonly ApprovedRole[] = [
   "EDITOR",
 ];
 
-const STATUS_LABEL: Readonly<Record<string, string>> = {
-  DRAFT: "Brouillon",
-  INTERNAL_REVIEW: "Validation interne",
-  CLIENT_REVIEW: "Validation client",
-  APPROVED: "Approuvé",
-  SCHEDULED: "Programmé",
-  PUBLISHED: "Publié",
-  CANCELLED: "Annulé",
-};
 const CONTENT_LABEL: Readonly<Record<string, string>> = {
   POST: "Post",
   STORY: "Story",
@@ -185,11 +178,7 @@ export default async function WorkspaceEditorialPage({
                         key={item.id}
                         className="editorial-card editorial-card--professional"
                       >
-                        <span
-                          className={`status-badge status-badge--${item.status.toLowerCase()}`}
-                        >
-                          {STATUS_LABEL[item.status]}
-                        </span>
+                        <StatusBadge kind="editorial" status={item.status} />
                         <p className="editorial-card__title">{item.title}</p>
                         <p className="editorial-card__meta">
                           {item.client?.name ?? item.clientLabel} ·{" "}
@@ -252,9 +241,5 @@ export default async function WorkspaceEditorialPage({
 }
 
 function formatDayLabel(date: Date): string {
-  return date.toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "2-digit",
-    timeZone: "UTC",
-  });
+  return formatShortDate(date);
 }

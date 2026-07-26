@@ -1,5 +1,19 @@
 import type { NextConfig } from "next";
 
+const supabaseRemote = (() => {
+  try {
+    if (!process.env.SUPABASE_URL) return null;
+    const url = new URL(process.env.SUPABASE_URL);
+    return {
+      protocol:
+        url.protocol === "http:" ? ("http" as const) : ("https" as const),
+      hostname: url.hostname,
+    };
+  } catch {
+    return null;
+  }
+})();
+
 const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
@@ -8,6 +22,13 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "15mb",
     },
   },
+  images: supabaseRemote
+    ? {
+        remotePatterns: [
+          { ...supabaseRemote, pathname: "/storage/v1/object/public/**" },
+        ],
+      }
+    : undefined,
 };
 
 export default nextConfig;

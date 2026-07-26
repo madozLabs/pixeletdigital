@@ -6,6 +6,10 @@ import { revalidatePath } from "next/cache";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import { recordAuditEvent } from "@/modules/audit/infrastructure/record-audit-event";
+import {
+  evidencePublicationErrors,
+  isEvidenceSectionType,
+} from "@/modules/content/domain/evidence-section";
 import type { ActionState } from "../_components/feedback";
 import { requireWorldAccess } from "../_lib/authorization";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
@@ -50,6 +54,8 @@ const ERROR_MESSAGE: Readonly<Record<string, string>> = {
   PAGE_NOT_DRAFT:
     "Cette page n'est plus en brouillon et ne peut plus être modifiée.",
   INVALID_SECTION_PAYLOAD: "Le contenu de la section n'est pas un JSON valide.",
+  EVIDENCE_NOT_PUBLISHABLE:
+    "Publication impossible : une preuve sociale est incomplète ou non approuvée.",
   FILE_REQUIRED: "Merci de sélectionner un fichier.",
   SUPABASE_STORAGE_NOT_CONFIGURED:
     "Le stockage média n'est pas configuré sur cet environnement.",
@@ -145,6 +151,25 @@ export async function transitionPageAction(
       "DRAFT" | "IN_REVIEW" | "PUBLISHED" | "ARCHIVED";
     const isPublicChange = target === "PUBLISHED" || target === "ARCHIVED";
     const { actor, context } = await actorFor(page.worldKey, isPublicChange);
+    if (target === "PUBLISHED") {
+      const evidenceSections = await prisma.pageSection.findMany({
+        where: {
+          pageId: id,
+          sectionType: { in: ["CASE_STUDY", "TESTIMONIAL"] },
+        },
+        select: { sectionType: true, payload: true },
+      });
+      const invalid = evidenceSections.some((section) => {
+        if (!isEvidenceSectionType(section.sectionType)) return false;
+        return (
+          evidencePublicationErrors(
+            section.sectionType,
+            section.payload as Record<string, unknown>,
+          ).length > 0
+        );
+      });
+      if (invalid) throw new Error("EVIDENCE_NOT_PUBLISHABLE");
+    }
     await prisma.page.update({
       where: { id, version: Number(formData.get("expectedVersion")) },
       data: {
@@ -234,6 +259,25 @@ const TYPED_PAYLOAD_KEYS = [
   "label",
   "href",
   "mediaId",
+  "evidenceStatus",
+  "evidenceClass",
+  "claimOwner",
+  "sourceLocation",
+  "sourceOwner",
+  "verificationDate",
+  "attributionPermission",
+  "mediaRights",
+  "mediaCredit",
+  "accessibleAlternative",
+  "relatedService",
+  "context",
+  "scope",
+  "evidence",
+  "outcome",
+  "outcomeTreatment",
+  "limitations",
+  "quote",
+  "attribution",
 ] as const;
 
 /**

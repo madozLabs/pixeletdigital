@@ -1,9 +1,5 @@
-const FORMATTER = new Intl.NumberFormat("fr-FR", {
-  style: "currency",
-  currency: "XOF",
-  maximumFractionDigits: 0,
-});
+import { formatCurrency } from "@/shared/format";
 
 export function formatXof(cents: number): string {
-  return FORMATTER.format(Math.round(cents / 100));
+  return formatCurrency(cents);
 }

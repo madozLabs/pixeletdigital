@@ -96,13 +96,17 @@ export async function setUserStatusAction(
   void _state;
   const context = await getWorkspaceRequestContext();
   if (!context) return { status: "error", message: "Session expirée." };
+  const nextStatus = text(formData, "status");
+  if (nextStatus === "INACTIVE" && formData.get("confirmed") !== "on") {
+    return { status: "error", message: "La suspension doit être confirmée." };
+  }
   const input = {
     targetUserId: text(formData, "userId"),
-    confirmed: true,
+    confirmed: nextStatus === "ACTIVE" || formData.get("confirmed") === "on",
     auditEventId: randomUUID(),
   };
   const result =
-    text(formData, "status") === "ACTIVE"
+    nextStatus === "ACTIVE"
       ? await activateUser(dependencies(), context, input)
       : await deactivateUser(dependencies(), context, input);
   const state = mapResult(result, "Le statut du profil a été mis à jour.");
@@ -141,9 +145,12 @@ export async function revokeRoleAction(
   void _state;
   const context = await getWorkspaceRequestContext();
   if (!context) return { status: "error", message: "Session expirée." };
+  if (formData.get("confirmed") !== "on") {
+    return { status: "error", message: "La révocation doit être confirmée." };
+  }
   const result = await revokeRoleScope(dependencies(), context, {
     assignmentId: text(formData, "assignmentId"),
-    confirmed: true,
+    confirmed: formData.get("confirmed") === "on",
     auditEventId: randomUUID(),
   });
   const state = mapResult(result, "Le rôle a été révoqué.");

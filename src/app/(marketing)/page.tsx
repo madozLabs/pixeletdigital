@@ -1,4 +1,6 @@
 import Link from "next/link";
+import Image from "next/image";
+import type { Metadata } from "next";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import { listPublishedServiceFamilies } from "@/modules/content/application/public/list-published-service-families";
@@ -12,6 +14,22 @@ import { MagneticButton } from "@/app/_components/magnetic-button";
 import { Reveal } from "@/app/_components/reveal";
 import { getCmsHomeContent } from "@/app/_lib/cms-home";
 import { groupServicesByFamily } from "@/app/_lib/group-services-by-family";
+import { OrganizationJsonLd } from "./_components/organization-json-ld";
+
+const HOME_DESCRIPTION =
+  "Agence créative et digitale : stratégie, identité, contenu, digital et production pour construire des marques visibles et crédibles.";
+
+export const metadata: Metadata = {
+  title: { absolute: "Pixel&Digital — Agence créative et digitale" },
+  description: HOME_DESCRIPTION,
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "Pixel&Digital — Agence créative et digitale",
+    description: HOME_DESCRIPTION,
+    url: "/",
+    type: "website",
+  },
+};
 
 // Static-generated with periodic revalidation instead of force-dynamic: an
 // isolated DB blip now serves the last good render instead of crashing, and
@@ -52,6 +70,11 @@ export default async function HomePage() {
 
   return (
     <main id="main-content" className="public-home">
+      <OrganizationJsonLd
+        name="Pixel&Digital"
+        path="/"
+        description={HOME_DESCRIPTION}
+      />
       <section className="home-hero">
         <div className="home-hero__eyebrow">
           {cms.hero?.eyebrow ?? "Agence créative & digitale"}
@@ -89,14 +112,16 @@ export default async function HomePage() {
           </div>
 
           <Reveal delay={0.1}>
-            <div className="home-hero__visual" aria-hidden="true">
+            <div className="home-hero__visual">
               <HeroParallax className="home-hero__parallax" strength={22}>
                 {cms.hero?.imageUrl ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
+                  <Image
                     className="home-hero__photo"
                     src={cms.hero.imageUrl}
                     alt={cms.hero.imageAlt}
+                    fill
+                    priority
+                    sizes="(max-width: 760px) 100vw, 46vw"
                   />
                 ) : null}
                 <div className="home-hero__orb home-hero__orb--red" />

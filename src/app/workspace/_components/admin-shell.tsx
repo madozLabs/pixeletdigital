@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import {
   CalendarDays,
   FolderKanban,
@@ -13,13 +13,20 @@ import {
   Network,
   PanelLeftClose,
   PanelLeftOpen,
+  PlusCircle,
   ReceiptText,
+  Search,
   SquareKanban,
   UserCog,
   Users,
 } from "lucide-react";
 
 import { Avatar } from "./avatar";
+import {
+  CommandPalette,
+  type CommandPaletteHandle,
+  type CommandPaletteItem,
+} from "./command-palette";
 import { ThemeToggle } from "./theme-toggle";
 
 type NavItem = Readonly<{ href: string; label: string; icon: ReactNode }>;
@@ -149,6 +156,47 @@ function buildNavGroups(role: string | null): readonly NavGroup[] {
   return groups;
 }
 
+function buildCommandPaletteItems(
+  navGroups: readonly NavGroup[],
+  worldKey: string,
+): readonly CommandPaletteItem[] {
+  const navItems: CommandPaletteItem[] = navGroups.flatMap((group) =>
+    group.items.map((item) => ({
+      id: item.href,
+      label: item.label,
+      href: `${item.href}?world=${worldKey}`,
+      group: "Aller à",
+      icon: item.icon,
+    })),
+  );
+
+  const quickActions: CommandPaletteItem[] = [
+    {
+      id: "quick-project",
+      label: "Nouveau projet",
+      href: `/workspace/projects?world=${worldKey}`,
+      group: "Actions rapides",
+      icon: <PlusCircle size={ICON_SIZE} />,
+    },
+    {
+      id: "quick-task",
+      label: "Nouvelle tâche",
+      href: `/workspace/tasks?world=${worldKey}`,
+      group: "Actions rapides",
+      icon: <PlusCircle size={ICON_SIZE} />,
+    },
+    {
+      id: "quick-client",
+      label: "Nouveau client",
+      href: `/workspace/clients?world=${worldKey}`,
+      group: "Actions rapides",
+      icon: <PlusCircle size={ICON_SIZE} />,
+    },
+  ];
+
+  return [...quickActions, ...navItems];
+}
+
 export function AdminShell({
   role,
   children,
@@ -159,6 +207,11 @@ export function AdminShell({
   const worldKey = searchParams.get("world") ?? WORLDS[0].key;
   const navGroups = buildNavGroups(role);
   const roleLabel = role ? (ROLE_LABEL[role] ?? role) : null;
+  const commandPaletteRef = useRef<CommandPaletteHandle>(null);
+  const commandPaletteItems = useMemo(
+    () => buildCommandPaletteItems(navGroups, worldKey),
+    [navGroups, worldKey],
+  );
   // Lazy initializer: reads localStorage once on the client's actual first
   // render, same rationale/pattern as ThemeToggle's readStoredTheme().
   const [collapsed, setCollapsed] = useState<boolean>(() =>
@@ -232,6 +285,18 @@ export function AdminShell({
           ))}
         </select>
 
+        <button
+          type="button"
+          className="command-palette-trigger"
+          onClick={() => commandPaletteRef.current?.open()}
+        >
+          <span className="command-palette-trigger__label">
+            <Search size={15} aria-hidden="true" />
+            {!collapsed ? "Rechercher…" : null}
+          </span>
+          {!collapsed ? <kbd>Ctrl K</kbd> : null}
+        </button>
+
         <nav className="admin-nav" aria-label="Navigation Workspace">
           {navGroups.map((group) => (
             <div className="admin-nav__group" key={group.label || "root"}>
@@ -270,6 +335,7 @@ export function AdminShell({
       <main className="admin-content" id="main-content">
         {children}
       </main>
+      <CommandPalette ref={commandPaletteRef} items={commandPaletteItems} />
     </div>
   );
 }

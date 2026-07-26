@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import { listPublishedServiceFamilies } from "@/modules/content/application/public/list-published-service-families";
@@ -13,13 +14,16 @@ import { MagneticButton } from "@/app/_components/magnetic-button";
 import { Reveal } from "@/app/_components/reveal";
 import { getCmsHomeContent } from "@/app/_lib/cms-home";
 import { groupServicesByFamily } from "@/app/_lib/group-services-by-family";
+import { OrganizationJsonLd } from "@/app/(marketing)/_components/organization-json-ld";
+
+const KWALITI_DESCRIPTION =
+  "Kwaliti Print transforme les identités et les idées en objets et surfaces imprimés avec une approche précise et orientée production.";
 
 // See (marketing)/page.tsx for why this is ISR rather than force-dynamic.
 export const revalidate = 60;
 
 export const metadata: Metadata = {
-  description:
-    "Impression, personnalisation et signalétique pour donner une présence physique à vos idées.",
+  description: KWALITI_DESCRIPTION,
 };
 
 const DEFAULT_CAPABILITIES = [
@@ -49,6 +53,12 @@ export default async function KwalitiPrintHomePage() {
 
   return (
     <main id="main-content" className="kp-home">
+      <OrganizationJsonLd
+        name="Kwaliti Print"
+        path="/kwaliti-print"
+        description={KWALITI_DESCRIPTION}
+        parentName="Pixel&Digital"
+      />
       <section className="kp-hero">
         <div className="kp-hero__copy">
           <Reveal>
@@ -84,32 +94,52 @@ export default async function KwalitiPrintHomePage() {
           </Reveal>
         </div>
 
-        <Reveal delay={0.12}>
-          <div className="kp-hero__visual" aria-hidden="true">
-            <HeroParallax className="kp-hero__parallax" strength={16}>
+        <Reveal delay={0.1}>
+          <figure className="kp-hero__visual">
+            <HeroParallax className="kp-hero__parallax" strength={4}>
               {cms.hero?.imageUrl ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
+                <Image
                   className="kp-hero__photo"
                   src={cms.hero.imageUrl}
                   alt={cms.hero.imageAlt}
+                  fill
+                  priority
+                  sizes="(max-width: 760px) 100vw, 44vw"
                 />
-              ) : null}
-              <span className="kp-shape kp-shape--cyan" />
-              <span className="kp-shape kp-shape--yellow" />
-              <span className="kp-shape kp-shape--magenta" />
+              ) : (
+                <div className="kp-hero__media-pending">
+                  <span>Photographie produit</span>
+                  <strong>Visuel matière en attente de validation</strong>
+                  <p>
+                    Cet espace accueillera uniquement une image réelle, sourcée
+                    et approuvée.
+                  </p>
+                </div>
+              )}
             </HeroParallax>
-            <strong>KP</strong>
-          </div>
+            <span
+              className="kp-hero__measure kp-hero__measure--top"
+              aria-hidden="true"
+            >
+              240 mm
+            </span>
+            <span
+              className="kp-hero__measure kp-hero__measure--side"
+              aria-hidden="true"
+            >
+              échelle 1:1
+            </span>
+            {cms.hero?.imageUrl ? (
+              <figcaption>{cms.hero.imageAlt}</figcaption>
+            ) : null}
+          </figure>
         </Reveal>
       </section>
       <section className="kp-strip" aria-label="Catégories principales">
         <div className="kp-strip__track">
-          {[...DEFAULT_CAPABILITIES, ...DEFAULT_CAPABILITIES].map(
-            (item, index) => (
-              <span key={`${item}-${index}`}>{item}</span>
-            ),
-          )}
+          {DEFAULT_CAPABILITIES.map((item) => (
+            <span key={item}>{item}</span>
+          ))}
         </div>
       </section>
 

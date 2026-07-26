@@ -8,6 +8,7 @@ import {
   IDLE_ACTION_STATE,
   SubmitButton,
 } from "../_components/feedback";
+import { ConfirmAction } from "../_components/confirm-action";
 import {
   createPageAction,
   deleteMediaAction,
@@ -26,6 +27,8 @@ const SECTION_TYPES = [
   "GALLERY",
   "STATS",
   "TESTIMONIALS",
+  "TESTIMONIAL",
+  "CASE_STUDY",
   "CTA",
   "PORTFOLIO",
 ];
@@ -110,7 +113,9 @@ export function DeleteSectionForm({
   return (
     <form action={action}>
       <input type="hidden" name="id" value={sectionId} />
-      <SubmitButton>Supprimer</SubmitButton>
+      <ConfirmAction consequence="Cette section sera supprimée définitivement de la page.">
+        Supprimer
+      </ConfirmAction>
       <Feedback state={state} />
     </form>
   );
@@ -137,6 +142,7 @@ export function SectionFieldsForm({
   images,
   worldKey,
   editable,
+  evidencePayload,
 }: Readonly<{
   sectionId: string;
   pageId: string;
@@ -151,6 +157,7 @@ export function SectionFieldsForm({
   images: readonly ImageOption[];
   worldKey: string;
   editable: boolean;
+  evidencePayload: Readonly<Record<string, unknown>>;
 }>) {
   const [state, action] = useActionState(
     saveSectionFieldsAction,
@@ -161,6 +168,9 @@ export function SectionFieldsForm({
       <input type="hidden" name="id" value={sectionId} />
       <input type="hidden" name="pageId" value={pageId} />
       <input type="hidden" name="sectionType" value={sectionType} />
+      {sectionType === "CASE_STUDY" || sectionType === "TESTIMONIAL" ? (
+        <EvidenceFields sectionType={sectionType} payload={evidencePayload} />
+      ) : null}
       <div className="admin-form-grid">
         <label>
           Ordre
@@ -230,6 +240,162 @@ export function SectionFieldsForm({
       <Feedback state={state} />
       <SubmitButton>Mettre à jour</SubmitButton>
     </form>
+  );
+}
+
+function EvidenceFields({
+  sectionType,
+  payload,
+}: Readonly<{
+  sectionType: string;
+  payload: Readonly<Record<string, unknown>>;
+}>) {
+  const value = (key: string) =>
+    typeof payload[key] === "string" ? (payload[key] as string) : "";
+  return (
+    <fieldset className="cms-evidence-fields">
+      <legend>Gouvernance de la preuve</legend>
+      <p className="section__note">
+        Ces informations restent internes, sauf les champs de présentation. La
+        page ne pourra pas être publiée tant que la preuve n’est pas approuvée
+        et traçable.
+      </p>
+      <div className="admin-form-grid">
+        <label>
+          Statut
+          <select
+            name="evidenceStatus"
+            defaultValue={value("evidenceStatus") || "Proposed"}
+          >
+            {[
+              "Proposed",
+              "Evidence pending",
+              "Rights pending",
+              "In review",
+              "Approved",
+              "Published",
+              "Withdrawn",
+            ].map((status) => (
+              <option key={status}>{status}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Classe de preuve
+          <select
+            name="evidenceClass"
+            defaultValue={
+              value("evidenceClass") ||
+              (sectionType === "TESTIMONIAL" ? "Testimonial" : "Deliverable")
+            }
+          >
+            {[
+              "Deliverable",
+              "Outcome",
+              "Before/after",
+              "Testimonial",
+              "Process evidence",
+              "Capability evidence",
+            ].map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="admin-form-grid">
+        <label>
+          Responsable de la preuve
+          <input name="claimOwner" defaultValue={value("claimOwner")} />
+        </label>
+        <label>
+          Date de vérification
+          <input
+            type="date"
+            name="verificationDate"
+            defaultValue={value("verificationDate")}
+          />
+        </label>
+        <label>
+          Emplacement de la source
+          <input name="sourceLocation" defaultValue={value("sourceLocation")} />
+        </label>
+        <label>
+          Responsable de la source
+          <input name="sourceOwner" defaultValue={value("sourceOwner")} />
+        </label>
+      </div>
+      <label>
+        Autorisation d’attribution ou anonymisation
+        <textarea
+          name="attributionPermission"
+          defaultValue={value("attributionPermission")}
+        />
+      </label>
+      <div className="admin-form-grid">
+        <label>
+          Droits média
+          <input name="mediaRights" defaultValue={value("mediaRights")} />
+        </label>
+        <label>
+          Crédit média
+          <input name="mediaCredit" defaultValue={value("mediaCredit")} />
+        </label>
+      </div>
+      <label>
+        Alternative accessible
+        <textarea
+          name="accessibleAlternative"
+          defaultValue={value("accessibleAlternative")}
+        />
+      </label>
+      <label>
+        Service ou capacité lié
+        <input name="relatedService" defaultValue={value("relatedService")} />
+      </label>
+      {sectionType === "CASE_STUDY" ? (
+        <>
+          <label>
+            Contexte et défi vérifiés
+            <textarea name="context" defaultValue={value("context")} />
+          </label>
+          <label>
+            Périmètre approuvé et unités contributrices
+            <textarea name="scope" defaultValue={value("scope")} />
+          </label>
+          <label>
+            Preuve du travail ou du processus
+            <textarea name="evidence" defaultValue={value("evidence")} />
+          </label>
+          <label>
+            Résultat attribuable ou traitement qualitatif
+            <textarea name="outcome" defaultValue={value("outcome")} />
+          </label>
+          <label>
+            Niveau d’attribution du résultat
+            <input
+              name="outcomeTreatment"
+              placeholder="Attribuable, qualitatif ou deliverable-only"
+              defaultValue={value("outcomeTreatment")}
+            />
+          </label>
+          <label>
+            Limites et contexte de la revendication
+            <textarea name="limitations" defaultValue={value("limitations")} />
+          </label>
+        </>
+      ) : (
+        <>
+          <label>
+            Témoignage exact approuvé
+            <textarea name="quote" defaultValue={value("quote")} />
+          </label>
+          <label>
+            Attribution publique approuvée
+            <input name="attribution" defaultValue={value("attribution")} />
+          </label>
+        </>
+      )}
+    </fieldset>
   );
 }
 
@@ -304,7 +470,13 @@ export function PageTransitionForm({
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="expectedVersion" value={version} />
       <input type="hidden" name="target" value={target} />
-      <SubmitButton>{label}</SubmitButton>
+      {target === "ARCHIVED" ? (
+        <ConfirmAction consequence="La page sera retirée du site public et archivée.">
+          {label}
+        </ConfirmAction>
+      ) : (
+        <SubmitButton>{label}</SubmitButton>
+      )}
       <Feedback state={state} />
     </form>
   );
@@ -353,7 +525,9 @@ export function DeleteMediaForm({ mediaId }: Readonly<{ mediaId: string }>) {
   return (
     <form action={action}>
       <input type="hidden" name="id" value={mediaId} />
-      <SubmitButton>Supprimer</SubmitButton>
+      <ConfirmAction consequence="Le média sera supprimé définitivement s’il n’est plus utilisé.">
+        Supprimer
+      </ConfirmAction>
       <Feedback state={state} />
     </form>
   );

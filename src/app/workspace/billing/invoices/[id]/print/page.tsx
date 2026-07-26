@@ -9,15 +9,8 @@ import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-wo
 import { getWorkspaceRequestContext } from "../../../../get-workspace-context";
 import { PrintButton } from "../../../_components/print-button";
 import { formatXof } from "../../../_lib/money";
-
-const INVOICE_STATUS_LABEL: Readonly<Record<string, string>> = {
-  DRAFT: "Brouillon",
-  SENT: "Envoyée",
-  PARTIALLY_PAID: "Partiellement payée",
-  PAID: "Payée",
-  OVERDUE: "En retard",
-  CANCELLED: "Annulée",
-};
+import { formatDate } from "@/shared/format";
+import { getStatusLabel } from "../../../../_components/status-badge";
 
 export default async function InvoicePrintPage({
   params,
@@ -53,14 +46,14 @@ export default async function InvoicePrintPage({
           <p className="invoice-print__brand">Pixel&Digital</p>
           <p className="invoice-print__meta">Facture {invoice.number}</p>
           <p className="invoice-print__meta">
-            Émise le {invoice.issuedAt.toLocaleDateString("fr-FR")}
+            Émise le {formatDate(invoice.issuedAt)}
           </p>
           <p className="invoice-print__meta">
-            Statut : {INVOICE_STATUS_LABEL[invoice.status] ?? invoice.status}
+            Statut : {getStatusLabel("invoice", invoice.status)}
           </p>
           {invoice.dueAt ? (
             <p className="invoice-print__meta">
-              Échéance : {invoice.dueAt.toLocaleDateString("fr-FR")}
+              Échéance : {formatDate(invoice.dueAt)}
             </p>
           ) : null}
         </div>

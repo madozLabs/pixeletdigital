@@ -14,6 +14,17 @@ export const metadata: Metadata = {
     // `absolute` fully escapes every ancestor template.
     absolute: "Kwaliti Print",
   },
+  description:
+    "Kwaliti Print transforme les identités et les idées en objets et surfaces imprimés avec une approche précise et orientée production.",
+  alternates: { canonical: "/kwaliti-print" },
+  openGraph: {
+    title: "Kwaliti Print",
+    description:
+      "Impression et personnalisation avec une approche précise, tactile et orientée production.",
+    url: "/kwaliti-print",
+    siteName: "Kwaliti Print",
+    type: "website",
+  },
 };
 
 const manrope = Manrope({

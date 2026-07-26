@@ -7,6 +7,8 @@ import {
   IDLE_ACTION_STATE,
   SubmitButton,
 } from "../_components/feedback";
+import { ConfirmAction } from "../_components/confirm-action";
+import { getStatusLabel } from "../_components/status-badge";
 import {
   archiveCatalogueItemAction,
   cancelInvoiceAction,
@@ -20,14 +22,14 @@ import {
 
 type Option = Readonly<{ id: string; label: string }>;
 
-const QUOTE_STATUS_LABEL: Readonly<Record<string, string>> = {
-  DRAFT: "Brouillon",
-  SENT: "Envoyé",
-  ACCEPTED: "Accepté",
-  DECLINED: "Refusé",
-  EXPIRED: "Expiré",
-  CANCELLED: "Annulé",
-};
+const QUOTE_STATUSES = [
+  "DRAFT",
+  "SENT",
+  "ACCEPTED",
+  "DECLINED",
+  "EXPIRED",
+  "CANCELLED",
+] as const;
 
 export function CreateQuoteForm({
   worldKey,
@@ -130,9 +132,9 @@ export function QuoteActionsForm({
         <input type="hidden" name="quoteId" value={quoteId} />
         <input type="hidden" name="expectedVersion" value={version} />
         <select name="status" defaultValue={status}>
-          {Object.entries(QUOTE_STATUS_LABEL).map(([key, label]) => (
-            <option key={key} value={key}>
-              {label}
+          {QUOTE_STATUSES.map((quoteStatus) => (
+            <option key={quoteStatus} value={quoteStatus}>
+              {getStatusLabel("quote", quoteStatus)}
             </option>
           ))}
         </select>
@@ -205,7 +207,9 @@ export function InvoiceActionsForm({
         <form action={cancelAction}>
           <input type="hidden" name="id" value={invoiceId} />
           <input type="hidden" name="expectedVersion" value={version} />
-          <SubmitButton>Annuler</SubmitButton>
+          <ConfirmAction consequence="La facture sera annulée et ne pourra plus recevoir de paiement.">
+            Annuler
+          </ConfirmAction>
           <Feedback state={cancelState} />
         </form>
       </div>
@@ -225,7 +229,9 @@ export function ArchiveCatalogueItemForm({
     <form action={action}>
       <input type="hidden" name="id" value={itemId} />
       <input type="hidden" name="expectedVersion" value={version} />
-      <SubmitButton>Archiver</SubmitButton>
+      <ConfirmAction consequence="Cet élément ne sera plus disponible dans le catalogue actif.">
+        Archiver
+      </ConfirmAction>
       <Feedback state={state} />
     </form>
   );

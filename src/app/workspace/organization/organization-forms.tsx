@@ -7,6 +7,7 @@ import {
   IDLE_ACTION_STATE,
   SubmitButton,
 } from "../_components/feedback";
+import { ConfirmAction } from "../_components/confirm-action";
 import {
   assignMemberAction,
   createDepartmentAction,
@@ -156,7 +157,9 @@ export function EndMembershipForm({
   return (
     <form action={action}>
       <input type="hidden" name="membershipId" value={membershipId} />
-      <SubmitButton>Retirer</SubmitButton>
+      <ConfirmAction consequence="Cette personne sera retirée de l’équipe active.">
+        Retirer
+      </ConfirmAction>
       <Feedback state={state} />
     </form>
   );

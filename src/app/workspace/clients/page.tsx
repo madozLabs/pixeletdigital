@@ -7,6 +7,7 @@ import { Avatar } from "../_components/avatar";
 import { Pagination } from "../_components/pagination";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import { archiveProfessionalClientAction } from "./actions";
+import { ConfirmAction } from "../_components/confirm-action";
 import { ClientContactForm, CreateClientForm } from "./client-forms";
 
 const CLIENT_ROLES = ["SUPER_ADMIN", "ADMIN", "WORLD_MANAGER"] as const;
@@ -175,9 +176,9 @@ export default async function ClientsPage({
                   name="expectedVersion"
                   value={client.version}
                 />
-                <button className="admin-table__action" type="submit">
+                <ConfirmAction consequence="Le client sera retiré des listes actives.">
                   Archiver le client
-                </button>
+                </ConfirmAction>
               </form>
             ) : null}
           </article>

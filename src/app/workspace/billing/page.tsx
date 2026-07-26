@@ -2,8 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
+import { listBillingSummary } from "@/modules/billing/application/billing-summary-query";
+import { PrismaBillingSummaryReader } from "@/modules/billing/infrastructure/prisma-billing-summary-query";
 import { parsePage, toSkipTake } from "@/shared/pagination";
+import { formatDate } from "@/shared/format";
 import { Pagination } from "../_components/pagination";
+import { StatusBadge } from "../_components/status-badge";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import { formatXof } from "./_lib/money";
 import {
@@ -46,53 +50,21 @@ export default async function WorkspaceBillingPage({
   const activeTab = TABS.find((item) => item.id === tab)?.id ?? "quotes";
   const pageParams = parsePage(pageParam);
   const { skip, take } = toSkipTake(pageParams);
-  const [
+  const summary = await listBillingSummary(
+    { billingSummaryReader: new PrismaBillingSummaryReader(prisma) },
+    context,
+    { worldKey, skip, take },
+  );
+  if (!summary.ok) return <p role="alert">Accès refusé.</p>;
+  const {
     clients,
     quotes,
     totalQuotes,
     invoices,
     totalInvoices,
-    invoicesForBalances,
+    balances: clientBalances,
     catalogue,
-  ] = await Promise.all([
-    prisma.client.findMany({
-      where: { worldKey, status: "ACTIVE" },
-      orderBy: { name: "asc" },
-    }),
-    prisma.quote.findMany({
-      where: { worldKey },
-      include: { client: true, lines: true, invoice: true },
-      orderBy: { issuedAt: "desc" },
-      skip,
-      take,
-    }),
-    prisma.quote.count({ where: { worldKey } }),
-    prisma.invoice.findMany({
-      where: { worldKey },
-      include: { client: true, lines: true, payments: true },
-      orderBy: { issuedAt: "desc" },
-      skip,
-      take,
-    }),
-    prisma.invoice.count({ where: { worldKey } }),
-    // Full scan needed to compute accurate per-client balances (an aggregate,
-    // not a browsable list) — kept lean (no client include) to limit overfetch.
-    prisma.invoice.findMany({
-      where: { worldKey },
-      select: {
-        clientId: true,
-        status: true,
-        discountCents: true,
-        taxRateBps: true,
-        lines: { select: { quantity: true, unitPriceCents: true } },
-        payments: { select: { amountCents: true } },
-      },
-    }),
-    prisma.catalogueItem.findMany({
-      where: { worldKey, status: "ACTIVE" },
-      orderBy: { label: "asc" },
-    }),
-  ]);
+  } = summary.value;
   const totalQuotePages = Math.max(
     1,
     Math.ceil(totalQuotes / pageParams.pageSize),
@@ -102,26 +74,6 @@ export default async function WorkspaceBillingPage({
     Math.ceil(totalInvoices / pageParams.pageSize),
   );
 
-  const clientBalances = clients.map((client) => {
-    const clientInvoices = invoicesForBalances.filter(
-      (invoice) =>
-        invoice.clientId === client.id && invoice.status !== "CANCELLED",
-    );
-    const billed = clientInvoices.reduce(
-      (sum, invoice) => sum + invoiceTotal(invoice),
-      0,
-    );
-    const paid = clientInvoices.reduce(
-      (sum, invoice) =>
-        sum +
-        invoice.payments.reduce(
-          (inner, payment) => inner + payment.amountCents,
-          0,
-        ),
-      0,
-    );
-    return { client, billed, paid, balance: Math.max(0, billed - paid) };
-  });
   return (
     <>
       <div className="admin-page-heading">
@@ -133,7 +85,7 @@ export default async function WorkspaceBillingPage({
         </div>
         <span className="admin-metric">
           {formatXof(
-            clientBalances.reduce((sum, item) => sum + item.balance, 0),
+            clientBalances.reduce((sum, item) => sum + item.balanceCents, 0),
           )}{" "}
           à encaisser
         </span>
@@ -164,26 +116,21 @@ export default async function WorkspaceBillingPage({
               <p className="admin-empty">Aucun devis.</p>
             ) : null}
             {quotes.map((quote) => {
-              const total = documentTotal(quote);
               return (
                 <article className="billing-card" key={quote.id}>
                   <header>
                     <div>
                       <p className="billing-card__eyebrow">{quote.number}</p>
-                      <h2>{quote.client.name}</h2>
+                      <h2>{quote.clientName}</h2>
                     </div>
-                    <span
-                      className={`status-badge status-badge--${quote.status.toLowerCase()}`}
-                    >
-                      {QUOTE_STATUS_LABEL[quote.status]}
-                    </span>
+                    <StatusBadge kind="quote" status={quote.status} />
                   </header>
                   <p>
-                    {quote.lines.length} ligne(s) · {formatXof(total)}
+                    {quote.lineCount} ligne(s) · {formatXof(quote.totalCents)}
                   </p>
                   <p className="admin-table__note">
                     Valide jusqu’au{" "}
-                    {quote.validUntil?.toLocaleDateString("fr-FR") ?? "—"}
+                    {quote.validUntil ? formatDate(quote.validUntil) : "—"}
                   </p>
                   <details className="billing-card__actions">
                     <summary>Actions</summary>
@@ -191,7 +138,7 @@ export default async function WorkspaceBillingPage({
                       quoteId={quote.id}
                       version={quote.version}
                       status={quote.status}
-                      canConvert={quote.status === "ACCEPTED" && !quote.invoice}
+                      canConvert={quote.canConvert}
                     />
                   </details>
                 </article>
@@ -228,31 +175,22 @@ export default async function WorkspaceBillingPage({
             <p className="admin-empty">Aucune facture.</p>
           ) : null}
           {invoices.map((invoice) => {
-            const total = invoiceTotal(invoice);
-            const paid = invoice.payments.reduce(
-              (sum, payment) => sum + payment.amountCents,
-              0,
-            );
-            const balance = Math.max(0, total - paid);
             return (
               <article className="billing-card" key={invoice.id}>
                 <header>
                   <div>
                     <p className="billing-card__eyebrow">{invoice.number}</p>
-                    <h2>{invoice.client.name}</h2>
+                    <h2>{invoice.clientName}</h2>
                   </div>
-                  <span
-                    className={`status-badge status-badge--${invoice.status.toLowerCase()}`}
-                  >
-                    {INVOICE_STATUS_LABEL[invoice.status]}
-                  </span>
+                  <StatusBadge kind="invoice" status={invoice.status} />
                 </header>
                 <p>
-                  Total {formatXof(total)} · Payé {formatXof(paid)} · Solde{" "}
-                  {formatXof(balance)}
+                  Total {formatXof(invoice.totalCents)} · Payé{" "}
+                  {formatXof(invoice.paidCents)} · Solde{" "}
+                  {formatXof(invoice.balanceCents)}
                 </p>
                 <p className="admin-table__note">
-                  Échéance : {invoice.dueAt?.toLocaleDateString("fr-FR") ?? "—"}
+                  Échéance : {invoice.dueAt ? formatDate(invoice.dueAt) : "—"}
                 </p>
                 <div className="admin-table__actions">
                   <Link
@@ -299,11 +237,11 @@ export default async function WorkspaceBillingPage({
             </thead>
             <tbody>
               {clientBalances.map((item) => (
-                <tr key={item.client.id}>
-                  <td>{item.client.name}</td>
-                  <td>{formatXof(item.billed)}</td>
-                  <td>{formatXof(item.paid)}</td>
-                  <td>{formatXof(item.balance)}</td>
+                <tr key={item.clientId}>
+                  <td>{item.clientName}</td>
+                  <td>{formatXof(item.billedCents)}</td>
+                  <td>{formatXof(item.paidCents)}</td>
+                  <td>{formatXof(item.balanceCents)}</td>
                 </tr>
               ))}
             </tbody>
@@ -358,42 +296,3 @@ export default async function WorkspaceBillingPage({
     </>
   );
 }
-
-function documentTotal(document: {
-  lines: { quantity: number; unitPriceCents: number }[];
-  discountCents: number;
-  taxRateBps: number;
-}): number {
-  const subtotal = document.lines.reduce(
-    (sum, line) => sum + line.quantity * line.unitPriceCents,
-    0,
-  );
-  const taxable = Math.max(0, subtotal - document.discountCents);
-  return taxable + Math.round((taxable * document.taxRateBps) / 10000);
-}
-
-function invoiceTotal(invoice: {
-  lines: { quantity: number; unitPriceCents: number }[];
-  discountCents: number;
-  taxRateBps: number;
-}): number {
-  return documentTotal(invoice);
-}
-
-const QUOTE_STATUS_LABEL: Readonly<Record<string, string>> = {
-  DRAFT: "Brouillon",
-  SENT: "Envoyé",
-  ACCEPTED: "Accepté",
-  DECLINED: "Refusé",
-  EXPIRED: "Expiré",
-  CONVERTED: "Converti",
-  CANCELLED: "Annulé",
-};
-const INVOICE_STATUS_LABEL: Readonly<Record<string, string>> = {
-  DRAFT: "Brouillon",
-  SENT: "Envoyée",
-  PARTIALLY_PAID: "Partiellement payée",
-  PAID: "Payée",
-  OVERDUE: "En retard",
-  CANCELLED: "Annulée",
-};

@@ -1,9 +1,11 @@
-/* eslint-disable @next/next/no-img-element */
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
+import { isEvidenceSectionType } from "@/modules/content/domain/evidence-section";
+import { EvidenceSection } from "../_components/evidence-section";
 
 // See (marketing)/page.tsx for why this is ISR rather than force-dynamic.
 export const revalidate = 60;
@@ -20,8 +22,32 @@ async function loadPage(slug: string) {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const page = await loadPage((await params).slug);
-  return page ? { title: page.title } : { title: "Page" };
+  const { slug } = await params;
+  const page = await loadPage(slug);
+  if (!page) {
+    return {
+      title: "Page",
+      description: "Découvrez Pixel&Digital, ses expertises et son approche.",
+      robots: { index: false, follow: false },
+    };
+  }
+  const description =
+    page.sections
+      .map((section) =>
+        stringValue(section.payload as Record<string, unknown>, "text"),
+      )
+      .find(Boolean) || `Découvrez ${page.title} par Pixel&Digital.`;
+  return {
+    title: page.title,
+    description,
+    alternates: { canonical: `/${slug}` },
+    openGraph: {
+      title: page.title,
+      description,
+      url: `/${slug}`,
+      type: "website",
+    },
+  };
 }
 
 export default async function CmsPublicPage({ params }: Props) {
@@ -80,6 +106,10 @@ function CmsSection({
   const mediaId = stringValue(payload, "mediaId");
   const asset = mediaId ? mediaById.get(mediaId) : null;
 
+  if (isEvidenceSectionType(type)) {
+    return <EvidenceSection type={type} payload={payload} media={asset} />;
+  }
+
   if (type === "HERO")
     return (
       <section className="cms-public-hero">
@@ -92,7 +122,15 @@ function CmsSection({
           </Link>
         </div>
         {asset?.mimeType.startsWith("image/") ? (
-          <img src={asset.publicUrl} alt={asset.altText} />
+          <div className="cms-public-image cms-public-image--hero">
+            <Image
+              src={asset.publicUrl}
+              alt={asset.altText}
+              fill
+              priority
+              sizes="(max-width: 760px) 100vw, 45vw"
+            />
+          </div>
         ) : null}
       </section>
     );
@@ -101,7 +139,14 @@ function CmsSection({
     return (
       <section className="cms-public-section cms-public-media">
         {asset?.mimeType.startsWith("image/") ? (
-          <img src={asset.publicUrl} alt={asset.altText} />
+          <div className="cms-public-image">
+            <Image
+              src={asset.publicUrl}
+              alt={asset.altText}
+              fill
+              sizes="(max-width: 760px) 100vw, 50vw"
+            />
+          </div>
         ) : null}
         <div>
           {eyebrow ? <p>{eyebrow}</p> : null}

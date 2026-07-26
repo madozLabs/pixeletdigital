@@ -28,8 +28,22 @@ export async function generateMetadata({
   const { slug } = await params;
   const service = await loadService(slug);
   return service
-    ? { title: service.name, description: service.description }
-    : { title: "Service | Pixel&Digital" };
+    ? {
+        title: service.name,
+        description: service.description,
+        alternates: { canonical: `/services/${service.slug}` },
+        openGraph: {
+          title: service.name,
+          description: service.description,
+          url: `/services/${service.slug}`,
+          type: "website",
+        },
+      }
+    : {
+        title: "Service",
+        description: "Découvrez les expertises de Pixel&Digital.",
+        robots: { index: false, follow: false },
+      };
 }
 export default async function ServiceDetailPage({ params }: PageParams) {
   const { slug } = await params;

@@ -11,8 +11,16 @@ import {
   UploadCloud,
 } from "lucide-react";
 
-import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/infrastructure/shared/prisma-client";
+import {
+  getWorkspaceContent,
+  type WorkspaceEditablePageDto,
+  type WorkspaceMediaDto,
+  type WorkspacePageDto,
+} from "@/modules/content/application/workspace-content-query";
+import { PrismaWorkspaceContentReader } from "@/modules/content/infrastructure/prisma-workspace-content-query";
+import { countWorkspaceEnquiries } from "@/modules/enquiries/application/workspace-enquiry-query";
+import { PrismaWorkspaceEnquiryReader } from "@/modules/enquiries/infrastructure/prisma-workspace-enquiry-query";
 import { parsePage, toSkipTake } from "@/shared/pagination";
 import { LifecycleBadge } from "../_components/status-badge";
 import { Pagination } from "../_components/pagination";
@@ -28,11 +36,16 @@ import {
   UploadMediaForm,
 } from "./site-content-forms";
 
-const TYPED_SECTION_TYPES = new Set(["HERO", "TEXT", "MEDIA", "CTA"]);
+const TYPED_SECTION_TYPES = new Set([
+  "HERO",
+  "TEXT",
+  "MEDIA",
+  "CTA",
+  "CASE_STUDY",
+  "TESTIMONIAL",
+]);
 
-type MediaAsset = Awaited<
-  ReturnType<typeof prisma.mediaAsset.findMany>
->[number];
+type MediaAsset = WorkspaceMediaDto;
 
 export default async function SiteContentPage({
   searchParams,
@@ -53,11 +66,26 @@ export default async function SiteContentPage({
   const listPageParams = parsePage(params.listPage);
   const { skip: listSkip, take: listTake } = toSkipTake(listPageParams);
 
-  // The editor's media picker needs to see every asset to select from, so it
-  // is only fetched when actually editing a page rather than on every load.
-  const needsFullMediaForEditor = Boolean(params.page) && tab !== "media";
-
-  const [
+  const [contentResult, enquiryResult] = await Promise.all([
+    getWorkspaceContent(
+      { workspaceContentReader: new PrismaWorkspaceContentReader(prisma) },
+      context,
+      {
+        worldKey,
+        tab,
+        selectedPageId: params.page,
+        skip: listSkip,
+        take: listTake,
+      },
+    ),
+    countWorkspaceEnquiries(
+      { workspaceEnquiryReader: new PrismaWorkspaceEnquiryReader(prisma) },
+      context,
+      { worldKey },
+    ),
+  ]);
+  if (!contentResult.ok) return <p role="alert">Accès refusé.</p>;
+  const {
     recentPages,
     homePage,
     totalPages,
@@ -68,64 +96,9 @@ export default async function SiteContentPage({
     mediaForTab,
     fullMediaForEditor,
     publishedServices,
-    enquiryCount,
-  ] = await Promise.all([
-    prisma.page
-      .findMany({
-        where: { worldKey },
-        orderBy: { updatedAt: "desc" },
-        take: 6,
-      })
-      .catch(() => []),
-    prisma.page
-      .findFirst({ where: { worldKey, slug: "accueil" } })
-      .catch(() => null),
-    prisma.page.count({ where: { worldKey } }).catch(() => 0),
-    prisma.page
-      .count({ where: { worldKey, lifecycle: "PUBLISHED" } })
-      .catch(() => 0),
-    prisma.page
-      .count({ where: { worldKey, lifecycle: "DRAFT" } })
-      .catch(() => 0),
-    prisma.mediaAsset.count({ where: { worldKey } }).catch(() => 0),
-    tab === "pages"
-      ? prisma.page
-          .findMany({
-            where: { worldKey },
-            orderBy: { updatedAt: "desc" },
-            skip: listSkip,
-            take: listTake,
-          })
-          .catch(() => [])
-      : Promise.resolve([]),
-    tab === "media"
-      ? prisma.mediaAsset
-          .findMany({
-            where: { worldKey },
-            orderBy: { createdAt: "desc" },
-            skip: listSkip,
-            take: listTake,
-          })
-          .catch(() => [])
-      : Promise.resolve([]),
-    needsFullMediaForEditor
-      ? prisma.mediaAsset
-          .findMany({ where: { worldKey }, orderBy: { createdAt: "desc" } })
-          .catch(() => [])
-      : Promise.resolve([]),
-    prisma.service
-      .count({ where: { worldKey, lifecycle: "PUBLISHED" } })
-      .catch(() => 0),
-    prisma.enquiry.count({ where: { worldKey } }).catch(() => 0),
-  ]);
-  const selectedPage = params.page
-    ? await prisma.page
-        .findUnique({
-          where: { id: params.page },
-          include: { sections: { orderBy: { order: "asc" } } },
-        })
-        .catch(() => null)
-    : null;
+    selectedPage,
+  } = contentResult.value;
+  const enquiryCount = enquiryResult.ok ? enquiryResult.value : 0;
 
   const totalListPages = Math.max(
     1,
@@ -231,8 +204,8 @@ function OverviewPanel({
   enquiryCount,
 }: {
   worldKey: string;
-  recentPages: Awaited<ReturnType<typeof prisma.page.findMany>>;
-  homePage: Awaited<ReturnType<typeof prisma.page.findFirst>>;
+  recentPages: readonly WorkspacePageDto[];
+  homePage: WorkspacePageDto | null;
   publishedCount: number;
   draftCount: number;
   mediaCount: number;
@@ -380,7 +353,7 @@ function PagesPanel({
   pages,
 }: {
   worldKey: string;
-  pages: Awaited<ReturnType<typeof prisma.page.findMany>>;
+  pages: readonly WorkspacePageDto[];
 }) {
   return (
     <div className="cms-layout">
@@ -427,7 +400,7 @@ function PagesPanel({
   );
 }
 
-type EditablePage = Prisma.PageGetPayload<{ include: { sections: true } }>;
+type EditablePage = WorkspaceEditablePageDto;
 
 function PageEditor({
   worldKey,
@@ -512,6 +485,7 @@ function SectionEditor({
           images={images}
           worldKey={page.worldKey}
           editable={!disabled}
+          evidencePayload={payload}
         />
       ) : null}
 

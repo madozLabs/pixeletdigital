@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import {
   Feedback,
   IDLE_ACTION_STATE,
   SubmitButton,
 } from "../_components/feedback";
+import { ConfirmAction } from "../_components/confirm-action";
 import { createProjectAction, updateProjectAction } from "./actions";
 
 type Option = Readonly<{ value: string; label: string }>;
@@ -108,10 +109,15 @@ export function UpdateProjectForm({
     updateProjectAction,
     IDLE_ACTION_STATE,
   );
+  const [nextStatus, setNextStatus] = useState(status);
   return (
     <form action={action} className="project-card__controls">
       <input type="hidden" name="projectId" value={projectId} />
-      <select name="status" defaultValue={status}>
+      <select
+        name="status"
+        value={nextStatus}
+        onChange={(event) => setNextStatus(event.target.value)}
+      >
         <option value="PLANNED">Planifié</option>
         <option value="ACTIVE">Actif</option>
         <option value="ON_HOLD">En pause</option>
@@ -126,7 +132,13 @@ export function UpdateProjectForm({
         defaultValue={progress}
         aria-label="Progression en pourcentage"
       />
-      <SubmitButton>Mettre à jour</SubmitButton>
+      {nextStatus === "CANCELLED" && status !== "CANCELLED" ? (
+        <ConfirmAction consequence="Le projet quittera les vues de production actives.">
+          Annuler le projet
+        </ConfirmAction>
+      ) : (
+        <SubmitButton>Mettre à jour</SubmitButton>
+      )}
       <Feedback state={state} />
     </form>
   );

@@ -3,6 +3,7 @@ import { Outfit } from "next/font/google";
 import type { ReactNode } from "react";
 
 import "./globals.css";
+import { getSiteUrl } from "./_lib/site-url";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -11,6 +12,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
+  metadataBase: getSiteUrl(),
   title: {
     template: "%s — Pixel&Digital",
     default: "Pixel&Digital",

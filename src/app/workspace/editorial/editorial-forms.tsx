@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import {
   Feedback,
   IDLE_ACTION_STATE,
   SubmitButton,
 } from "../_components/feedback";
+import { ConfirmAction } from "../_components/confirm-action";
 import {
   advanceEditorialWorkflowAction,
   createProfessionalEditorialItemAction,
@@ -34,11 +35,16 @@ export function EditorialWorkflowForm({
     advanceEditorialWorkflowAction,
     IDLE_ACTION_STATE,
   );
+  const [nextStatus, setNextStatus] = useState(status);
   return (
     <form action={action} className="editorial-card__workflow">
       <input type="hidden" name="itemId" value={itemId} />
       <input type="hidden" name="expectedVersion" value={version} />
-      <select name="status" defaultValue={status}>
+      <select
+        name="status"
+        value={nextStatus}
+        onChange={(event) => setNextStatus(event.target.value)}
+      >
         <option value="DRAFT">Brouillon</option>
         <option value="INTERNAL_REVIEW">Validation interne</option>
         <option value="CLIENT_REVIEW">Validation client</option>
@@ -48,7 +54,13 @@ export function EditorialWorkflowForm({
         <option value="CANCELLED">Annulé</option>
       </select>
       <input name="proofUrl" type="url" placeholder="Lien de publication" />
-      <SubmitButton>Mettre à jour</SubmitButton>
+      {nextStatus === "CANCELLED" && status !== "CANCELLED" ? (
+        <ConfirmAction consequence="Ce contenu quittera définitivement le pipeline éditorial actif.">
+          Annuler le contenu
+        </ConfirmAction>
+      ) : (
+        <SubmitButton>Mettre à jour</SubmitButton>
+      )}
       <Feedback state={state} />
     </form>
   );

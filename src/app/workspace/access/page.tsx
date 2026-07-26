@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
+import { listAccessOverview } from "@/modules/access/application/access-read-model";
+import { PrismaAccessReadModel } from "@/modules/access/infrastructure/prisma-access-overview-query";
 import { parsePage, toSkipTake } from "@/shared/pagination";
 import { Pagination } from "../_components/pagination";
+import { StatusBadge } from "../_components/status-badge";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import {
   AssignRoleForm,
@@ -40,20 +43,13 @@ export default async function WorkspaceAccessPage({
   const { page: pageParam } = await searchParams;
   const pageParams = parsePage(pageParam);
   const { skip, take } = toSkipTake(pageParams);
-  const [users, totalUsers] = await Promise.all([
-    prisma.user.findMany({
-      include: {
-        roleAssignments: {
-          include: { world: { select: { displayName: true, key: true } } },
-          orderBy: { validFrom: "desc" },
-        },
-      },
-      orderBy: [{ status: "asc" }, { displayName: "asc" }],
-      skip,
-      take,
-    }),
-    prisma.user.count(),
-  ]);
+  const overview = await listAccessOverview(
+    { accessReadModel: new PrismaAccessReadModel(prisma) },
+    context,
+    { skip, take },
+  );
+  if (!overview.ok) return <p role="alert">Accès refusé.</p>;
+  const { users, totalUsers } = overview.value;
   const totalPages = Math.max(1, Math.ceil(totalUsers / pageParams.pageSize));
   const now = new Date();
   return (
@@ -88,11 +84,7 @@ export default async function WorkspaceAccessPage({
                   <p>{user.normalizedEmail ?? "Aucun e-mail"}</p>
                 </div>
                 <div className="admin-user-card__status">
-                  <span
-                    className={`status-badge status-badge--${user.status.toLowerCase()}`}
-                  >
-                    {user.status === "ACTIVE" ? "Actif" : "Suspendu"}
-                  </span>
+                  <StatusBadge kind="user" status={user.status} />
                   <UserStatusForm
                     userId={user.id}
                     currentStatus={user.status}

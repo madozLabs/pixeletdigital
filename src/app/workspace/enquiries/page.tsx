@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
+import { listActiveUserOptions } from "@/modules/access/application/access-read-model";
+import { PrismaAccessReadModel } from "@/modules/access/infrastructure/prisma-access-overview-query";
 import { listEnquiriesByWorld } from "@/modules/enquiries/application/list-enquiries-by-world";
 import { PrismaEnquiryRepository } from "@/modules/enquiries/infrastructure/prisma-enquiry-repository";
 import {
@@ -10,8 +12,13 @@ import {
   type LeadDetail,
 } from "@/modules/leads/application/lead-use-cases";
 import { PrismaLeadRepository } from "@/modules/leads/infrastructure/prisma-lead-repository";
+import { formatDateTime } from "@/shared/format";
 
-import { AbuseStatusBadge } from "../_components/status-badge";
+import {
+  AbuseStatusBadge,
+  getStatusLabel,
+  StatusBadge,
+} from "../_components/status-badge";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import {
   addLeadNoteAction,
@@ -25,22 +32,6 @@ const WORLDS = [
   { key: "pixel-digital", label: "Pixel&Digital" },
   { key: "kwaliti-print", label: "Kwaliti Print" },
 ];
-
-const LEAD_STATUS_LABEL: Readonly<Record<string, string>> = {
-  NEW: "Nouveau",
-  IN_REVIEW: "En qualification",
-  QUALIFIED: "Qualifié",
-  UNQUALIFIED: "Non qualifié",
-  CLOSED: "Clôturé",
-};
-
-const LEAD_STATUS_TONE: Readonly<Record<string, string>> = {
-  NEW: "neutral",
-  IN_REVIEW: "warning",
-  QUALIFIED: "positive",
-  UNQUALIFIED: "neutral",
-  CLOSED: "positive",
-};
 
 function leadRepository() {
   return { leads: new PrismaLeadRepository(prisma) };
@@ -75,10 +66,11 @@ export default async function WorkspaceEnquiriesPage({
     ? await getLeadDetail(leadRepository(), context, { id: selectedLeadId })
     : null;
 
-  const users = await prisma.user.findMany({
-    where: { status: "ACTIVE" },
-    orderBy: { displayName: "asc" },
-  });
+  const usersResult = await listActiveUserOptions(
+    { accessReadModel: new PrismaAccessReadModel(prisma) },
+    context,
+  );
+  const users = usersResult.ok ? usersResult.value : [];
 
   return (
     <>
@@ -133,11 +125,7 @@ export default async function WorkspaceEnquiriesPage({
                           className="admin-table__action"
                           href={`/workspace/enquiries?world=${worldKey}&lead=${lead.id}`}
                         >
-                          <span
-                            className={`status-badge status-badge--${LEAD_STATUS_TONE[lead.status]}`}
-                          >
-                            {LEAD_STATUS_LABEL[lead.status] ?? lead.status}
-                          </span>
+                          <StatusBadge kind="lead" status={lead.status} />
                         </Link>
                       ) : (
                         "—"
@@ -193,11 +181,7 @@ function LeadDetailPanel({
             Source : {lead.source} · Créé le {formatDateTime(lead.createdAt)}
           </p>
         </div>
-        <span
-          className={`status-badge status-badge--${LEAD_STATUS_TONE[lead.status]}`}
-        >
-          {LEAD_STATUS_LABEL[lead.status] ?? lead.status}
-        </span>
+        <StatusBadge kind="lead" status={lead.status} />
       </div>
 
       <div className="admin-form-grid">
@@ -211,7 +195,7 @@ function LeadDetailPanel({
               <select name="status" defaultValue={nextStatuses[0]}>
                 {nextStatuses.map((status) => (
                   <option key={status} value={status}>
-                    {LEAD_STATUS_LABEL[status] ?? status}
+                    {getStatusLabel("lead", status)}
                   </option>
                 ))}
               </select>
@@ -384,14 +368,3 @@ const ACTIVITY_LABEL: Readonly<Record<string, string>> = {
   NEXT_ACTION_SET: "Prochaine action planifiée",
   NEXT_ACTION_COMPLETED: "Prochaine action terminée",
 };
-
-function formatDateTime(date: Date): string {
-  return date.toLocaleString("fr-FR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "UTC",
-  });
-}

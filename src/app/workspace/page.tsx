@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { ReactNode } from "react";
 import {
   AlarmClock,
   BadgeCheck,
@@ -11,6 +10,14 @@ import {
 } from "lucide-react";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
+import { formatCurrency, formatDate } from "@/shared/format";
+import {
+  DashboardList,
+  Metric,
+  MyWorkPanel,
+  TeamMetricsSummary,
+} from "./_components/dashboard-sections";
+import { buildPersonalWorkFilters } from "./_lib/dashboard-personal-work";
 import { getWorkspaceRequestContext } from "./get-workspace-context";
 
 const ACTIVE_PROJECT_STATUSES = ["PLANNED", "ACTIVE", "ON_HOLD"] as const;
@@ -45,6 +52,7 @@ export default async function WorkspaceDashboardPage({
       context.actor.role as (typeof BILLING_ROLES)[number],
     ),
   );
+  const actorId = context.actor?.id ?? null;
 
   const lateProjectsWhere = {
     worldKey,
@@ -64,6 +72,9 @@ export default async function WorkspaceDashboardPage({
     worldKey,
     status: { in: Array.from(REVIEW_STATUSES) },
   };
+  const personalFilters = actorId
+    ? buildPersonalWorkFilters({ actorId, worldKey })
+    : null;
 
   const [
     activeClients,
@@ -79,6 +90,12 @@ export default async function WorkspaceDashboardPage({
     otherClients,
     otherActiveProjects,
     otherPendingReviews,
+    myTasksCount,
+    myTasksPreview,
+    myReviewsCount,
+    myReviewsPreview,
+    myLeadsCount,
+    myLeadsPreview,
   ] = await Promise.all([
     prisma.client.count({ where: { worldKey, status: "ACTIVE" } }),
     prisma.project.count({ where: lateProjectsWhere }),
@@ -133,6 +150,38 @@ export default async function WorkspaceDashboardPage({
         status: { in: [...REVIEW_STATUSES] },
       },
     }),
+    personalFilters
+      ? prisma.task.count({ where: personalFilters.tasks })
+      : Promise.resolve(0),
+    personalFilters
+      ? prisma.task.findMany({
+          where: personalFilters.tasks,
+          include: { project: true },
+          orderBy: { dueDate: "asc" },
+          take: 6,
+        })
+      : Promise.resolve([]),
+    personalFilters
+      ? prisma.editorialItem.count({ where: personalFilters.reviews })
+      : Promise.resolve(0),
+    personalFilters
+      ? prisma.editorialItem.findMany({
+          where: personalFilters.reviews,
+          include: { client: true },
+          orderBy: { scheduledFor: "asc" },
+          take: 6,
+        })
+      : Promise.resolve([]),
+    personalFilters
+      ? prisma.lead.count({ where: personalFilters.leads })
+      : Promise.resolve(0),
+    personalFilters
+      ? prisma.lead.findMany({
+          where: personalFilters.leads,
+          orderBy: { createdAt: "desc" },
+          take: 6,
+        })
+      : Promise.resolve([]),
   ]);
 
   const sentAmount = invoices
@@ -165,173 +214,162 @@ export default async function WorkspaceDashboardPage({
           {activeClients > 1 ? "s" : ""}
         </span>
       </div>
-      <section className="dashboard-metrics">
-        <Metric
-          label="Projets en retard"
-          value={lateProjectsCount}
-          href="/workspace/projects"
-          tone="danger"
-          icon={<AlarmClock size={20} />}
-        />
-        <Metric
-          label="Tâches bloquées"
-          value={blockedTasksCount}
-          href="/workspace/tasks"
-          tone="warning"
-          icon={<OctagonAlert size={20} />}
-        />
-        <Metric
-          label="À valider"
-          value={toValidateCount}
-          href="/workspace/editorial"
-          tone="info"
-          icon={<BadgeCheck size={20} />}
-        />
-        <Metric
-          label="Échéances à 7 jours"
-          value={dueSoonTasksCount}
-          href="/workspace/tasks"
-          tone="violet"
-          icon={<CalendarClock size={20} />}
-        />
-        {canSeeBilling ? (
-          <>
-            <Metric
-              label="Facturé en attente"
-              value={formatXof(sentAmount)}
-              href="/workspace/billing"
-              tone="accent"
-              icon={<Banknote size={20} />}
-            />
-            <Metric
-              label="Encaissé"
-              value={formatXof(paidAmount)}
-              href="/workspace/billing"
-              tone="success"
-              icon={<Wallet size={20} />}
-            />
-          </>
-        ) : null}
-      </section>
 
-      <div className="dashboard-grid">
-        <DashboardList
-          title="Projets en retard"
-          empty="Aucun projet en retard."
-          items={lateProjectsPreview.map((project) => ({
-            title: project.name,
-            meta: `${project.client.name} · ${project.dueDate ? formatDate(project.dueDate) : "Sans échéance"}`,
-          }))}
-        />
-        <DashboardList
-          title="Tâches bloquées"
-          empty="Aucune tâche bloquée."
-          items={blockedTasksPreview.map((task) => ({
-            title: task.title,
-            meta: `${task.project.name} · ${task.assignee?.displayName ?? "Non assignée"}`,
-          }))}
-        />
-        <DashboardList
-          title="Contenus à valider"
-          empty="Aucun contenu en attente."
-          items={toValidatePreview.map((item) => ({
-            title: item.title,
-            meta: `${item.client?.name ?? item.clientLabel} · ${item.status === "INTERNAL_REVIEW" ? "Validation interne" : "Validation client"}`,
-          }))}
-        />
-        <DashboardList
-          title="Charge par collaborateur"
-          empty="Aucune tâche assignée."
-          items={workload.map((user) => ({
-            title: user.name,
-            meta: `${user.count} tâche${user.count > 1 ? "s" : ""} ouverte${user.count > 1 ? "s" : ""}`,
-          }))}
-        />
-        <section className="dashboard-panel dashboard-panel--crossworld">
-          <h2>{otherWorldLabel} en un coup d’œil</h2>
-          <ul>
-            <li>
-              <strong>
-                {otherClients} client{otherClients > 1 ? "s" : ""} actif
-                {otherClients > 1 ? "s" : ""}
-              </strong>
-              <span>Comptes de l’autre univers</span>
-            </li>
-            <li>
-              <strong>
-                {otherActiveProjects} projet
-                {otherActiveProjects > 1 ? "s" : ""} en cours
-              </strong>
-              <span>Production {otherWorldLabel}</span>
-            </li>
-            <li>
-              <strong>
-                {otherPendingReviews} contenu
-                {otherPendingReviews > 1 ? "s" : ""} à valider
-              </strong>
-              <span>Calendrier éditorial</span>
-            </li>
-          </ul>
-          <Link
-            className="admin-table__action"
-            href={`/workspace?world=${otherWorldKey}`}
-          >
-            Basculer vers {otherWorldLabel}
-          </Link>
-        </section>
-      </div>
+      <MyWorkPanel
+        queues={[
+          {
+            title: "Mes tâches ouvertes",
+            empty: "Aucune tâche qui vous est assignée.",
+            items: myTasksPreview.map((task) => ({
+              title: task.title,
+              meta: `${task.project.name} · ${task.dueDate ? formatDate(task.dueDate) : "Sans échéance"}`,
+            })),
+            count: myTasksCount,
+            href: `/workspace/tasks?world=${worldKey}`,
+          },
+          {
+            title: "Contenus à valider par vous",
+            empty: "Aucun contenu à valider de votre côté.",
+            items: myReviewsPreview.map((item) => ({
+              title: item.title,
+              meta: `${item.client?.name ?? item.clientLabel} · ${formatDate(item.scheduledFor)}`,
+            })),
+            count: myReviewsCount,
+            href: `/workspace/editorial?world=${worldKey}`,
+          },
+          {
+            title: "Vos leads à traiter",
+            empty: "Aucun lead qui vous est assigné pour le moment.",
+            items: myLeadsPreview.map((lead) => ({
+              title: lead.name,
+              meta: `${lead.source} · ${lead.status === "NEW" ? "Nouveau" : "En qualification"}`,
+            })),
+            count: myLeadsCount,
+            href: `/workspace/enquiries?world=${worldKey}`,
+          },
+        ]}
+      />
+
+      <TeamMetricsSummary
+        metrics={
+          <section className="dashboard-metrics">
+            <Metric
+              label="Projets en retard"
+              value={lateProjectsCount}
+              href="/workspace/projects"
+              tone="danger"
+              icon={<AlarmClock size={20} />}
+            />
+            <Metric
+              label="Tâches bloquées"
+              value={blockedTasksCount}
+              href="/workspace/tasks"
+              tone="warning"
+              icon={<OctagonAlert size={20} />}
+            />
+            <Metric
+              label="À valider"
+              value={toValidateCount}
+              href="/workspace/editorial"
+              tone="info"
+              icon={<BadgeCheck size={20} />}
+            />
+            <Metric
+              label="Échéances à 7 jours"
+              value={dueSoonTasksCount}
+              href="/workspace/tasks"
+              tone="violet"
+              icon={<CalendarClock size={20} />}
+            />
+            {canSeeBilling ? (
+              <>
+                <Metric
+                  label="Facturé en attente"
+                  value={formatCurrency(sentAmount)}
+                  href="/workspace/billing"
+                  tone="accent"
+                  icon={<Banknote size={20} />}
+                />
+                <Metric
+                  label="Encaissé"
+                  value={formatCurrency(paidAmount)}
+                  href="/workspace/billing"
+                  tone="success"
+                  icon={<Wallet size={20} />}
+                />
+              </>
+            ) : null}
+          </section>
+        }
+      >
+        <div className="dashboard-grid">
+          <DashboardList
+            title="Projets en retard"
+            empty="Aucun projet en retard."
+            items={lateProjectsPreview.map((project) => ({
+              title: project.name,
+              meta: `${project.client.name} · ${project.dueDate ? formatDate(project.dueDate) : "Sans échéance"}`,
+            }))}
+          />
+          <DashboardList
+            title="Tâches bloquées"
+            empty="Aucune tâche bloquée."
+            items={blockedTasksPreview.map((task) => ({
+              title: task.title,
+              meta: `${task.project.name} · ${task.assignee?.displayName ?? "Non assignée"}`,
+            }))}
+          />
+          <DashboardList
+            title="Contenus à valider"
+            empty="Aucun contenu en attente."
+            items={toValidatePreview.map((item) => ({
+              title: item.title,
+              meta: `${item.client?.name ?? item.clientLabel} · ${item.status === "INTERNAL_REVIEW" ? "Validation interne" : "Validation client"}`,
+            }))}
+          />
+          <DashboardList
+            title="Charge par collaborateur"
+            empty="Aucune tâche assignée."
+            items={workload.map((user) => ({
+              title: user.name,
+              meta: `${user.count} tâche${user.count > 1 ? "s" : ""} ouverte${user.count > 1 ? "s" : ""}`,
+            }))}
+          />
+          <section className="dashboard-panel dashboard-panel--crossworld">
+            <h2>{otherWorldLabel} en un coup d’œil</h2>
+            <ul>
+              <li>
+                <strong>
+                  {otherClients} client{otherClients > 1 ? "s" : ""} actif
+                  {otherClients > 1 ? "s" : ""}
+                </strong>
+                <span>Comptes de l’autre univers</span>
+              </li>
+              <li>
+                <strong>
+                  {otherActiveProjects} projet
+                  {otherActiveProjects > 1 ? "s" : ""} en cours
+                </strong>
+                <span>Production {otherWorldLabel}</span>
+              </li>
+              <li>
+                <strong>
+                  {otherPendingReviews} contenu
+                  {otherPendingReviews > 1 ? "s" : ""} à valider
+                </strong>
+                <span>Calendrier éditorial</span>
+              </li>
+            </ul>
+            <Link
+              className="admin-table__action"
+              href={`/workspace?world=${otherWorldKey}`}
+            >
+              Basculer vers {otherWorldLabel}
+            </Link>
+          </section>
+        </div>
+      </TeamMetricsSummary>
     </>
-  );
-}
-
-function Metric({
-  label,
-  value,
-  href,
-  tone,
-  icon,
-}: Readonly<{
-  label: string;
-  value: string | number;
-  href: string;
-  tone: "danger" | "warning" | "info" | "violet" | "accent" | "success";
-  icon: ReactNode;
-}>) {
-  return (
-    <Link href={href} className="dashboard-metric-card">
-      <span className={`metric-icon metric-icon--${tone}`}>{icon}</span>
-      <span className="dashboard-metric-card__body">
-        <span>{label}</span>
-        <strong>{value}</strong>
-      </span>
-    </Link>
-  );
-}
-function DashboardList({
-  title,
-  empty,
-  items,
-}: Readonly<{
-  title: string;
-  empty: string;
-  items: readonly Readonly<{ title: string; meta: string }>[];
-}>) {
-  return (
-    <section className="dashboard-panel">
-      <h2>{title}</h2>
-      {items.length === 0 ? (
-        <p className="admin-empty">{empty}</p>
-      ) : (
-        <ul>
-          {items.map((item) => (
-            <li key={`${item.title}-${item.meta}`}>
-              <strong>{item.title}</strong>
-              <span>{item.meta}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
   );
 }
 
@@ -342,20 +380,4 @@ function invoiceTotal(
     (sum, line) => sum + line.quantity * line.unitPriceCents,
     0,
   );
-}
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    timeZone: "UTC",
-  });
-}
-
-function formatXof(cents: number): string {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "XOF",
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
 }

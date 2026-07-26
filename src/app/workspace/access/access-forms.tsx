@@ -7,6 +7,7 @@ import {
   IDLE_ACTION_STATE,
   SubmitButton,
 } from "../_components/feedback";
+import { ConfirmAction } from "../_components/confirm-action";
 import {
   assignRoleAction,
   createEmployeeAction,
@@ -107,9 +108,13 @@ export function UserStatusForm({
     <form action={action} className="admin-inline-form">
       <input type="hidden" name="userId" value={userId} />
       <input type="hidden" name="status" value={nextStatus} />
-      <SubmitButton>
-        {nextStatus === "ACTIVE" ? "Activer" : "Suspendre"}
-      </SubmitButton>
+      {nextStatus === "ACTIVE" ? (
+        <SubmitButton>Activer</SubmitButton>
+      ) : (
+        <ConfirmAction consequence="Le compte ne pourra plus accéder au Workspace jusqu’à sa réactivation.">
+          Suspendre
+        </ConfirmAction>
+      )}
       <Feedback state={state} />
     </form>
   );
@@ -139,7 +144,9 @@ export function RevokeRoleForm({
   return (
     <form action={action} className="admin-inline-form">
       <input type="hidden" name="assignmentId" value={assignmentId} />
-      <SubmitButton>Révoquer</SubmitButton>
+      <ConfirmAction consequence="Cette autorisation sera retirée immédiatement à l’utilisateur.">
+        Révoquer
+      </ConfirmAction>
       <Feedback state={state} />
     </form>
   );
