@@ -1,17 +1,18 @@
 "use client";
 
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
 
+import {
+  Feedback,
+  IDLE_ACTION_STATE,
+  SubmitButton,
+} from "../_components/feedback";
 import {
   assignRoleAction,
   createEmployeeAction,
   revokeRoleAction,
   setUserStatusAction,
-  type AccessActionState,
 } from "./actions";
-
-const initialState: AccessActionState = { status: "idle" };
 
 const ROLES = [
   ["SUPER_ADMIN", "Super Admin"],
@@ -27,31 +28,6 @@ const WORLDS = [
   ["pixel-digital", "Pixel&Digital"],
   ["kwaliti-print", "Kwaliti Print"],
 ] as const;
-function Feedback({ state }: Readonly<{ state: AccessActionState }>) {
-  if (state.status === "idle" || !state.message) return null;
-  return (
-    <p
-      className={
-        state.status === "success"
-          ? "admin-feedback admin-feedback--success"
-          : "admin-feedback admin-feedback--error"
-      }
-      role={state.status === "error" ? "alert" : "status"}
-    >
-      {state.message}
-    </p>
-  );
-}
-
-function SubmitButton({ children }: Readonly<{ children: string }>) {
-  const { pending } = useFormStatus();
-  return (
-    <button type="submit" className="admin-table__action" disabled={pending}>
-      {pending ? "Traitement…" : children}
-    </button>
-  );
-}
-
 function RoleFields({ prefix = "" }: Readonly<{ prefix?: string }>) {
   return (
     <>
@@ -86,7 +62,10 @@ function RoleFields({ prefix = "" }: Readonly<{ prefix?: string }>) {
   );
 }
 export function CreateEmployeeForm() {
-  const [state, action] = useActionState(createEmployeeAction, initialState);
+  const [state, action] = useActionState(
+    createEmployeeAction,
+    IDLE_ACTION_STATE,
+  );
   return (
     <form action={action} className="admin-form-card">
       <h2 className="admin-content__subtitle">Créer un profil</h2>
@@ -119,7 +98,10 @@ export function UserStatusForm({
   userId,
   currentStatus,
 }: Readonly<{ userId: string; currentStatus: "ACTIVE" | "INACTIVE" }>) {
-  const [state, action] = useActionState(setUserStatusAction, initialState);
+  const [state, action] = useActionState(
+    setUserStatusAction,
+    IDLE_ACTION_STATE,
+  );
   const nextStatus = currentStatus === "ACTIVE" ? "INACTIVE" : "ACTIVE";
   return (
     <form action={action} className="admin-inline-form">
@@ -133,7 +115,7 @@ export function UserStatusForm({
   );
 }
 export function AssignRoleForm({ userId }: Readonly<{ userId: string }>) {
-  const [state, action] = useActionState(assignRoleAction, initialState);
+  const [state, action] = useActionState(assignRoleAction, IDLE_ACTION_STATE);
   return (
     <form action={action} className="admin-form-card admin-form-card--compact">
       <input type="hidden" name="userId" value={userId} />
@@ -153,7 +135,7 @@ export function AssignRoleForm({ userId }: Readonly<{ userId: string }>) {
 export function RevokeRoleForm({
   assignmentId,
 }: Readonly<{ assignmentId: string }>) {
-  const [state, action] = useActionState(revokeRoleAction, initialState);
+  const [state, action] = useActionState(revokeRoleAction, IDLE_ACTION_STATE);
   return (
     <form action={action} className="admin-inline-form">
       <input type="hidden" name="assignmentId" value={assignmentId} />

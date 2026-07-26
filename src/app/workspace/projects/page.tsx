@@ -4,7 +4,7 @@ import { prisma } from "@/infrastructure/shared/prisma-client";
 import { parsePage, toSkipTake } from "@/shared/pagination";
 import { Pagination } from "../_components/pagination";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
-import { createProjectAction, updateProjectAction } from "./actions";
+import { CreateProjectForm, UpdateProjectForm } from "./project-forms";
 
 const PROJECT_ROLES = ["SUPER_ADMIN", "ADMIN", "WORLD_MANAGER"] as const;
 
@@ -82,76 +82,18 @@ export default async function ProjectsPage({
         </span>
       </div>
 
-      <form action={createProjectAction} className="admin-form-card">
-        <input type="hidden" name="worldKey" value={worldKey} />
-        <h2 className="admin-content__subtitle">Créer un projet</h2>
-        <div className="admin-form-grid">
-          <label>
-            Nom
-            <input name="name" required maxLength={160} />
-          </label>
-          <label>
-            Client
-            <select name="clientId" required>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Chef de projet
-            <select name="projectManagerId" defaultValue="">
-              <option value="">Non affecté</option>
-              {users.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.displayName ?? user.normalizedEmail}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Équipe
-            <select name="teamId" defaultValue="">
-              <option value="">Non affectée</option>
-              {teams.map((team) => (
-                <option key={team.id} value={team.id}>
-                  {team.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Priorité
-            <select name="priority" defaultValue="NORMAL">
-              <option value="LOW">Faible</option>
-              <option value="NORMAL">Normale</option>
-              <option value="HIGH">Haute</option>
-              <option value="URGENT">Urgente</option>
-            </select>
-          </label>
-          <label>
-            Budget (XOF)
-            <input name="budget" type="number" min={0} step={1} />
-          </label>
-          <label>
-            Début
-            <input name="startDate" type="date" />
-          </label>
-          <label>
-            Échéance
-            <input name="dueDate" type="date" />
-          </label>
-        </div>
-        <label>
-          Description
-          <textarea name="description" maxLength={1000} />
-        </label>
-        <button type="submit" className="admin-table__action">
-          Créer le projet
-        </button>
-      </form>
+      <CreateProjectForm
+        worldKey={worldKey}
+        clients={clients.map((client) => ({
+          value: client.id,
+          label: client.name,
+        }))}
+        users={users.map((user) => ({
+          value: user.id,
+          label: user.displayName ?? user.normalizedEmail ?? "Collaborateur",
+        }))}
+        teams={teams.map((team) => ({ value: team.id, label: team.name }))}
+      />
       <section className="project-grid">
         {projects.length === 0 ? (
           <p className="admin-empty">Aucun projet.</p>
@@ -195,30 +137,11 @@ export default async function ProjectsPage({
             <div className="project-progress">
               <span style={{ width: `${project.progress}%` }} />
             </div>
-            <form
-              action={updateProjectAction}
-              className="project-card__controls"
-            >
-              <input type="hidden" name="projectId" value={project.id} />
-              <select name="status" defaultValue={project.status}>
-                <option value="PLANNED">Planifié</option>
-                <option value="ACTIVE">Actif</option>
-                <option value="ON_HOLD">En pause</option>
-                <option value="COMPLETED">Terminé</option>
-                <option value="CANCELLED">Annulé</option>
-              </select>
-              <input
-                name="progress"
-                type="number"
-                min={0}
-                max={100}
-                defaultValue={project.progress}
-                aria-label="Progression en pourcentage"
-              />
-              <button type="submit" className="admin-table__action">
-                Mettre à jour
-              </button>
-            </form>
+            <UpdateProjectForm
+              projectId={project.id}
+              status={project.status}
+              progress={project.progress}
+            />
           </article>
         ))}
       </section>

@@ -1,37 +1,19 @@
 "use client";
 
 import { useActionState } from "react";
-import { useFormStatus } from "react-dom";
 
+import {
+  Feedback,
+  IDLE_ACTION_STATE,
+  SubmitButton,
+} from "../_components/feedback";
 import {
   addClientContactAction,
   createProfessionalClientAction,
-  type ClientActionState,
 } from "./actions";
 
-const initialState: ClientActionState = { status: "idle" };
 type Option = Readonly<{ value: string; label: string }>;
 
-function Feedback({ state }: Readonly<{ state: ClientActionState }>) {
-  if (state.status === "idle" || !state.message) return null;
-  return (
-    <p
-      className={`admin-feedback admin-feedback--${state.status}`}
-      role={state.status === "error" ? "alert" : "status"}
-    >
-      {state.message}
-    </p>
-  );
-}
-
-function SubmitButton({ children }: Readonly<{ children: string }>) {
-  const { pending } = useFormStatus();
-  return (
-    <button className="admin-table__action" disabled={pending}>
-      {pending ? "Traitement…" : children}
-    </button>
-  );
-}
 export function CreateClientForm({
   worldKey,
   users,
@@ -39,7 +21,7 @@ export function CreateClientForm({
 }: Readonly<{ worldKey: string; users: Option[]; teams: Option[] }>) {
   const [state, action] = useActionState(
     createProfessionalClientAction,
-    initialState,
+    IDLE_ACTION_STATE,
   );
   return (
     <form action={action} className="admin-form-card">
@@ -127,7 +109,10 @@ export function CreateClientForm({
 export function ClientContactForm({
   clientId,
 }: Readonly<{ clientId: string }>) {
-  const [state, action] = useActionState(addClientContactAction, initialState);
+  const [state, action] = useActionState(
+    addClientContactAction,
+    IDLE_ACTION_STATE,
+  );
   return (
     <form action={action} className="admin-form-card admin-form-card--compact">
       <input type="hidden" name="clientId" value={clientId} />
