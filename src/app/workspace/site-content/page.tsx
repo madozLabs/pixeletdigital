@@ -25,6 +25,7 @@ import { PrismaWorkspaceEnquiryReader } from "@/modules/enquiries/infrastructure
 import { parsePage, toSkipTake } from "@/shared/pagination";
 import { LifecycleBadge } from "../_components/status-badge";
 import { Pagination } from "../_components/pagination";
+import { actorHasWorldAccess } from "../_lib/authorization";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import {
   CreatePageForm,
@@ -46,6 +47,11 @@ const TYPED_SECTION_TYPES = new Set([
   "CASE_STUDY",
   "TESTIMONIAL",
 ]);
+
+const CONTENT_WORLDS = [
+  { key: "pixel-digital", label: "Pixel&Digital" },
+  { key: "kwaliti-print", label: "Kwaliti Print" },
+] as const;
 
 type MediaAsset = WorkspaceMediaDto;
 
@@ -108,6 +114,9 @@ export default async function SiteContentPage({
       (tab === "media" ? totalMedia : totalPages) / listPageParams.pageSize,
     ),
   );
+  const availableWorlds = CONTENT_WORLDS.filter((world) =>
+    context.actor ? actorHasWorldAccess(context.actor, world.key) : false,
+  );
 
   return (
     <>
@@ -122,6 +131,23 @@ export default async function SiteContentPage({
           {publishedCount} page{publishedCount > 1 ? "s" : ""} en ligne
         </span>
       </div>
+
+      <nav className="admin-tabs" aria-label="Univers du contenu">
+        {availableWorlds.map((world) => (
+          <Link
+            key={world.key}
+            className={
+              world.key === worldKey
+                ? "admin-tabs__item admin-tabs__item--active"
+                : "admin-tabs__item"
+            }
+            href={`/workspace/site-content?world=${world.key}&tab=${tab}`}
+            aria-current={world.key === worldKey ? "page" : undefined}
+          >
+            {world.label}
+          </Link>
+        ))}
+      </nav>
 
       <div className="admin-tabs" role="tablist">
         {(
@@ -370,7 +396,8 @@ function PagesPanel({
               <thead>
                 <tr>
                   <th>Titre</th>
-                  <th>Slug</th>
+                  <th>Route</th>
+                  <th>Source</th>
                   <th>Cycle</th>
                   <th></th>
                 </tr>
@@ -379,7 +406,14 @@ function PagesPanel({
                 {pages.map((page) => (
                   <tr key={page.id}>
                     <td>{page.title}</td>
-                    <td>/{page.slug}</td>
+                    <td>{page.routePath ?? `/${page.slug}`}</td>
+                    <td>
+                      {page.serviceId
+                        ? "Service"
+                        : page.pageKind === "SYSTEM"
+                          ? "Système"
+                          : "Page CMS"}
+                    </td>
                     <td>
                       <LifecycleBadge lifecycle={page.lifecycle} />
                     </td>

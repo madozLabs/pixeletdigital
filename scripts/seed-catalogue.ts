@@ -210,12 +210,130 @@ async function main() {
       }
     }
 
+    await ensureCmsRouteInventory(client);
+
     console.log(
       `Seed complete: ${createdWorlds} world(s), ${createdFamilies} family(ies), ${createdServices} service(s) created, ${approvedServices} approved as current. Re-running is safe -- existing records are left untouched.`,
     );
   } finally {
     await client.$disconnect();
   }
+}
+
+async function ensureCmsRouteInventory(client: PrismaClient): Promise<void> {
+  const pixelServices = await client.service.findMany({
+    where: { worldKey: "pixel-digital" },
+  });
+  for (const service of pixelServices) {
+    await ensureCmsPage(client, {
+      id: `service-page:${service.id}`,
+      worldKey: service.worldKey,
+      pageType: "SERVICE",
+      pageKind: "SERVICE",
+      templateKey: "SERVICE_DETAIL",
+      routePath: `/services/${service.slug}`,
+      title: service.name,
+      slug: service.slug,
+      lifecycle: service.lifecycle,
+      publishedAt: service.publishedAt,
+      serviceId: service.id,
+    });
+  }
+
+  await ensureCmsPage(client, {
+    id: "system-page:pixel-digital:contact",
+    worldKey: "pixel-digital",
+    pageType: "SYSTEM",
+    pageKind: "SYSTEM",
+    templateKey: "CONTACT",
+    routePath: "/contact",
+    title: "Contact",
+    slug: "contact",
+    lifecycle: "PUBLISHED",
+    publishedAt: new Date(),
+    serviceId: null,
+  });
+  await ensureCmsPage(client, {
+    id: "system-page:kwaliti-print:devis",
+    worldKey: "kwaliti-print",
+    pageType: "SYSTEM",
+    pageKind: "SYSTEM",
+    templateKey: "QUOTE",
+    routePath: "/kwaliti-print/devis",
+    title: "Demande de devis",
+    slug: "devis",
+    lifecycle: "PUBLISHED",
+    publishedAt: new Date(),
+    serviceId: null,
+  });
+}
+
+async function ensureCmsPage(
+  client: PrismaClient,
+  input: Readonly<{
+    id: string;
+    worldKey: string;
+    pageType: string;
+    pageKind: string;
+    templateKey: string;
+    routePath: string;
+    title: string;
+    slug: string;
+    lifecycle: "DRAFT" | "IN_REVIEW" | "SCHEDULED" | "PUBLISHED" | "ARCHIVED";
+    publishedAt: Date | null;
+    serviceId: string | null;
+  }>,
+): Promise<void> {
+  const existing = await client.page.findFirst({
+    where: {
+      OR: [
+        { id: input.id },
+        { worldKey: input.worldKey, routePath: input.routePath },
+      ],
+    },
+  });
+  if (existing) return;
+
+  await client.$transaction(async (transaction) => {
+    const now = new Date();
+    await transaction.page.create({
+      data: {
+        ...input,
+        version: 1,
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+    const revisionId = `${input.id}:r1`;
+    const revisionStatus =
+      input.lifecycle === "PUBLISHED"
+        ? "PUBLISHED"
+        : input.lifecycle === "IN_REVIEW"
+          ? "IN_REVIEW"
+          : input.lifecycle === "ARCHIVED"
+            ? "ARCHIVED"
+            : "DRAFT";
+    await transaction.pageRevision.create({
+      data: {
+        id: revisionId,
+        pageId: input.id,
+        revisionNumber: 1,
+        status: revisionStatus,
+        title: input.title,
+        version: 1,
+        publishedAt: input.publishedAt,
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+    await transaction.page.update({
+      where: { id: input.id },
+      data:
+        revisionStatus === "PUBLISHED"
+          ? { publishedRevisionId: revisionId }
+          : { draftRevisionId: revisionId },
+    });
+  });
 }
 
 async function ensureWorld(

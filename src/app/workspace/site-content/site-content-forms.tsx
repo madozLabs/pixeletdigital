@@ -501,7 +501,7 @@ export function UploadMediaForm({ worldKey }: Readonly<{ worldKey: string }>) {
         <input
           type="file"
           name="file"
-          accept="image/*,video/*,application/pdf"
+          accept="image/jpeg,image/png,image/webp,application/pdf"
           required
         />
       </label>

@@ -10,6 +10,11 @@ import {
   evidencePublicationErrors,
   isEvidenceSectionType,
 } from "@/modules/content/domain/evidence-section";
+import {
+  resolveWorkspacePageTransition,
+  sectionBelongsToPage,
+  validateWorkspaceMediaUpload,
+} from "@/modules/content/application/workspace-site-content-policy";
 import type { ActionState } from "../_components/feedback";
 import { requireWorldAccess } from "../_lib/authorization";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
@@ -57,6 +62,17 @@ const ERROR_MESSAGE: Readonly<Record<string, string>> = {
   EVIDENCE_NOT_PUBLISHABLE:
     "Publication impossible : une preuve sociale est incomplète ou non approuvée.",
   FILE_REQUIRED: "Merci de sélectionner un fichier.",
+  FILE_TOO_LARGE: "Le fichier dépasse la taille maximale autorisée de 15 Mo.",
+  FILE_TYPE_NOT_ALLOWED:
+    "Type de fichier refusé. Utilisez une image JPEG, PNG, WebP ou un PDF.",
+  INVALID_PAGE_TRANSITION:
+    "Ce changement de statut n’est pas autorisé depuis l’état actuel de la page.",
+  SECTION_PAGE_MISMATCH:
+    "Cette section n’appartient pas à la page que vous êtes autorisé à modifier.",
+  MEDIA_IN_USE:
+    "Ce média est utilisé par une page et ne peut pas être supprimé.",
+  STORAGE_DELETE_FAILED:
+    "Le fichier n’a pas pu être supprimé du stockage. Aucune donnée n’a été retirée.",
   EDIT_CONFLICT:
     "Cet élément a été modifié par quelqu’un d’autre. Rechargez la page avant de réessayer.",
   SUPABASE_STORAGE_NOT_CONFIGURED:
@@ -149,10 +165,16 @@ export async function transitionPageAction(
   try {
     const id = text(formData, "id");
     const page = await prisma.page.findUniqueOrThrow({ where: { id } });
-    const target = text(formData, "target") as
-      "DRAFT" | "IN_REVIEW" | "PUBLISHED" | "ARCHIVED";
-    const isPublicChange = target === "PUBLISHED" || target === "ARCHIVED";
-    const { actor, context } = await actorFor(page.worldKey, isPublicChange);
+    const transition = resolveWorkspacePageTransition(
+      page.lifecycle,
+      text(formData, "target"),
+    );
+    if (!transition) throw new Error("INVALID_PAGE_TRANSITION");
+    const target = transition.target;
+    const { actor, context } = await actorFor(
+      page.worldKey,
+      transition.requiresReviewRole,
+    );
     if (target === "PUBLISHED") {
       const evidenceSections = await prisma.pageSection.findMany({
         where: {
@@ -184,7 +206,7 @@ export async function transitionPageAction(
     revalidatePath("/workspace/site-content");
     // Sections can only be edited while a page is DRAFT (see saveSectionAction),
     // so publish/archive here is the only moment the public rendering changes.
-    if (isPublicChange) {
+    if (transition.changesPublicContent) {
       revalidatePublicPage(page.worldKey, page.slug);
       await recordAuditEvent(prisma, {
         action:
@@ -227,6 +249,15 @@ export async function saveSectionAction(
     const now = new Date();
     const payload = parsePayload(text(formData, "payload"));
     const existingId = text(formData, "id");
+    if (existingId) {
+      const existing = await prisma.pageSection.findUnique({
+        where: { id: existingId },
+        select: { pageId: true },
+      });
+      if (!existing || !sectionBelongsToPage(existing.pageId, pageId)) {
+        throw new Error("SECTION_PAGE_MISMATCH");
+      }
+    }
     if (!existingId) {
       await prisma.pageSection.create({
         data: {
@@ -245,6 +276,7 @@ export async function saveSectionAction(
       const updated = await prisma.pageSection.updateMany({
         where: {
           id: existingId,
+          pageId,
           version: Number(formData.get("expectedVersion")),
         },
         data: {
@@ -308,6 +340,9 @@ export async function saveSectionFieldsAction(
     if (page.lifecycle !== "DRAFT") throw new Error("PAGE_NOT_DRAFT");
     const id = text(formData, "id") || randomUUID();
     const existing = await prisma.pageSection.findUnique({ where: { id } });
+    if (existing && !sectionBelongsToPage(existing.pageId, pageId)) {
+      throw new Error("SECTION_PAGE_MISMATCH");
+    }
     const payload: Record<string, unknown> = {
       ...((existing?.payload as Record<string, unknown> | null) ?? {}),
     };
@@ -336,6 +371,7 @@ export async function saveSectionFieldsAction(
       const updated = await prisma.pageSection.updateMany({
         where: {
           id,
+          pageId,
           version: Number(formData.get("expectedVersion")),
         },
         data: {
@@ -385,6 +421,11 @@ export async function uploadMediaAction(
     if (!(file instanceof File) || file.size === 0) {
       throw new Error("FILE_REQUIRED");
     }
+    const uploadError = validateWorkspaceMediaUpload({
+      size: file.size,
+      mimeType: file.type,
+    });
+    if (uploadError) throw new Error(uploadError);
 
     const supabaseUrl = process.env.SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -443,10 +484,19 @@ export async function deleteMediaAction(
     const id = text(formData, "id");
     const asset = await prisma.mediaAsset.findUniqueOrThrow({ where: { id } });
     await actorFor(asset.worldKey);
+    const candidateUsages = await prisma.pageSection.findMany({
+      where: { page: { worldKey: asset.worldKey } },
+      select: { payload: true },
+    });
+    const inUse = candidateUsages.some((section) => {
+      const payload = section.payload as Record<string, unknown>;
+      return payload.mediaId === asset.id;
+    });
+    if (inUse) throw new Error("MEDIA_IN_USE");
     const supabaseUrl = process.env.SUPABASE_URL;
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (supabaseUrl && serviceKey) {
-      await fetch(
+      const response = await fetch(
         `${supabaseUrl}/storage/v1/object/${asset.bucket}/${asset.objectPath}`,
         {
           method: "DELETE",
@@ -456,6 +506,9 @@ export async function deleteMediaAction(
           },
         },
       );
+      if (!response.ok && response.status !== 404) {
+        throw new Error("STORAGE_DELETE_FAILED");
+      }
     }
     await prisma.mediaAsset.delete({ where: { id } });
     revalidatePath("/workspace/site-content");

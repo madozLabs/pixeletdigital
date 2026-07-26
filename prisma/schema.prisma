@@ -89,6 +89,27 @@ enum ContentLifecycleState {
   ARCHIVED
 }
 
+enum PageRevisionStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  PUBLISHED
+  SUPERSEDED
+  ARCHIVED
+}
+
+enum MediaLifecycleState {
+  DRAFT
+  APPROVED
+  ARCHIVED
+}
+
+enum MediaProcessingState {
+  PENDING
+  READY
+  REJECTED
+}
+
 enum ServiceAvailabilityStatus {
   CANDIDATE
   CURRENT_STATED
@@ -409,24 +430,97 @@ model AuthenticationEvent {
 }
 
 model Page {
-  id          String                @id
-  worldKey    String
-  world       World                 @relation(fields: [worldKey], references: [key], onDelete: Restrict)
-  pageType    String
-  title       String
-  slug        String
-  lifecycle   ContentLifecycleState
-  version     Int
-  publishedAt DateTime?
-  createdAt   DateTime
-  updatedAt   DateTime
+  id                  String                @id
+  worldKey            String
+  world               World                 @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  pageType            String
+  pageKind            String                @default("STANDARD")
+  templateKey         String                @default("STANDARD")
+  routePath           String?
+  title               String
+  slug                String
+  lifecycle           ContentLifecycleState
+  version             Int
+  publishedAt         DateTime?
+  draftRevisionId     String?               @unique
+  publishedRevisionId String?               @unique
+  serviceId           String?               @unique
+  createdAt           DateTime
+  updatedAt           DateTime
 
-  sections PageSection[]
+  sections          PageSection[]
+  revisions         PageRevision[] @relation("PageRevisions")
+  draftRevision     PageRevision?  @relation("PageDraftRevision", fields: [draftRevisionId], references: [id], onDelete: SetNull)
+  publishedRevision PageRevision?  @relation("PagePublishedRevision", fields: [publishedRevisionId], references: [id], onDelete: SetNull)
+  service           Service?       @relation(fields: [serviceId], references: [id], onDelete: Restrict)
 
   @@unique([worldKey, pageType, slug])
+  @@unique([worldKey, routePath])
   @@index([worldKey, lifecycle])
   @@index([worldKey, slug, lifecycle])
   @@map("pages")
+}
+
+model PageRevision {
+  id             String             @id
+  pageId         String
+  page           Page               @relation("PageRevisions", fields: [pageId], references: [id], onDelete: Restrict)
+  revisionNumber Int
+  status         PageRevisionStatus
+  title          String
+  seoTitle       String?
+  seoDescription String?
+  version        Int                @default(1)
+  createdById    String?
+  reviewedById   String?
+  publishedById  String?
+  reviewedAt     DateTime?
+  publishedAt    DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  sections          PageRevisionSection[]
+  draftForPages     Page[]                @relation("PageDraftRevision")
+  publishedForPages Page[]                @relation("PagePublishedRevision")
+
+  @@unique([pageId, revisionNumber])
+  @@index([pageId, status])
+  @@map("page_revisions")
+}
+
+model PageRevisionSection {
+  id                   String       @id
+  revisionId           String
+  revision             PageRevision @relation(fields: [revisionId], references: [id], onDelete: Restrict)
+  sectionKey           String
+  sectionType          String
+  order                Int
+  payload              Json
+  payloadSchemaVersion Int
+  version              Int          @default(1)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  mediaUsages SectionMediaUsage[]
+
+  @@unique([revisionId, sectionKey])
+  @@index([revisionId, order])
+  @@map("page_revision_sections")
+}
+
+model SectionMediaUsage {
+  id        String              @id @default(cuid())
+  sectionId String
+  section   PageRevisionSection @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  mediaId   String
+  media     MediaAsset          @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  slot      String
+  order     Int                 @default(0)
+  createdAt DateTime            @default(now())
+
+  @@unique([sectionId, slot, order])
+  @@index([mediaId])
+  @@map("section_media_usages")
 }
 
 model PageSection {
@@ -446,21 +540,30 @@ model PageSection {
 }
 
 model MediaAsset {
-  id         String   @id @default(cuid())
-  worldKey   String
-  world      World    @relation(fields: [worldKey], references: [key], onDelete: Restrict)
-  bucket     String
-  objectPath String
-  publicUrl  String
-  title      String
-  altText    String
-  mimeType   String
-  sizeBytes  Int
-  width      Int?
-  height     Int?
-  tags       String[] @default([])
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id              String               @id @default(cuid())
+  worldKey        String
+  world           World                @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  bucket          String
+  objectPath      String
+  publicUrl       String
+  title           String
+  altText         String
+  mimeType        String
+  sizeBytes       Int
+  width           Int?
+  height          Int?
+  tags            String[]             @default([])
+  lifecycle       MediaLifecycleState  @default(DRAFT)
+  processingState MediaProcessingState @default(PENDING)
+  checksum        String?
+  caption         String?
+  credit          String?
+  rightsStatement String?
+  rightsExpiresAt DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  usages SectionMediaUsage[]
 
   @@unique([bucket, objectPath])
   @@index([worldKey, createdAt])
@@ -477,6 +580,7 @@ model Service {
   name               String
   slug               String
   description        String
+  page               Page?
   availabilityStatus ServiceAvailabilityStatus
   lifecycle          ContentLifecycleState
   version            Int

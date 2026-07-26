@@ -5,6 +5,10 @@ export type WorkspacePageDto = Readonly<{
   id: string;
   worldKey: string;
   pageType: string;
+  pageKind: string;
+  templateKey: string;
+  routePath: string | null;
+  serviceId: string | null;
   title: string;
   slug: string;
   lifecycle: string;
