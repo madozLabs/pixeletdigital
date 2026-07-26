@@ -4018,6 +4018,43 @@ a.world-switcher__item:focus-visible {
   max-height: 42rem;
   object-fit: cover;
 }
+
+.error-page {
+  width: min(100% - 3rem, 40rem);
+  margin-inline: auto;
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-3);
+  text-align: center;
+}
+
+.error-page__eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.error-page h1 {
+  font-size: var(--step-4);
+  line-height: 1.05;
+}
+
+.error-page__actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+}
+
+.error-page__link {
+  color: var(--ink-soft);
+  text-decoration: underline;
+}
 .cms-public-section {
   border-top: 1px solid var(--hairline);
 }

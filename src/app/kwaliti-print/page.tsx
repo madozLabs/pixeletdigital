@@ -14,7 +14,8 @@ import { Reveal } from "@/app/_components/reveal";
 import { getCmsHomeContent } from "@/app/_lib/cms-home";
 import { groupServicesByFamily } from "@/app/_lib/group-services-by-family";
 
-export const dynamic = "force-dynamic";
+// See (marketing)/page.tsx for why this is ISR rather than force-dynamic.
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   description:

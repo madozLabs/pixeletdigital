@@ -8,7 +8,8 @@ import { PrismaServiceRepository } from "@/modules/content/infrastructure/prisma
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
 import { Reveal } from "@/app/_components/reveal";
 
-export const dynamic = "force-dynamic";
+// See (marketing)/page.tsx for why this is ISR rather than force-dynamic.
+export const revalidate = 60;
 type PageParams = Readonly<{ params: Promise<{ slug: string }> }>;
 
 async function loadService(slug: string) {

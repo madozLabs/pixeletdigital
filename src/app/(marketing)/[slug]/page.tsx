@@ -5,7 +5,8 @@ import { notFound, redirect } from "next/navigation";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
 
-export const dynamic = "force-dynamic";
+// See (marketing)/page.tsx for why this is ISR rather than force-dynamic.
+export const revalidate = 60;
 
 type Props = Readonly<{ params: Promise<{ slug: string }> }>;
 
@@ -35,7 +36,9 @@ export default async function CmsPublicPage({ params }: Props) {
     return typeof payload.mediaId === "string" ? [payload.mediaId] : [];
   });
   const media = mediaIds.length
-    ? await prisma.mediaAsset.findMany({ where: { id: { in: mediaIds } } })
+    ? await prisma.mediaAsset
+        .findMany({ where: { id: { in: mediaIds } } })
+        .catch(() => [])
     : [];
   const mediaById = new Map(media.map((asset) => [asset.id, asset]));
 

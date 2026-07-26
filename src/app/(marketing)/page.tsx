@@ -13,7 +13,11 @@ import { Reveal } from "@/app/_components/reveal";
 import { getCmsHomeContent } from "@/app/_lib/cms-home";
 import { groupServicesByFamily } from "@/app/_lib/group-services-by-family";
 
-export const dynamic = "force-dynamic";
+// Static-generated with periodic revalidation instead of force-dynamic: an
+// isolated DB blip now serves the last good render instead of crashing, and
+// site-content/services actions call revalidatePath("/") on publish so
+// editors still see changes immediately rather than waiting out the window.
+export const revalidate = 60;
 
 const MANIFESTO = [
   "Les likes paient rarement les factures.",

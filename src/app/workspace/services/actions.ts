@@ -37,6 +37,14 @@ function toActionState(
   return { status: "error", message: result.error.message };
 }
 
+// Public pages are ISR-cached (revalidate = 60); revalidate the specific
+// service page plus its world's home page (services also render there) so
+// publishing/archiving is reflected immediately instead of waiting it out.
+function revalidatePublicService(worldKey: string, slug: string): void {
+  revalidatePath(`/services/${slug}`);
+  revalidatePath(worldKey === "kwaliti-print" ? "/kwaliti-print" : "/");
+}
+
 export async function submitForReviewAction(
   _state: ActionState,
   formData: FormData,
@@ -67,6 +75,7 @@ export async function publishServiceAction(
     transitionInput(formData),
   );
   if (!result.ok) console.error("publishService failed", result.error);
+  else revalidatePublicService(result.value.worldKey, result.value.slug);
   revalidatePath("/workspace/services");
   return toActionState(result, "Service publié.");
 }
@@ -101,6 +110,7 @@ export async function archiveServiceAction(
     transitionInput(formData),
   );
   if (!result.ok) console.error("archiveService failed", result.error);
+  else revalidatePublicService(result.value.worldKey, result.value.slug);
   revalidatePath("/workspace/services");
   return toActionState(result, "Service archivé.");
 }

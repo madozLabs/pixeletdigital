@@ -153,7 +153,7 @@ Recherche exhaustive : aucun type de section "témoignage" ou "étude de cas" n'
 | C4 | Introduire la pagination bornée sur toutes les listes | Critique | Archi/Perf | ✅ traité 2026-07-25 (listes principales) |
 | C5 | Compléter le pipeline Leads/Enquiries (qualification → conversion) | Critique | Produit/UX | ✅ traité 2026-07-25 |
 | C6 | Retour utilisateur explicite sur chaque mutation (fin des échecs silencieux) | Critique | UX | ✅ traité 2026-07-26 (8/8 pages) |
-| C7 | Résilience du site public face à l'indisponibilité base de données | Critique | Archi/Fiabilité | Ouvert |
+| C7 | Résilience du site public face à l'indisponibilité base de données | Critique | Archi/Fiabilité | ✅ traité 2026-07-26 |
 | C8 | Réparer la navigation mobile Kwaliti Print (menu, ancre, retour marque mère) | Critique | UX public | Ouvert |
 | I1 | Command Palette + recherche globale (Cmd+K) | Important | UX Workspace | Ouvert |
 | I2 | Dashboard personnalisé par rôle ("mon travail" plutôt que mur de métriques) | Important | UX Workspace | Ouvert |
@@ -319,7 +319,14 @@ Contraintes :
 Résultat attendu : Tous les formulaires du Workspace donnent un retour visuel cohérent (en cours / succès / erreur), sur le modèle déjà validé par clients et access.
 ```
 
-**C7 — Résilience du site public face à l'indisponibilité base de données**
+**C7 — Résilience du site public face à l'indisponibilité base de données** — ✅ traité le 26 juillet 2026 :
+- Constat corrigé au passage : en relisant le code, `page.tsx` (accueil) et `[slug]/page.tsx` protégeaient déjà leurs requêtes principales par `.catch()` — le vrai trou restant était la recherche de médias dans `[slug]/page.tsx` (`prisma.mediaAsset.findMany` sans filet), maintenant corrigée.
+- `error.tsx` ajouté sur les segments `(marketing)` et `kwaliti-print` — filet de dernier recours, stylé à la charte de chaque marque (couleur d'accent héritée du thème `data-brand`), avec bouton « Réessayer » et lien de retour.
+- Accueil, pages CMS (`[slug]`), fiches service et accueil Kwaliti Print passés de `force-dynamic` à `revalidate = 60` (ISR) : une indisponibilité DB ponctuelle sert désormais la dernière version générée avec succès au lieu de planter. `contact` et `devis` restent `force-dynamic` (formulaires, pas de mise en cache pertinente).
+- Pour ne pas faire attendre les éditeurs jusqu'à 60 s après une publication : `revalidatePath` ciblé ajouté sur `transitionPageAction` (site-content) et `publishServiceAction`/`archiveServiceAction` (services) — les seules mutations qui changent réellement le rendu public, les autres actions ne touchant que des pages en brouillon (jamais rendues publiquement).
+- Vérifié en direct : accueil et Kwaliti Print rechargés dans le navigateur, aucune erreur console, rendu correct. `tsc`, `eslint`, suite complète (537 tests) verts.
+
+Prompt d'origine conservé ci-dessous pour mémoire — le périmètre réellement couvert (ISR ciblée + revalidation à la publication, pas une bascule générale) est plus précis que ce qui était esquissé.
 ```text
 Contexte : Toutes les pages publiques (accueil, [slug], services, contact, Kwaliti Print, devis) utilisent export const dynamic = "force-dynamic" et font un aller-retour Prisma à chaque requête, sans génération statique ni ISR. La capture home-check.png montre un échec réel de connexion PostgreSQL ("SASL: SCRAM-SERVER-FIRST-MESSAGE") faisant planter la page d'accueil publique.
 

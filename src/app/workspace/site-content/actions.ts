@@ -16,6 +16,19 @@ function text(formData: FormData, key: string): string {
   return String(formData.get(key) ?? "").trim();
 }
 
+// Public pages are ISR-cached (revalidate = 60 in the (marketing)/kwaliti-print
+// routes); revalidate the specific public URL on every content change so
+// editors see the result immediately instead of waiting out the window.
+// The public [slug] catch-all only serves pixel-digital; Kwaliti Print's
+// only CMS-driven public route today is its own home page.
+function revalidatePublicPage(worldKey: string, slug: string): void {
+  if (slug === "accueil") {
+    revalidatePath(worldKey === "kwaliti-print" ? "/kwaliti-print" : "/");
+    return;
+  }
+  if (worldKey === "pixel-digital") revalidatePath(`/${slug}`);
+}
+
 async function actorFor(worldKey: string, publish = false) {
   const context = await getWorkspaceRequestContext();
   const actor = context?.actor;
@@ -71,6 +84,8 @@ export async function createPageAction(
   try {
     await actorFor(worldKey);
     const now = new Date();
+    // A new page starts as DRAFT, so nothing public changes yet -- no
+    // revalidation needed here (see transitionPageAction for publish).
     await prisma.page.create({
       data: {
         id: randomUUID(),
@@ -139,6 +154,11 @@ export async function transitionPageAction(
       },
     });
     revalidatePath("/workspace/site-content");
+    // Sections can only be edited while a page is DRAFT (see saveSectionAction),
+    // so publish/archive here is the only moment the public rendering changes.
+    if (target === "PUBLISHED" || target === "ARCHIVED") {
+      revalidatePublicPage(page.worldKey, page.slug);
+    }
     return { status: "success", message: "Statut de la page mis à jour." };
   } catch (error) {
     return toActionState(error);
