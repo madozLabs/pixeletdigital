@@ -36,6 +36,7 @@ import {
   UpdatePageForm,
   UploadMediaForm,
 } from "./site-content-forms";
+import { MediaUrlField } from "./media-url-field";
 
 const TYPED_SECTION_TYPES = new Set([
   "HERO",
@@ -588,15 +589,10 @@ function MediaPanel({
                     <strong>{asset.title}</strong>
                     <details className="cms-gallery__details">
                       <summary>Détails</summary>
-                      <label className="cms-gallery__url-field">
-                        URL publique
-                        <input
-                          readOnly
-                          value={asset.publicUrl}
-                          onFocus={(event) => event.currentTarget.select()}
-                          aria-label={`URL de ${asset.title}`}
-                        />
-                      </label>
+                      <MediaUrlField
+                        title={asset.title}
+                        publicUrl={asset.publicUrl}
+                      />
                       <DeleteMediaForm mediaId={asset.id} />
                     </details>
                   </div>
