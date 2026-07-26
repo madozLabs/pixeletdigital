@@ -154,7 +154,7 @@ Recherche exhaustive : aucun type de section "témoignage" ou "étude de cas" n'
 | C5 | Compléter le pipeline Leads/Enquiries (qualification → conversion) | Critique | Produit/UX | ✅ traité 2026-07-25 |
 | C6 | Retour utilisateur explicite sur chaque mutation (fin des échecs silencieux) | Critique | UX | ✅ traité 2026-07-26 (8/8 pages) |
 | C7 | Résilience du site public face à l'indisponibilité base de données | Critique | Archi/Fiabilité | ✅ traité 2026-07-26 |
-| C8 | Réparer la navigation mobile Kwaliti Print (menu, ancre, retour marque mère) | Critique | UX public | Ouvert |
+| C8 | Réparer la navigation mobile Kwaliti Print (menu, ancre, retour marque mère) | Critique | UX public | ✅ traité 2026-07-26 |
 | I1 | Command Palette + recherche globale (Cmd+K) | Important | UX Workspace | Ouvert |
 | I2 | Dashboard personnalisé par rôle ("mon travail" plutôt que mur de métriques) | Important | UX Workspace | Ouvert |
 | I3 | Unifier les formulaires (un seul standard, confirmations sur actions sensibles) | Important | UX Workspace | Ouvert |
@@ -344,7 +344,17 @@ Contraintes :
 Résultat attendu : Une indisponibilité base de données dégrade gracieusement (page d'erreur de marque, pas un plantage runtime brut), et les pages à contenu stable ne dépendent plus d'un aller-retour DB à chaque requête.
 ```
 
-**C8 — Réparer la navigation mobile Kwaliti Print**
+**C8 — Réparer la navigation mobile Kwaliti Print** — ✅ traité le 26 juillet 2026, dernier item critique de l'audit :
+- `kwaliti-header.tsx` : ajout d'un menu mobile `<details>/<summary>` répliquant exactement le patron déjà en place et éprouvé sur `site-header.tsx` (Pixel&Digital), au lieu de simplement masquer les liens sans remplacement.
+- Le lien de retour vers Pixel&Digital, absent sur mobile, est maintenant dans ce menu — conforme à l'exigence `BRAND_ARCHITECTURE.md` §8 (repère permanent et réversible vers la marque mère).
+- Lien d'ancre mort corrigé : `#possibilites` → `#capacites-kp` (identifiant réel de la section, `kwaliti-print/page.tsx:116`), sur les deux occurrences (nav desktop et mobile).
+- CSS : `.kp-site-header__nav` entièrement masqué sous 720px (au lieu de ne masquer que les liens non-bouton, l'ancien comportement bogué), `.kp-site-header__mobile` affiché avec le même positionnement/style de tiroir que la version Pixel&Digital, recoloré aux tokens Kwaliti Print.
+- Vérifié en direct (viewport mobile 375px et desktop) : nav complète masquée et menu affiché en mobile, l'inverse en desktop, liens corrects (Possibilités, Pixel&Digital, Demander un devis) présents dans le tiroir avec le bon style une fois ouvert.
+- `tsc`, `eslint`, suite complète (537 tests) verts.
+
+**7 des 8 recommandations critiques de l'audit sont traitées. Seul C1 (traçabilité d'audit) reste ouvert.**
+
+Prompt d'origine conservé ci-dessous pour mémoire.
 ```text
 Contexte : src/app/kwaliti-print/_components/kwaliti-header.tsx (lignes 13-19) ne fournit aucun repli mobile — globals.css (règle @media max-width: 720px, lignes ~3258-3264) masque simplement les liens de navigation sans proposer de menu de remplacement, contrairement au header Pixel&Digital qui a un vrai menu <details>/<summary> (site-header.tsx:29-34). Confirmé par la capture mobile-kp.png : seuls le logo et le CTA "Demander un devis" restent visibles sur mobile, y compris le lien de retour vers Pixel&Digital. De plus, le lien "Possibilités" (kwaliti-header.tsx:14) pointe vers l'ancre #possibilites qui n'existe pas — la section réelle a l'id capacites-kp (kwaliti-print/page.tsx ligne 115).
 

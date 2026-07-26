@@ -3161,6 +3161,10 @@ a.world-switcher__item:focus-visible {
   text-decoration: none;
 }
 
+.kp-site-header__mobile {
+  display: none;
+}
+
 .kp-site-footer {
   padding: clamp(4rem, 8vw, 8rem) clamp(1.25rem, 4vw, 4rem) 2rem;
   background: #060606;
@@ -3259,11 +3263,52 @@ a.world-switcher__item:focus-visible {
     justify-content: flex-end;
   }
 
-  .kp-site-header__nav > a:not(.button) {
+  .kp-site-header__nav {
     display: none;
   }
 
-  .kp-site-header__nav .button {
+  .kp-site-header__mobile {
+    display: block;
+    position: relative;
+  }
+
+  .kp-site-header__mobile summary {
+    cursor: pointer;
+    list-style: none;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.75rem;
+    color: #151515;
+  }
+
+  .kp-site-header__mobile summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .kp-site-header__mobile nav {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 1rem);
+    width: min(19rem, calc(100vw - 2rem));
+    padding: 1rem;
+    background: #fff;
+    border: 1px solid rgb(0 0 0 / 12%);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    z-index: 20;
+  }
+
+  .kp-site-header__mobile nav a:not(.button) {
+    color: #151515;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .kp-site-header__mobile .button {
+    text-align: center;
     padding: 0.7em 1em;
     font-size: 0.85rem;
   }
