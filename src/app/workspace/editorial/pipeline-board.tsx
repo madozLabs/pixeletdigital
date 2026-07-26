@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { startTransition, useOptimistic } from "react";
+import { startTransition, useOptimistic, useState } from "react";
 import {
   DragDropContext,
   Draggable,
@@ -37,6 +37,7 @@ export function EditorialPipeline({
   canMutate,
 }: Readonly<{ items: readonly PipelineItem[]; canMutate: boolean }>) {
   const router = useRouter();
+  const [dragError, setDragError] = useState<string | null>(null);
   const [optimisticItems, setOptimisticStatus] = useOptimistic(
     items,
     (state, update: Readonly<{ id: string; status: string }>) =>
@@ -52,15 +53,22 @@ export function EditorialPipeline({
     const itemId = result.draggableId;
 
     startTransition(() => {
+      setDragError(null);
       setOptimisticStatus({ id: itemId, status: destination });
-      void moveEditorialItemAction(itemId, destination).then(() =>
-        router.refresh(),
-      );
+      void moveEditorialItemAction(itemId, destination).then((moveResult) => {
+        if (!moveResult.ok) setDragError(moveResult.message);
+        router.refresh();
+      });
     });
   }
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
+      {dragError ? (
+        <p className="admin-feedback admin-feedback--error" role="alert">
+          {dragError}
+        </p>
+      ) : null}
       <section className="task-board editorial-pipeline">
         {COLUMNS.map(([status, label]) => {
           const columnItems = optimisticItems.filter(

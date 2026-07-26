@@ -1,7 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { startTransition, useOptimistic } from "react";
+import {
+  startTransition,
+  useActionState,
+  useOptimistic,
+  useState,
+} from "react";
 import {
   DragDropContext,
   Draggable,
@@ -10,6 +15,11 @@ import {
 } from "@hello-pangea/dnd";
 
 import { Avatar } from "../_components/avatar";
+import {
+  Feedback,
+  IDLE_ACTION_STATE,
+  SubmitButton,
+} from "../_components/feedback";
 import { moveTaskAction, updateTaskAction } from "./actions";
 
 export type BoardTask = Readonly<{
@@ -46,6 +56,7 @@ export function TaskBoard({
   canMutate,
 }: Readonly<{ tasks: readonly BoardTask[]; canMutate: boolean }>) {
   const router = useRouter();
+  const [dragError, setDragError] = useState<string | null>(null);
   const [optimisticTasks, setOptimisticStatus] = useOptimistic(
     tasks,
     (state, update: Readonly<{ id: string; status: string }>) =>
@@ -62,15 +73,22 @@ export function TaskBoard({
     const taskId = result.draggableId;
 
     startTransition(() => {
+      setDragError(null);
       setOptimisticStatus({ id: taskId, status: destinationStatus });
-      void moveTaskAction(taskId, destinationStatus).then(() =>
-        router.refresh(),
-      );
+      void moveTaskAction(taskId, destinationStatus).then((moveResult) => {
+        if (!moveResult.ok) setDragError(moveResult.message);
+        router.refresh();
+      });
     });
   }
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
+      {dragError ? (
+        <p className="admin-feedback admin-feedback--error" role="alert">
+          {dragError}
+        </p>
+      ) : null}
       <section className="task-board">
         {COLUMNS.map(([status, label]) => {
           const columnTasks = optimisticTasks.filter(
@@ -154,43 +172,7 @@ export function TaskBoard({
                               </div>
                             </div>
                             {canMutate ? (
-                              <form
-                                action={updateTaskAction}
-                                className="task-card__controls"
-                              >
-                                <input
-                                  type="hidden"
-                                  name="taskId"
-                                  value={task.id}
-                                />
-                                <input
-                                  type="hidden"
-                                  name="status"
-                                  value={task.status}
-                                />
-                                <input
-                                  name="progress"
-                                  type="number"
-                                  min={0}
-                                  max={100}
-                                  defaultValue={task.progress}
-                                  aria-label="Progression"
-                                />
-                                <input
-                                  name="actualHours"
-                                  type="number"
-                                  min={0}
-                                  step="0.25"
-                                  defaultValue={task.actualHours}
-                                  aria-label="Temps réalisé en heures"
-                                />
-                                <button
-                                  className="admin-table__action"
-                                  type="submit"
-                                >
-                                  Enregistrer
-                                </button>
-                              </form>
+                              <TaskCardControls task={task} />
                             ) : null}
                           </article>
                         )}
@@ -205,5 +187,33 @@ export function TaskBoard({
         })}
       </section>
     </DragDropContext>
+  );
+}
+
+function TaskCardControls({ task }: Readonly<{ task: BoardTask }>) {
+  const [state, action] = useActionState(updateTaskAction, IDLE_ACTION_STATE);
+  return (
+    <form action={action} className="task-card__controls">
+      <input type="hidden" name="taskId" value={task.id} />
+      <input type="hidden" name="status" value={task.status} />
+      <input
+        name="progress"
+        type="number"
+        min={0}
+        max={100}
+        defaultValue={task.progress}
+        aria-label="Progression"
+      />
+      <input
+        name="actualHours"
+        type="number"
+        min={0}
+        step="0.25"
+        defaultValue={task.actualHours}
+        aria-label="Temps réalisé en heures"
+      />
+      <SubmitButton>Enregistrer</SubmitButton>
+      <Feedback state={state} />
+    </form>
   );
 }

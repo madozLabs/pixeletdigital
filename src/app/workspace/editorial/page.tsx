@@ -5,9 +5,9 @@ import { prisma } from "@/infrastructure/shared/prisma-client";
 import type { ApprovedRole } from "@/shared/request-context";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import {
-  advanceEditorialWorkflowAction,
-  createProfessionalEditorialItemAction,
-} from "./professional-actions";
+  CreateEditorialItemForm,
+  EditorialWorkflowForm,
+} from "./editorial-forms";
 import { EditorialPipeline, type PipelineItem } from "./pipeline-board";
 import {
   addDays,
@@ -213,45 +213,11 @@ export default async function WorkspaceEditorialPage({
                         {canMutate &&
                         item.status !== "PUBLISHED" &&
                         item.status !== "CANCELLED" ? (
-                          <form
-                            action={advanceEditorialWorkflowAction}
-                            className="editorial-card__workflow"
-                          >
-                            <input
-                              type="hidden"
-                              name="itemId"
-                              value={item.id}
-                            />
-                            <input
-                              type="hidden"
-                              name="expectedVersion"
-                              value={item.version}
-                            />
-                            <select name="status" defaultValue={item.status}>
-                              <option value="DRAFT">Brouillon</option>
-                              <option value="INTERNAL_REVIEW">
-                                Validation interne
-                              </option>
-                              <option value="CLIENT_REVIEW">
-                                Validation client
-                              </option>
-                              <option value="APPROVED">Approuvé</option>
-                              <option value="SCHEDULED">Programmé</option>
-                              <option value="PUBLISHED">Publié</option>
-                              <option value="CANCELLED">Annulé</option>
-                            </select>
-                            <input
-                              name="proofUrl"
-                              type="url"
-                              placeholder="Lien de publication"
-                            />
-                            <button
-                              type="submit"
-                              className="admin-table__action"
-                            >
-                              Mettre à jour
-                            </button>
-                          </form>
+                          <EditorialWorkflowForm
+                            itemId={item.id}
+                            version={item.version}
+                            status={item.status}
+                          />
                         ) : null}
                       </article>
                     ))
@@ -264,114 +230,22 @@ export default async function WorkspaceEditorialPage({
       ) : null}
 
       {canMutate ? (
-        <form
-          action={createProfessionalEditorialItemAction}
-          className="admin-form-card editorial-professional-form"
-        >
-          <input type="hidden" name="worldKey" value={worldKey} />
-          <h2 className="admin-content__subtitle">Planifier un contenu</h2>
-          <div className="admin-form-grid">
-            <label>
-              Client
-              <select name="clientId" defaultValue="">
-                <option value="">Sans client lié</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Projet
-              <select name="projectId" defaultValue="">
-                <option value="">Sans projet lié</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Responsable
-              <select name="ownerId" defaultValue="">
-                <option value="">Non affecté</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.displayName ?? user.normalizedEmail}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Validateur
-              <select name="reviewerId" defaultValue="">
-                <option value="">Non affecté</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.displayName ?? user.normalizedEmail}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Client libre
-              <input
-                name="clientLabel"
-                maxLength={120}
-                placeholder="Utilisé sans client lié"
-              />
-            </label>
-            <label>
-              Canal
-              <input
-                name="channel"
-                required
-                maxLength={60}
-                placeholder="Instagram, Facebook…"
-              />
-            </label>
-            <label>
-              Type
-              <select name="contentType" defaultValue="POST">
-                {Object.entries(CONTENT_LABEL).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Titre
-              <input name="title" required maxLength={160} />
-            </label>
-            <label>
-              Fin de production
-              <input name="productionDueAt" type="date" />
-            </label>
-            <label>
-              Publication
-              <input
-                name="scheduledFor"
-                type="date"
-                required
-                defaultValue={formatISODate(weekStart)}
-              />
-            </label>
-          </div>
-          <label>
-            Brief
-            <textarea name="brief" maxLength={2000} />
-          </label>
-          <label>
-            Notes
-            <textarea name="notes" maxLength={1000} />
-          </label>
-          <button type="submit" className="admin-table__action">
-            Créer le contenu
-          </button>
-        </form>
+        <CreateEditorialItemForm
+          worldKey={worldKey}
+          clients={clients.map((client) => ({
+            id: client.id,
+            label: client.name,
+          }))}
+          projects={projects.map((project) => ({
+            id: project.id,
+            label: project.name,
+          }))}
+          users={users.map((user) => ({
+            id: user.id,
+            label: user.displayName ?? user.normalizedEmail ?? "Collaborateur",
+          }))}
+          defaultScheduledFor={formatISODate(weekStart)}
+        />
       ) : null}
     </>
   );
