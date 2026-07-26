@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/infrastructure/shared/prisma-client";
+import { recordAuditEvent } from "@/modules/audit/infrastructure/record-audit-event";
 import type { ActionState } from "../_components/feedback";
 import { requireWorldAccess } from "../_lib/authorization";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
@@ -32,12 +33,14 @@ function revalidatePublicPage(worldKey: string, slug: string): void {
 async function actorFor(worldKey: string, publish = false) {
   const context = await getWorkspaceRequestContext();
   const actor = context?.actor;
-  if (!actor?.active || !actor.role) throw new Error("UNAUTHORIZED");
+  if (!context || !actor?.active || !actor.role) {
+    throw new Error("UNAUTHORIZED");
+  }
   requireWorldAccess(actor, worldKey);
   if (!(publish ? PUBLISH_ROLES : EDIT_ROLES).has(actor.role)) {
     throw new Error("FORBIDDEN_ROLE");
   }
-  return actor;
+  return { actor, context };
 }
 
 const ERROR_MESSAGE: Readonly<Record<string, string>> = {
@@ -140,10 +143,8 @@ export async function transitionPageAction(
     const page = await prisma.page.findUniqueOrThrow({ where: { id } });
     const target = text(formData, "target") as
       "DRAFT" | "IN_REVIEW" | "PUBLISHED" | "ARCHIVED";
-    await actorFor(
-      page.worldKey,
-      target === "PUBLISHED" || target === "ARCHIVED",
-    );
+    const isPublicChange = target === "PUBLISHED" || target === "ARCHIVED";
+    const { actor, context } = await actorFor(page.worldKey, isPublicChange);
     await prisma.page.update({
       where: { id, version: Number(formData.get("expectedVersion")) },
       data: {
@@ -156,8 +157,21 @@ export async function transitionPageAction(
     revalidatePath("/workspace/site-content");
     // Sections can only be edited while a page is DRAFT (see saveSectionAction),
     // so publish/archive here is the only moment the public rendering changes.
-    if (target === "PUBLISHED" || target === "ARCHIVED") {
+    if (isPublicChange) {
       revalidatePublicPage(page.worldKey, page.slug);
+      await recordAuditEvent(prisma, {
+        action:
+          target === "PUBLISHED"
+            ? "CONTENT_PAGE_PUBLISHED"
+            : "CONTENT_PAGE_ARCHIVED",
+        targetType: "PAGE",
+        targetId: page.id,
+        actorId: actor.id,
+        correlationId: context.correlationId,
+        originChannel: context.origin.channel,
+        worldKey: page.worldKey,
+        occurredAt: context.clock.now(),
+      });
     }
     return { status: "success", message: "Statut de la page mis à jour." };
   } catch (error) {

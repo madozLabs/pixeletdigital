@@ -11,6 +11,11 @@ import {
 } from "@/modules/content/application/service-use-cases";
 import { PrismaServiceRepository } from "@/modules/content/infrastructure/prisma-service-repository";
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
+import {
+  recordAuditEvent,
+  type RecordableAuditAction,
+} from "@/modules/audit/infrastructure/record-audit-event";
+import type { RequestContext } from "@/shared/request-context";
 
 import type { ActionState } from "../_components/feedback";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
@@ -45,6 +50,23 @@ function revalidatePublicService(worldKey: string, slug: string): void {
   revalidatePath(worldKey === "kwaliti-print" ? "/kwaliti-print" : "/");
 }
 
+function auditServiceTransition(
+  context: RequestContext,
+  action: RecordableAuditAction,
+  service: Readonly<{ id: string; worldKey: string }>,
+): Promise<void> {
+  return recordAuditEvent(prisma, {
+    action,
+    targetType: "SERVICE",
+    targetId: service.id,
+    actorId: context.actor?.id ?? "unknown",
+    correlationId: context.correlationId,
+    originChannel: context.origin.channel,
+    worldKey: service.worldKey,
+    occurredAt: context.clock.now(),
+  });
+}
+
 export async function submitForReviewAction(
   _state: ActionState,
   formData: FormData,
@@ -74,8 +96,16 @@ export async function publishServiceAction(
     context,
     transitionInput(formData),
   );
-  if (!result.ok) console.error("publishService failed", result.error);
-  else revalidatePublicService(result.value.worldKey, result.value.slug);
+  if (!result.ok) {
+    console.error("publishService failed", result.error);
+  } else {
+    revalidatePublicService(result.value.worldKey, result.value.slug);
+    await auditServiceTransition(
+      context,
+      "CONTENT_SERVICE_PUBLISHED",
+      result.value,
+    );
+  }
   revalidatePath("/workspace/services");
   return toActionState(result, "Service publié.");
 }
@@ -109,8 +139,16 @@ export async function archiveServiceAction(
     context,
     transitionInput(formData),
   );
-  if (!result.ok) console.error("archiveService failed", result.error);
-  else revalidatePublicService(result.value.worldKey, result.value.slug);
+  if (!result.ok) {
+    console.error("archiveService failed", result.error);
+  } else {
+    revalidatePublicService(result.value.worldKey, result.value.slug);
+    await auditServiceTransition(
+      context,
+      "CONTENT_SERVICE_ARCHIVED",
+      result.value,
+    );
+  }
   revalidatePath("/workspace/services");
   return toActionState(result, "Service archivé.");
 }

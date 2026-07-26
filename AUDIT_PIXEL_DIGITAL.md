@@ -147,7 +147,7 @@ Recherche exhaustive : aucun type de section "témoignage" ou "étude de cas" n'
 
 | # | Recommandation | Priorité | Domaine | Statut |
 |---|---|---|---|---|
-| C1 | Combler le trou de traçabilité d'audit (publication, facturation, accès) | Critique | Sécurité/Archi | Ouvert |
+| C1 | Combler le trou de traçabilité d'audit (publication, facturation, accès) | Critique | Sécurité/Archi | ✅ traité 2026-07-26 (contenu + facturation) |
 | C2 | Trancher la dérive de périmètre architecturale (Organisation/Projets/Tâches/Facturation) | Critique | Archi/Gouvernance | ✅ décision documentée (ODR-025), tranche propriétaire en attente |
 | C3 | Corriger le bug d'encodage UTF-8 (mojibake FR) | Critique | Qualité/Brand | ✅ traité 2026-07-25 |
 | C4 | Introduire la pagination bornée sur toutes les listes | Critique | Archi/Perf | ✅ traité 2026-07-25 (listes principales) |
@@ -180,7 +180,14 @@ Chaque prompt est rédigé pour être collé tel quel. Il respecte le format att
 
 ### Priorité Critique
 
-**C1 — Combler le trou de traçabilité d'audit**
+**C1 — Combler le trou de traçabilité d'audit** — ✅ traité le 26 juillet 2026, périmètre resserré et justifié par rapport au prompt d'origine :
+- Migration `20260726090000_extend_audit_actions` : extension des enums `AuditAction` (+ `CONTENT_PAGE_PUBLISHED/ARCHIVED`, `CONTENT_SERVICE_PUBLISHED/ARCHIVED`, `BILLING_INVOICE_ISSUED/CANCELLED`, `BILLING_PAYMENT_RECORDED`) et `AuditTargetType` (+ `PAGE`, `SERVICE`, `INVOICE`) — appliquée et vérifiée sur une base réelle, rejouée avec succès par la suite d'intégration officielle (17 fichiers / 89 tests, +1 fichier/+3 tests pour l'audit lui-même).
+- Nouveau `src/modules/audit/infrastructure/record-audit-event.ts` : écriture **best-effort**, pas transactionnelle — un échec de journalisation ne bloque jamais la mutation métier elle-même. C'est un choix délibéré et documenté dans le code : le module `access` audite déjà ses actions de façon atomique (même transaction Prisma que la mutation, isolation Serializable, échec strict) parce que `DOMAIN_BOUNDARIES.md` §3 exige un échec strict pour les actions de sécurité/accès ; les actions de contenu et de facturation sont classées « risque plus faible » par ce même document, qui prescrit explicitement une alerte opérationnelle plutôt qu'un blocage. Je n'ai donc pas répliqué le patron transactionnel lourd de `access` ailleurs — un choix technique, pas un raccourci.
+- Instrumenté : `transitionPageAction` (site-content, publication/archivage — le seul moment où le rendu public change, cf. C7), `publishServiceAction`/`archiveServiceAction` (services), `convertQuoteToInvoiceAction`/`cancelInvoiceAction`/`recordPaymentAction` (billing).
+- Vérifié : `tsc`, `eslint` propres, suite complète (537 tests) verte, suite d'intégration officielle verte avec la nouvelle migration rejouée depuis zéro.
+- **Non fait dans ce lot**, périmètre volontairement laissé pour un futur prompt : changements de droits média (aucune notion de droits média n'existe encore dans le code), exports commerciaux (fonctionnalité elle-même absente), actions destructrices hors billing/contenu (ex. suppression de section, révocation de rôle — cette dernière est déjà auditée via le mécanisme `access` existant). L'assignation/statut d'un lead a son propre journal dédié et déjà complet (`LeadActivity`, ajouté en C5) — je ne l'ai pas dupliqué dans `AuditEvent`, les deux mécanismes répondent au même besoin pour des périmètres différents (activité commerciale détaillée vs. trace de sécurité globale).
+
+Prompt d'origine conservé ci-dessous pour mémoire — le périmètre réellement couvert (best-effort documenté, pas de transaction atomique généralisée) diffère de ce qui était esquissé.
 ```text
 Contexte : SECURITY_AND_PERMISSIONS.md §7 exige un audit trail pour la publication/archivage de contenu, les changements de facturation et les actions destructrices. En réalité, src/modules/audit/application/audit-event.ts ne modélise que les 5 actions d'accès (voir AccessAuditAction) et seul src/app/workspace/access/actions.ts écrit des événements d'audit. Aucune des mutations dans site-content/actions.ts (publication/archivage/suppression de page), services/actions.ts (publication/archivage), billing/actions.ts (émission/annulation de facture, paiement) ou clients/actions.ts n'écrit de trace.
 

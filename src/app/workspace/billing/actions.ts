@@ -24,6 +24,11 @@ import { PrismaPaymentRepository } from "@/modules/billing/infrastructure/prisma
 import { PrismaQuoteRepository } from "@/modules/billing/infrastructure/prisma-quote-repository";
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
 import { prisma } from "@/infrastructure/shared/prisma-client";
+import {
+  recordAuditEvent,
+  type RecordableAuditAction,
+} from "@/modules/audit/infrastructure/record-audit-event";
+import type { RequestContext } from "@/shared/request-context";
 
 import type { ActionState } from "../_components/feedback";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
@@ -46,6 +51,23 @@ function toActionState(
 ): ActionState {
   if (result.ok) return { status: "success", message: successMessage };
   return { status: "error", message: result.error.message };
+}
+
+function auditInvoiceEvent(
+  context: RequestContext,
+  action: RecordableAuditAction,
+  invoice: Readonly<{ id: string; worldKey: string }>,
+): Promise<void> {
+  return recordAuditEvent(prisma, {
+    action,
+    targetType: "INVOICE",
+    targetId: invoice.id,
+    actorId: context.actor?.id ?? "unknown",
+    correlationId: context.correlationId,
+    originChannel: context.origin.channel,
+    worldKey: invoice.worldKey,
+    occurredAt: context.clock.now(),
+  });
 }
 
 export async function createCatalogueItemAction(
@@ -187,7 +209,11 @@ export async function convertQuoteToInvoiceAction(
       invoiceId: randomUUID(),
     },
   );
-  if (!result.ok) console.error("convertQuoteToInvoice failed", result.error);
+  if (!result.ok) {
+    console.error("convertQuoteToInvoice failed", result.error);
+  } else {
+    await auditInvoiceEvent(context, "BILLING_INVOICE_ISSUED", result.value);
+  }
   revalidatePath("/workspace/billing");
   return toActionState(result, "Devis converti en facture.");
 }
@@ -227,7 +253,11 @@ export async function cancelInvoiceAction(
       expectedVersion: Number(formData.get("expectedVersion")),
     },
   );
-  if (!result.ok) console.error("cancelInvoice failed", result.error);
+  if (!result.ok) {
+    console.error("cancelInvoice failed", result.error);
+  } else {
+    await auditInvoiceEvent(context, "BILLING_INVOICE_CANCELLED", result.value);
+  }
   revalidatePath("/workspace/billing");
   return toActionState(result, "Facture annulée.");
 }
@@ -254,7 +284,20 @@ export async function recordPaymentAction(
       reference: String(formData.get("reference") ?? "").trim() || null,
     },
   );
-  if (!result.ok) console.error("recordInvoicePayment failed", result.error);
+  if (!result.ok) {
+    console.error("recordInvoicePayment failed", result.error);
+  } else {
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: result.value.invoiceId },
+      select: { worldKey: true },
+    });
+    if (invoice) {
+      await auditInvoiceEvent(context, "BILLING_PAYMENT_RECORDED", {
+        id: result.value.invoiceId,
+        worldKey: invoice.worldKey,
+      });
+    }
+  }
   revalidatePath("/workspace/billing");
   revalidatePath("/workspace");
   return toActionState(result, "Paiement enregistré.");
