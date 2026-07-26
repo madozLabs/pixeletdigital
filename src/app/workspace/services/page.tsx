@@ -11,12 +11,7 @@ import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-wo
 
 import { LifecycleBadge } from "../_components/status-badge";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
-import {
-  archiveServiceAction,
-  publishServiceAction,
-  rejectServiceAction,
-  submitForReviewAction,
-} from "./actions";
+import { ServiceLifecycleActions } from "./service-forms";
 
 const WORLDS = [
   { key: "pixel-digital", label: "Pixel&Digital" },
@@ -175,83 +170,11 @@ export default async function WorkspaceServicesPage({
                         </span>
                       </td>
                       <td className="admin-table__actions">
-                        {service.lifecycle === "DRAFT" && (
-                          <form action={submitForReviewAction}>
-                            <input type="hidden" name="id" value={service.id} />
-                            <input
-                              type="hidden"
-                              name="expectedVersion"
-                              value={service.version}
-                            />
-                            <button
-                              type="submit"
-                              className="admin-table__action"
-                            >
-                              Soumettre pour revue
-                            </button>
-                          </form>
-                        )}
-                        {service.lifecycle === "IN_REVIEW" && (
-                          <>
-                            <form action={publishServiceAction}>
-                              <input
-                                type="hidden"
-                                name="id"
-                                value={service.id}
-                              />
-                              <input
-                                type="hidden"
-                                name="expectedVersion"
-                                value={service.version}
-                              />
-                              <button
-                                type="submit"
-                                className="admin-table__action"
-                              >
-                                Publier
-                              </button>
-                            </form>
-                            <form action={rejectServiceAction}>
-                              <input
-                                type="hidden"
-                                name="id"
-                                value={service.id}
-                              />
-                              <input
-                                type="hidden"
-                                name="expectedVersion"
-                                value={service.version}
-                              />
-                              <button
-                                type="submit"
-                                className="admin-table__action"
-                              >
-                                Renvoyer en brouillon
-                              </button>
-                            </form>
-                          </>
-                        )}
-                        {service.lifecycle === "PUBLISHED" && (
-                          <form action={archiveServiceAction}>
-                            <input type="hidden" name="id" value={service.id} />
-                            <input
-                              type="hidden"
-                              name="expectedVersion"
-                              value={service.version}
-                            />
-                            <button
-                              type="submit"
-                              className="admin-table__action"
-                            >
-                              Archiver
-                            </button>
-                          </form>
-                        )}
-                        {service.lifecycle === "ARCHIVED" && (
-                          <span className="admin-table__note">
-                            Aucune action
-                          </span>
-                        )}
+                        <ServiceLifecycleActions
+                          serviceId={service.id}
+                          version={service.version}
+                          lifecycle={service.lifecycle}
+                        />
                       </td>
                     </tr>
                   ))}

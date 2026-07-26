@@ -18,26 +18,15 @@ import { LifecycleBadge } from "../_components/status-badge";
 import { Pagination } from "../_components/pagination";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import {
-  createPageAction,
-  deleteMediaAction,
-  deleteSectionAction,
-  saveSectionAction,
-  saveSectionFieldsAction,
-  transitionPageAction,
-  updatePageAction,
-  uploadMediaAction,
-} from "./actions";
-
-const SECTION_TYPES = [
-  "HERO",
-  "TEXT",
-  "MEDIA",
-  "GALLERY",
-  "STATS",
-  "TESTIMONIALS",
-  "CTA",
-  "PORTFOLIO",
-];
+  CreatePageForm,
+  DeleteMediaForm,
+  DeleteSectionForm,
+  PageTransitionForm,
+  SectionFieldsForm,
+  SectionJsonForm,
+  UpdatePageForm,
+  UploadMediaForm,
+} from "./site-content-forms";
 
 const TYPED_SECTION_TYPES = new Set(["HERO", "TEXT", "MEDIA", "CTA"]);
 
@@ -395,35 +384,7 @@ function PagesPanel({
 }) {
   return (
     <div className="cms-layout">
-      <form
-        action={createPageAction}
-        className="admin-form-card cms-create-card"
-      >
-        <h2>Nouvelle page</h2>
-        <input type="hidden" name="worldKey" value={worldKey} />
-        <label>
-          Titre
-          <input name="title" required maxLength={160} />
-        </label>
-        <label>
-          Slug
-          <input name="slug" required placeholder="notre-agence" />
-        </label>
-        <label>
-          Type
-          <select name="pageType">
-            <option>LANDING</option>
-            <option>STANDARD</option>
-            <option>PORTFOLIO</option>
-          </select>
-        </label>
-        <button className="admin-table__action" type="submit">
-          Créer la page
-        </button>
-        <p className="section__note">
-          Le slug « accueil » pilote le hero du site public de l’univers.
-        </p>
-      </form>
+      <CreatePageForm worldKey={worldKey} />
       <section className="cms-list-panel">
         <h2>Pages de l’univers</h2>
         {pages.length === 0 ? (
@@ -485,26 +446,13 @@ function PageEditor({
         </Link>
         <LifecycleBadge lifecycle={page.lifecycle} />
       </div>
-      <form action={updatePageAction} className="admin-form-card">
-        <input type="hidden" name="id" value={page.id} />
-        <input type="hidden" name="expectedVersion" value={page.version} />
-        <div className="admin-form-grid">
-          <label>
-            Titre
-            <input name="title" defaultValue={page.title} required />
-          </label>
-          <label>
-            Slug
-            <input name="slug" defaultValue={page.slug} required />
-          </label>
-        </div>
-        <button
-          className="admin-table__action"
-          disabled={page.lifecycle !== "DRAFT"}
-        >
-          Enregistrer
-        </button>
-      </form>
+      <UpdatePageForm
+        id={page.id}
+        version={page.version}
+        title={page.title}
+        slug={page.slug}
+        editable={page.lifecycle === "DRAFT"}
+      />
       <PageWorkflow page={page} />
       <h2>Sections</h2>
       <div className="cms-sections">
@@ -546,137 +494,37 @@ function SectionEditor({
         <h3>
           {section.sectionType} · position {section.order}
         </h3>
-        {!disabled ? (
-          <form action={deleteSectionAction}>
-            <input type="hidden" name="id" value={section.id} />
-            <button className="admin-table__action" type="submit">
-              Supprimer
-            </button>
-          </form>
-        ) : null}
+        {!disabled ? <DeleteSectionForm sectionId={section.id} /> : null}
       </header>
 
       {typed ? (
-        <form action={saveSectionFieldsAction}>
-          <input type="hidden" name="id" value={section.id} />
-          <input type="hidden" name="pageId" value={page.id} />
-          <input type="hidden" name="sectionType" value={section.sectionType} />
-          <div className="admin-form-grid">
-            <label>
-              Ordre
-              <input
-                type="number"
-                name="order"
-                min="0"
-                defaultValue={section.order}
-              />
-            </label>
-            <label>
-              Sur-titre
-              <input name="eyebrow" defaultValue={value("eyebrow")} />
-            </label>
-          </div>
-          <label>
-            Titre{" "}
-            {section.sectionType === "HERO"
-              ? "(une ligne par retour à la ligne)"
-              : ""}
-            <textarea name="title" rows={3} defaultValue={value("title")} />
-          </label>
-          <label>
-            Texte
-            <textarea name="text" rows={3} defaultValue={value("text")} />
-          </label>
-          <div className="admin-form-grid">
-            <label>
-              Libellé du bouton
-              <input name="label" defaultValue={value("label")} />
-            </label>
-            <label>
-              Lien du bouton
-              <input name="href" defaultValue={value("href")} />
-            </label>
-          </div>
-          <span className="cms-picker-label">Image</span>
-          {images.length === 0 ? (
-            <p className="admin-empty">
-              Aucun média disponible.{" "}
-              <Link
-                href={`/workspace/site-content?world=${page.worldKey}&tab=media`}
-              >
-                Ajoutez-en un dans la médiathèque
-              </Link>
-              , il apparaîtra ici.
-            </p>
-          ) : (
-            <div className="cms-image-picker" role="radiogroup">
-              <label className="cms-image-picker__tile cms-image-picker__tile--empty">
-                <input
-                  type="radio"
-                  name="mediaId"
-                  value=""
-                  defaultChecked={value("mediaId") === ""}
-                  disabled={disabled}
-                />
-                <span>Aucune image</span>
-              </label>
-              {images.map((asset) => (
-                <label className="cms-image-picker__tile" key={asset.id}>
-                  <input
-                    type="radio"
-                    name="mediaId"
-                    value={asset.id}
-                    defaultChecked={value("mediaId") === asset.id}
-                    disabled={disabled}
-                  />
-                  <img src={asset.publicUrl} alt={asset.altText} />
-                  <span>{asset.title}</span>
-                </label>
-              ))}
-            </div>
-          )}
-          <button className="admin-table__action" disabled={disabled}>
-            Mettre à jour
-          </button>
-        </form>
+        <SectionFieldsForm
+          sectionId={section.id}
+          pageId={page.id}
+          sectionType={section.sectionType}
+          order={section.order}
+          eyebrow={value("eyebrow")}
+          title={value("title")}
+          text={value("text")}
+          label={value("label")}
+          href={value("href")}
+          mediaId={value("mediaId")}
+          images={images}
+          worldKey={page.worldKey}
+          editable={!disabled}
+        />
       ) : null}
 
       <details className="admin-user-card__details">
         <summary>{typed ? "Mode avancé (JSON)" : "Contenu (JSON)"}</summary>
-        <form action={saveSectionAction}>
-          <input type="hidden" name="id" value={section.id} />
-          <input type="hidden" name="pageId" value={page.id} />
-          <div className="admin-form-grid">
-            <label>
-              Type
-              <select name="sectionType" defaultValue={section.sectionType}>
-                {SECTION_TYPES.map((type) => (
-                  <option key={type}>{type}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Ordre
-              <input
-                type="number"
-                name="order"
-                min="0"
-                defaultValue={section.order}
-              />
-            </label>
-          </div>
-          <label>
-            Contenu JSON
-            <textarea
-              name="payload"
-              rows={8}
-              defaultValue={JSON.stringify(section.payload, null, 2)}
-            />
-          </label>
-          <button className="admin-table__action" disabled={disabled}>
-            Mettre à jour le JSON
-          </button>
-        </form>
+        <SectionJsonForm
+          sectionId={section.id}
+          pageId={page.id}
+          sectionType={section.sectionType}
+          order={section.order}
+          payload={JSON.stringify(section.payload, null, 2)}
+          editable={!disabled}
+        />
       </details>
     </div>
   );
@@ -684,40 +532,12 @@ function SectionEditor({
 
 function NewSectionForm({ pageId, order }: { pageId: string; order: number }) {
   return (
-    <form
-      action={saveSectionAction}
-      className="admin-form-card cms-section-card cms-section-card--new"
-    >
-      <h3>Ajouter une section</h3>
-      <input type="hidden" name="pageId" value={pageId} />
-      <div className="admin-form-grid">
-        <label>
-          Type
-          <select name="sectionType">
-            {SECTION_TYPES.map((type) => (
-              <option key={type}>{type}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Ordre
-          <input type="number" name="order" min="0" defaultValue={order} />
-        </label>
-      </div>
-      <label>
-        Contenu JSON
-        <textarea
-          name="payload"
-          rows={8}
-          defaultValue={
-            '{\n  "eyebrow": "",\n  "title": "",\n  "text": "",\n  "label": "",\n  "href": "",\n  "mediaId": ""\n}'
-          }
-        />
-      </label>
-      <button className="admin-table__action" type="submit">
-        Ajouter
-      </button>
-    </form>
+    <SectionJsonForm
+      pageId={pageId}
+      order={order}
+      payload='{\n  "eyebrow": "",\n  "title": "",\n  "text": "",\n  "label": "",\n  "href": "",\n  "mediaId": ""\n}'
+      editable
+    />
   );
 }
 function PageWorkflow({ page }: { page: EditablePage }) {
@@ -735,12 +555,13 @@ function PageWorkflow({ page }: { page: EditablePage }) {
   return (
     <div className="cms-workflow">
       {transitions.map(([target, label]) => (
-        <form action={transitionPageAction} key={target}>
-          <input type="hidden" name="id" value={page.id} />
-          <input type="hidden" name="expectedVersion" value={page.version} />
-          <input type="hidden" name="target" value={target} />
-          <button className="admin-table__action">{label}</button>
-        </form>
+        <PageTransitionForm
+          key={target}
+          id={page.id}
+          version={page.version}
+          target={target}
+          label={label}
+        />
       ))}
     </div>
   );
@@ -757,42 +578,7 @@ function MediaPanel({
 }) {
   return (
     <div className="cms-layout">
-      <form
-        action={uploadMediaAction}
-        className="admin-form-card cms-create-card"
-      >
-        <h2>Ajouter un média</h2>
-        <input type="hidden" name="worldKey" value={worldKey} />
-        <label>
-          Fichier
-          <input
-            type="file"
-            name="file"
-            accept="image/*,video/*,application/pdf"
-            required
-          />
-        </label>
-        <label>
-          Titre
-          <input name="title" />
-        </label>
-        <label>
-          Texte alternatif
-          <input name="altText" required />
-        </label>
-        <label>
-          Tags
-          <input name="tags" placeholder="équipe, campagne, print" />
-        </label>
-        <button className="admin-table__action" type="submit">
-          Envoyer vers la médiathèque
-        </button>
-        <p className="section__note">
-          Une fois envoyée, l’image apparaît ci-contre et devient sélectionnable
-          dans le champ « Image » de n’importe quelle section (Pages → Éditer →
-          section HERO/MEDIA/CTA).
-        </p>
-      </form>
+      <UploadMediaForm worldKey={worldKey} />
       <section className="cms-list-panel">
         <h2>Médiathèque</h2>
         {media.length === 0 ? (
@@ -833,12 +619,7 @@ function MediaPanel({
                           aria-label={`URL de ${asset.title}`}
                         />
                       </label>
-                      <form action={deleteMediaAction}>
-                        <input type="hidden" name="id" value={asset.id} />
-                        <button className="admin-table__action">
-                          Supprimer
-                        </button>
-                      </form>
+                      <DeleteMediaForm mediaId={asset.id} />
                     </details>
                   </div>
                 </article>
