@@ -17,7 +17,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           lifecycle: "PUBLISHED",
           worldKey: { in: ["pixel-digital", "kwaliti-print"] },
         },
-        select: { worldKey: true, slug: true, updatedAt: true },
+        select: {
+          worldKey: true,
+          slug: true,
+          routePath: true,
+          updatedAt: true,
+        },
       })
       .catch(() => []),
     listPublishedServices(
@@ -49,13 +54,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
   const cmsEntries = pages.flatMap((page) => {
     const path =
-      page.worldKey === "pixel-digital"
+      page.routePath ??
+      (page.worldKey === "pixel-digital"
         ? page.slug === "accueil"
           ? "/"
           : `/${page.slug}`
         : page.slug === "accueil"
           ? "/kwaliti-print"
-          : null;
+          : `/kwaliti-print/${page.slug}`);
     return path
       ? [
           {

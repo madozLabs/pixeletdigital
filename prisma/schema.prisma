@@ -41,6 +41,7 @@ enum AuditAction {
   ACCESS_ROLE_REVOKED
   CONTENT_PAGE_PUBLISHED
   CONTENT_PAGE_ARCHIVED
+  CONTENT_SITE_IDENTITY_PUBLISHED
   CONTENT_SERVICE_PUBLISHED
   CONTENT_SERVICE_ARCHIVED
   BILLING_INVOICE_ISSUED
@@ -52,6 +53,7 @@ enum AuditTargetType {
   USER
   ROLE_ASSIGNMENT
   PAGE
+  SITE_SETTINGS
   SERVICE
   INVOICE
 }
@@ -270,6 +272,7 @@ model World {
   quotes          Quote[]
   invoices        Invoice[]
   mediaAssets     MediaAsset[]
+  siteSettings    SiteSettings?
   leads           Lead[]
 
   @@map("worlds")
@@ -563,12 +566,66 @@ model MediaAsset {
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
-  usages SectionMediaUsage[]
+  usages             SectionMediaUsage[]
+  siteIdentityUsages SiteIdentityMediaUsage[]
 
   @@unique([bucket, objectPath])
   @@index([worldKey, createdAt])
   @@index([worldKey, mimeType])
   @@map("media_assets")
+}
+
+model SiteSettings {
+  id                  String                 @id
+  worldKey            String                 @unique
+  world               World                  @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  draftRevisionId     String?                @unique
+  publishedRevisionId String?                @unique
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  revisions           SiteSettingsRevision[] @relation("SiteSettingsRevisions")
+  draftRevision       SiteSettingsRevision?  @relation("SiteSettingsDraftRevision", fields: [draftRevisionId], references: [id], onDelete: SetNull)
+  publishedRevision   SiteSettingsRevision?  @relation("SiteSettingsPublishedRevision", fields: [publishedRevisionId], references: [id], onDelete: SetNull)
+
+  @@map("site_settings")
+}
+
+model SiteSettingsRevision {
+  id             String                   @id
+  settingsId     String
+  settings       SiteSettings             @relation("SiteSettingsRevisions", fields: [settingsId], references: [id], onDelete: Restrict)
+  revisionNumber Int
+  status         PageRevisionStatus
+  config         Json
+  version        Int                      @default(1)
+  createdById    String?
+  reviewedById   String?
+  publishedById  String?
+  reviewedAt     DateTime?
+  publishedAt    DateTime?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  draftFor       SiteSettings[]           @relation("SiteSettingsDraftRevision")
+  publishedFor   SiteSettings[]           @relation("SiteSettingsPublishedRevision")
+  mediaUsages    SiteIdentityMediaUsage[]
+
+  @@unique([settingsId, revisionNumber])
+  @@index([settingsId, status])
+  @@map("site_settings_revisions")
+}
+
+model SiteIdentityMediaUsage {
+  id         String               @id @default(cuid())
+  revisionId String
+  revision   SiteSettingsRevision @relation(fields: [revisionId], references: [id], onDelete: Restrict)
+  mediaId    String
+  media      MediaAsset           @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  slot       String
+  createdAt  DateTime             @default(now())
+
+  @@unique([revisionId, slot])
+  @@index([mediaId])
+  @@map("site_identity_media_usages")
 }
 
 model Service {

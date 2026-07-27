@@ -144,6 +144,10 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.pixel-digital-scope {
+  font-family: var(--font-body, var(--font-display));
+}
+
 h1,
 h2,
 h3,

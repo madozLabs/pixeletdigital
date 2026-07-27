@@ -1,29 +1,78 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
-import { isEvidenceSectionType } from "@/modules/content/domain/evidence-section";
-import { EvidenceSection } from "../_components/evidence-section";
+import { getWorkspaceRequestContext } from "@/app/workspace/get-workspace-context";
+import { actorHasWorldAccess } from "@/app/workspace/_lib/authorization";
+import { CmsPreviewBridge } from "@/app/_components/cms-preview-bridge";
+import { CmsSection, stringValue } from "../_components/cms-section";
 
 // See (marketing)/page.tsx for why this is ISR rather than force-dynamic.
 export const revalidate = 60;
 
-type Props = Readonly<{ params: Promise<{ slug: string }> }>;
+type Props = Readonly<{
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{
+    preview?: string;
+    world?: string;
+    visualEditor?: string;
+  }>;
+}>;
 
-async function loadPage(slug: string) {
+async function loadPage(
+  worldKey: "pixel-digital" | "kwaliti-print",
+  slug: string,
+  previewRevisionId?: string,
+) {
+  if (previewRevisionId) {
+    const context = await getWorkspaceRequestContext();
+    if (!context?.actor || !actorHasWorldAccess(context.actor, worldKey)) {
+      return null;
+    }
+    return prisma.page
+      .findFirst({
+        where: {
+          worldKey,
+          slug,
+          draftRevisionId: previewRevisionId,
+        },
+        include: {
+          sections: { orderBy: { order: "asc" } },
+          draftRevision: {
+            include: { sections: { orderBy: { order: "asc" } } },
+          },
+          publishedRevision: {
+            include: { sections: { orderBy: { order: "asc" } } },
+          },
+        },
+      })
+      .catch(() => null);
+  }
   return prisma.page
     .findFirst({
-      where: { worldKey: "pixel-digital", slug, lifecycle: "PUBLISHED" },
-      include: { sections: { orderBy: { order: "asc" } } },
+      where: { worldKey, slug, lifecycle: "PUBLISHED" },
+      include: {
+        sections: { orderBy: { order: "asc" } },
+        draftRevision: {
+          include: { sections: { orderBy: { order: "asc" } } },
+        },
+        publishedRevision: {
+          include: { sections: { orderBy: { order: "asc" } } },
+        },
+      },
     })
     .catch(() => null);
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: Props): Promise<Metadata> {
   const { slug } = await params;
-  const page = await loadPage(slug);
+  const { preview, world } = await searchParams;
+  const worldKey =
+    world === "kwaliti-print" ? "kwaliti-print" : "pixel-digital";
+  const page = await loadPage(worldKey, slug, preview);
   if (!page) {
     return {
       title: "Page",
@@ -31,8 +80,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       robots: { index: false, follow: false },
     };
   }
+  const sections = preview
+    ? (page.draftRevision?.sections ?? page.sections)
+    : (page.publishedRevision?.sections ?? page.sections);
   const description =
-    page.sections
+    sections
       .map((section) =>
         stringValue(section.payload as Record<string, unknown>, "text"),
       )
@@ -40,26 +92,46 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: page.title,
     description,
-    alternates: { canonical: `/${slug}` },
+    alternates: {
+      canonical:
+        worldKey === "kwaliti-print" ? `/kwaliti-print/${slug}` : `/${slug}`,
+    },
     openGraph: {
       title: page.title,
       description,
-      url: `/${slug}`,
+      url: worldKey === "kwaliti-print" ? `/kwaliti-print/${slug}` : `/${slug}`,
       type: "website",
     },
+    robots: preview ? { index: false, follow: false } : undefined,
   };
 }
 
-export default async function CmsPublicPage({ params }: Props) {
+export default async function CmsPublicPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const { preview, world, visualEditor } = await searchParams;
+  const worldKey =
+    world === "kwaliti-print" ? "kwaliti-print" : "pixel-digital";
   // The "accueil" page feeds the real home hero; avoid a duplicate route.
-  if (slug === "accueil") redirect("/");
-  const page = await loadPage(slug);
+  if (slug === "accueil" && !preview) {
+    redirect(worldKey === "kwaliti-print" ? "/kwaliti-print" : "/");
+  }
+  const page = await loadPage(worldKey, slug, preview);
   if (!page) notFound();
 
-  const mediaIds = page.sections.flatMap((section) => {
+  const sections = preview
+    ? (page.draftRevision?.sections ?? page.sections)
+    : (page.publishedRevision?.sections ?? page.sections);
+  const mediaIds = sections.flatMap((section) => {
     const payload = section.payload as Record<string, unknown>;
-    return typeof payload.mediaId === "string" ? [payload.mediaId] : [];
+    return [
+      ...(typeof payload.mediaId === "string" ? [payload.mediaId] : []),
+      ...(typeof payload.backgroundMediaId === "string"
+        ? [payload.backgroundMediaId]
+        : []),
+      ...(Array.isArray(payload.mediaIds)
+        ? payload.mediaIds.filter((id): id is string => typeof id === "string")
+        : []),
+    ];
   });
   const media = mediaIds.length
     ? await prisma.mediaAsset
@@ -67,111 +139,35 @@ export default async function CmsPublicPage({ params }: Props) {
         .catch(() => [])
     : [];
   const mediaById = new Map(media.map((asset) => [asset.id, asset]));
+  const services = sections.some(
+    (section) => section.sectionType === "SERVICE_INDEX",
+  )
+    ? await prisma.service.findMany({
+        where: { worldKey: page.worldKey, lifecycle: "PUBLISHED" },
+        orderBy: { name: "asc" },
+      })
+    : [];
 
   return (
     <main id="main-content" className="cms-public-page">
-      {page.sections.map((section) => (
+      {visualEditor === "1" ? <CmsPreviewBridge /> : null}
+      {preview ? (
+        <aside className="cms-preview-banner">
+          Aperçu privé · aucune modification n’est encore publique
+        </aside>
+      ) : null}
+      {sections.map((section) => (
         <CmsSection
           key={section.id}
+          sectionId={section.id}
           type={section.sectionType}
           payload={section.payload as Record<string, unknown>}
           mediaById={mediaById}
+          services={services}
+          worldKey={worldKey}
+          editing={visualEditor === "1"}
         />
       ))}
     </main>
-  );
-}
-type MediaRecord = Awaited<
-  ReturnType<typeof prisma.mediaAsset.findMany>
->[number];
-
-function stringValue(payload: Record<string, unknown>, key: string): string {
-  return typeof payload[key] === "string" ? payload[key] : "";
-}
-
-function CmsSection({
-  type,
-  payload,
-  mediaById,
-}: {
-  type: string;
-  payload: Record<string, unknown>;
-  mediaById: Map<string, MediaRecord>;
-}) {
-  const title = stringValue(payload, "title");
-  const text = stringValue(payload, "text");
-  const eyebrow = stringValue(payload, "eyebrow");
-  const href = stringValue(payload, "href") || "/contact";
-  const label = stringValue(payload, "label") || "Lancer un projet";
-  const mediaId = stringValue(payload, "mediaId");
-  const asset = mediaId ? mediaById.get(mediaId) : null;
-
-  if (isEvidenceSectionType(type)) {
-    return <EvidenceSection type={type} payload={payload} media={asset} />;
-  }
-
-  if (type === "HERO")
-    return (
-      <section className="cms-public-hero">
-        <div>
-          {eyebrow ? <p>{eyebrow}</p> : null}
-          <h1>{title}</h1>
-          {text ? <p>{text}</p> : null}
-          <Link className="button button--primary" href={href}>
-            {label}
-          </Link>
-        </div>
-        {asset?.mimeType.startsWith("image/") ? (
-          <div className="cms-public-image cms-public-image--hero">
-            <Image
-              src={asset.publicUrl}
-              alt={asset.altText}
-              fill
-              priority
-              sizes="(max-width: 760px) 100vw, 45vw"
-            />
-          </div>
-        ) : null}
-      </section>
-    );
-
-  if (type === "MEDIA")
-    return (
-      <section className="cms-public-section cms-public-media">
-        {asset?.mimeType.startsWith("image/") ? (
-          <div className="cms-public-image">
-            <Image
-              src={asset.publicUrl}
-              alt={asset.altText}
-              fill
-              sizes="(max-width: 760px) 100vw, 50vw"
-            />
-          </div>
-        ) : null}
-        <div>
-          {eyebrow ? <p>{eyebrow}</p> : null}
-          <h2>{title}</h2>
-          {text ? <p>{text}</p> : null}
-        </div>
-      </section>
-    );
-
-  if (type === "CTA")
-    return (
-      <section className="cms-public-cta">
-        <h2>{title}</h2>
-        {text ? <p>{text}</p> : null}
-        <Link className="button button--primary" href={href}>
-          {label}
-        </Link>
-      </section>
-    );
-
-  return (
-    <section className="cms-public-section">
-      {eyebrow ? <p>{eyebrow}</p> : null}
-      <h2>{title}</h2>
-      {text ? <p>{text}</p> : null}
-    </section>
   );
 }

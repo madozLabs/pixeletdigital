@@ -7,6 +7,12 @@ import {
   type EvidenceSectionType,
 } from "@/modules/content/domain/evidence-section";
 import type { PageSectionPayload } from "@/modules/content/domain/page-section";
+import type { CmsMediaAsset } from "./cms-section";
+import {
+  CmsPrimaryImageOverlay,
+  CmsSectionBackground,
+  cmsSectionDesignProps,
+} from "./cms-section-design";
 
 type EvidenceMedia = Readonly<{
   publicUrl: string;
@@ -18,10 +24,14 @@ export function EvidenceSection({
   type,
   payload,
   media,
+  mediaById = new Map(),
+  sectionId,
 }: Readonly<{
   type: EvidenceSectionType;
   payload: PageSectionPayload;
   media?: EvidenceMedia | null;
+  mediaById?: ReadonlyMap<string, CmsMediaAsset>;
+  sectionId?: string;
 }>) {
   if (!isEvidencePublishable(type, payload)) return null;
   const value = (field: string) => evidenceValue(payload, field);
@@ -29,13 +39,21 @@ export function EvidenceSection({
   if (type === "TESTIMONIAL") {
     return (
       <section
-        className="cms-public-evidence cms-public-testimonial"
+        {...cmsSectionDesignProps(
+          payload,
+          "cms-public-evidence cms-public-testimonial",
+        )}
+        data-cms-section-id={sectionId}
+        data-cms-section-type={type}
         aria-labelledby={`proof-${slug(value("title"))}`}
       >
+        <CmsSectionBackground payload={payload} mediaById={mediaById} />
         <p className="cms-public-evidence__eyebrow">Témoignage</p>
-        <h2 id={`proof-${slug(value("title"))}`}>{value("title")}</h2>
+        <h2 id={`proof-${slug(value("title"))}`} data-cms-field="title">
+          {value("title")}
+        </h2>
         <blockquote>
-          <p>“{value("quote")}”</p>
+          <p data-cms-field="text">“{value("quote")}”</p>
           <footer>— {value("attribution")}</footer>
         </blockquote>
         <EvidenceCta
@@ -49,19 +67,28 @@ export function EvidenceSection({
 
   return (
     <section
-      className="cms-public-evidence"
+      {...cmsSectionDesignProps(payload, "cms-public-evidence")}
+      data-cms-section-id={sectionId}
+      data-cms-section-type={type}
       aria-labelledby={`proof-${slug(value("title"))}`}
     >
+      <CmsSectionBackground payload={payload} mediaById={mediaById} />
       <p className="cms-public-evidence__eyebrow">Étude de cas</p>
-      <h2 id={`proof-${slug(value("title"))}`}>{value("title")}</h2>
+      <h2 id={`proof-${slug(value("title"))}`} data-cms-field="title">
+        {value("title")}
+      </h2>
       {media?.mimeType.startsWith("image/") ? (
-        <div className="cms-public-evidence__media">
+        <div
+          className="cms-public-evidence__media"
+          data-cms-media-slot="primary"
+        >
           <Image
             src={media.publicUrl}
             alt={media.altText || value("accessibleAlternative")}
             fill
             sizes="(max-width: 760px) 100vw, 78rem"
           />
+          <CmsPrimaryImageOverlay />
         </div>
       ) : null}
       <div className="cms-public-evidence__grid">

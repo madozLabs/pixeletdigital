@@ -4,6 +4,7 @@ import type { PrismaClient } from "@/generated/prisma/client";
 
 export type RecordableAuditAction =
   | "CONTENT_PAGE_PUBLISHED"
+  | "CONTENT_SITE_IDENTITY_PUBLISHED"
   | "CONTENT_PAGE_ARCHIVED"
   | "CONTENT_SERVICE_PUBLISHED"
   | "CONTENT_SERVICE_ARCHIVED"
@@ -11,7 +12,8 @@ export type RecordableAuditAction =
   | "BILLING_INVOICE_CANCELLED"
   | "BILLING_PAYMENT_RECORDED";
 
-export type RecordableAuditTargetType = "PAGE" | "SERVICE" | "INVOICE";
+export type RecordableAuditTargetType =
+  "PAGE" | "SITE_SETTINGS" | "SERVICE" | "INVOICE";
 
 export type RecordAuditEventInput = Readonly<{
   action: RecordableAuditAction;

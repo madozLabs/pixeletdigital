@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { getCmsFormPageContent } from "@/app/_lib/cms-form-page";
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import { getPublishedService } from "@/modules/content/application/public/get-published-service";
 import { PrismaServiceRepository } from "@/modules/content/infrastructure/prisma-service-repository";
@@ -7,13 +8,21 @@ import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-wo
 import { ContactForm } from "./contact-form";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = {
-  title: "Lancer un projet | Pixel&Digital",
-  description:
-    "Parlez-nous de votre projet, de votre ambition et du terrain que vous voulez prendre.",
-};
+export async function generateMetadata({
+  searchParams,
+}: PageProps): Promise<Metadata> {
+  const { preview } = await searchParams;
+  return {
+    title: "Lancer un projet | Pixel&Digital",
+    description:
+      "Parlez-nous de votre projet, de votre ambition et du terrain que vous voulez prendre.",
+    robots: preview ? { index: false, follow: false } : undefined,
+  };
+}
 
-type PageProps = Readonly<{ searchParams: Promise<{ service?: string }> }>;
+type PageProps = Readonly<{
+  searchParams: Promise<{ service?: string; preview?: string }>;
+}>;
 
 async function loadService(slug: string) {
   return getPublishedService(
@@ -26,25 +35,43 @@ async function loadService(slug: string) {
 }
 
 export default async function ContactPage({ searchParams }: PageProps) {
-  const { service: serviceSlug } = await searchParams;
-  const service = serviceSlug ? await loadService(serviceSlug) : null;
+  const { service: serviceSlug, preview } = await searchParams;
+  const [service, content] = await Promise.all([
+    serviceSlug ? loadService(serviceSlug) : null,
+    getCmsFormPageContent("pixel-digital", "contact", preview),
+  ]);
   const sourcePage = service ? `/contact?service=${service.slug}` : "/contact";
+
   return (
     <main id="main-content" className="contact-page">
+      {content.isPreview ? (
+        <aside className="cms-preview-banner">
+          Aperçu privé · aucune modification n’est encore publique
+        </aside>
+      ) : null}
       <section className="contact-page__intro">
-        <p className="contact-page__eyebrow">On parle de votre projet ?</p>
+        <p className="contact-page__eyebrow">
+          {content.eyebrow ?? "On parle de votre projet ?"}
+        </p>
         <h1>
-          Vous avez le terrain. Nous apportons la strat&eacute;gie et la force
-          d&rsquo;ex&eacute;cution.
+          {content.title ??
+            "Vous avez le terrain. Nous apportons la stratégie et la force d’exécution."}
         </h1>
         <p>
-          Dites-nous o&ugrave; vous en &ecirc;tes, ce que vous voulez changer et
-          ce que le projet doit produire concr&egrave;tement.
+          {content.text ??
+            "Dites-nous où vous en êtes, ce que vous voulez changer et ce que le projet doit produire concrètement."}
         </p>
         <div className="contact-page__facts">
-          <span>R&eacute;ponse humaine</span>
-          <span>Brief confidentiel</span>
-          <span>Projet cadr&eacute; avant production</span>
+          {(content.facts.length
+            ? content.facts
+            : [
+                "Réponse humaine",
+                "Brief confidentiel",
+                "Projet cadré avant production",
+              ]
+          ).map((fact) => (
+            <span key={fact}>{fact}</span>
+          ))}
         </div>
       </section>
 
@@ -52,13 +79,13 @@ export default async function ContactPage({ searchParams }: PageProps) {
         <div className="contact-page__form-heading">
           <span>01</span>
           <div>
-            <p>Votre brief</p>
-            <h2>Parlons concret.</h2>
+            <p>{content.formEyebrow ?? "Votre brief"}</p>
+            <h2>{content.formTitle ?? "Parlons concret."}</h2>
           </div>
         </div>
         {service ? (
           <p className="contact-form__context">
-            Expertise concern&eacute;e : <strong>{service.name}</strong>
+            Expertise concernée : <strong>{service.name}</strong>
           </p>
         ) : null}
         <ContactForm

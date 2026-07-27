@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Outfit } from "next/font/google";
+import { Baloo_2, Manrope, Outfit } from "next/font/google";
 import type { ReactNode } from "react";
 
 import "./globals.css";
@@ -9,6 +9,17 @@ import { WorldTransitionProvider } from "./_components/world-transition";
 const outfit = Outfit({
   subsets: ["latin"],
   variable: "--font-outfit",
+  display: "swap",
+});
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-manrope",
+  display: "swap",
+});
+const baloo = Baloo_2({
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  variable: "--font-baloo",
   display: "swap",
 });
 
@@ -35,7 +46,10 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="fr" className={outfit.variable}>
+    <html
+      lang="fr"
+      className={`${outfit.variable} ${manrope.variable} ${baloo.variable}`}
+    >
       <body>
         <WorldTransitionProvider>{children}</WorldTransitionProvider>
       </body>

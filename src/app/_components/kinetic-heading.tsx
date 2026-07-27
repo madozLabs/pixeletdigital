@@ -6,17 +6,19 @@ export function KineticHeading({
   text,
   className,
   accentLastLine = false,
+  cmsField,
 }: Readonly<{
   text: string | readonly string[];
   className?: string;
   accentLastLine?: boolean;
+  cmsField?: string;
 }>) {
   const reduceMotion = useReducedMotion();
   const lines = typeof text === "string" ? [text] : text;
 
   if (reduceMotion) {
     return (
-      <h1 className={className}>
+      <h1 className={className} data-cms-field={cmsField}>
         {lines.map((line, index) => (
           <span
             key={`${line}-${index}`}
@@ -36,6 +38,7 @@ export function KineticHeading({
   return (
     <motion.h1
       className={className}
+      data-cms-field={cmsField}
       initial="hidden"
       animate="visible"
       variants={{

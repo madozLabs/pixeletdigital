@@ -1,5 +1,6 @@
 import type { PageDomainErrorCode } from "../domain/page";
 import type { PageSectionDomainErrorCode } from "../domain/page-section";
+import type { PageRevisionErrorCode } from "../domain/page-revision";
 import type { ServiceDomainErrorCode } from "../domain/service";
 import type { ServiceFamilyDomainErrorCode } from "../domain/service-family";
 
@@ -16,6 +17,7 @@ export type ContentApplicationError =
       code: "VALIDATION_ERROR";
       validationCode:
         | PageDomainErrorCode
+        | PageRevisionErrorCode
         | ServiceDomainErrorCode
         | PageSectionDomainErrorCode
         | ServiceFamilyDomainErrorCode;

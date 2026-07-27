@@ -7,10 +7,31 @@ import { getPublishedService } from "@/modules/content/application/public/get-pu
 import { PrismaServiceRepository } from "@/modules/content/infrastructure/prisma-service-repository";
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
 import { Reveal } from "@/app/_components/reveal";
+import CmsPublicPage, {
+  generateMetadata as generateCmsMetadata,
+} from "@/app/(marketing)/[slug]/page";
 
 // See (marketing)/page.tsx for why this is ISR rather than force-dynamic.
 export const revalidate = 60;
-type PageParams = Readonly<{ params: Promise<{ slug: string }> }>;
+type PageParams = Readonly<{
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ preview?: string }>;
+}>;
+
+async function hasCmsContent(slug: string, preview?: string) {
+  const page = await prisma.page.findFirst({
+    where: { worldKey: "pixel-digital", slug },
+    select: {
+      draftRevision: { select: { _count: { select: { sections: true } } } },
+      publishedRevision: {
+        select: { _count: { select: { sections: true } } },
+      },
+    },
+  });
+  return preview
+    ? (page?.draftRevision?._count.sections ?? 0) > 0
+    : (page?.publishedRevision?._count.sections ?? 0) > 0;
+}
 
 async function loadService(slug: string) {
   return getPublishedService(
@@ -24,8 +45,16 @@ async function loadService(slug: string) {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: PageParams): Promise<Metadata> {
   const { slug } = await params;
+  const { preview } = await searchParams;
+  if (await hasCmsContent(slug, preview)) {
+    return generateCmsMetadata({
+      params,
+      searchParams: Promise.resolve({ preview }),
+    });
+  }
   const service = await loadService(slug);
   return service
     ? {
@@ -45,8 +74,18 @@ export async function generateMetadata({
         robots: { index: false, follow: false },
       };
 }
-export default async function ServiceDetailPage({ params }: PageParams) {
+export default async function ServiceDetailPage({
+  params,
+  searchParams,
+}: PageParams) {
   const { slug } = await params;
+  const { preview } = await searchParams;
+  if (await hasCmsContent(slug, preview)) {
+    return CmsPublicPage({
+      params,
+      searchParams: Promise.resolve({ preview }),
+    });
+  }
   const service = await loadService(slug);
   if (!service) notFound();
 

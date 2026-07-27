@@ -1,20 +1,49 @@
 import Link from "next/link";
 
-export function SiteFooter() {
+import type { PublishedSiteIdentity } from "@/app/_lib/site-identity";
+import { whatsappHref } from "@/modules/content/domain/site-identity";
+
+export function SiteFooter({ identity }: { identity: PublishedSiteIdentity }) {
+  const whatsapp = whatsappHref(identity.whatsappNumber);
   return (
     <footer className="public-footer">
       <div className="public-footer__lead">
-        <p>Pixel&amp;Digital</p>
-        <h2>Une marque qu’on remarque. Une stratégie qui rapporte.</h2>
+        <p>{identity.siteName}</p>
+        <h2>
+          {identity.footerText ||
+            "Une marque qu’on remarque. Une stratégie qui rapporte."}
+        </h2>
       </div>
       <div className="public-footer__bottom">
         <nav aria-label="Navigation de pied de page">
-          <Link href="/#capacites">Expertises</Link>
-          <Link href="/#preuve">Méthode</Link>
+          {identity.footerNavigationItems.map((item) => (
+            <Link key={`${item.label}-${item.href}`} href={item.href}>
+              {item.label}
+            </Link>
+          ))}
           <Link href="/kwaliti-print">Kwaliti Print</Link>
-          <Link href="/contact">Lancer un projet</Link>
+          <Link href={identity.contactHref}>{identity.contactLabel}</Link>
+          {identity.linkedinHref ? (
+            <Link href={identity.linkedinHref}>LinkedIn</Link>
+          ) : null}
+          {identity.instagramHref ? (
+            <Link href={identity.instagramHref}>Instagram</Link>
+          ) : null}
+          {whatsapp ? (
+            <Link href={whatsapp} target="_blank" rel="noreferrer">
+              WhatsApp
+            </Link>
+          ) : null}
+          {identity.legalNoticeHref ? (
+            <Link href={identity.legalNoticeHref}>Mentions légales</Link>
+          ) : null}
+          {identity.privacyPolicyHref ? (
+            <Link href={identity.privacyPolicyHref}>Confidentialité</Link>
+          ) : null}
         </nav>
-        <p>Ouagadougou · Afrique de l’Ouest &amp; au-delà</p>
+        <p>
+          {identity.address || "Ouagadougou · Afrique de l’Ouest & au-delà"}
+        </p>
       </div>
     </footer>
   );

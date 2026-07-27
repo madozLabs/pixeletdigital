@@ -217,6 +217,7 @@ export function AdminShell({
   const [collapsed, setCollapsed] = useState<boolean>(() =>
     readStoredCollapsed(),
   );
+  const isCmsRoute = pathname.startsWith("/workspace/site-content");
 
   function toggleCollapsed() {
     setCollapsed((prev) => {
@@ -230,6 +231,17 @@ export function AdminShell({
     const params = new URLSearchParams(searchParams);
     params.set("world", event.target.value);
     router.push(`${pathname}?${params.toString()}`);
+  }
+
+  if (isCmsRoute) {
+    return (
+      <div className="cms-admin-root" data-world={worldKey}>
+        <a href="#main-content" className="skip-link">
+          Aller au contenu principal
+        </a>
+        {children}
+      </div>
+    );
   }
 
   return (

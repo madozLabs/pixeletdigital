@@ -4,6 +4,7 @@
 # Next.js build output
 /.next/
 /out/
+/public/uploads/media/
 
 # Test output
 /coverage/

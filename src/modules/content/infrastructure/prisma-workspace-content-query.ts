@@ -12,7 +12,8 @@ export class PrismaWorkspaceContentReader implements WorkspaceContentReader {
     take: number;
   }) {
     const needsFullMedia =
-      Boolean(input.selectedPageId) && input.tab !== "media";
+      (Boolean(input.selectedPageId) || input.tab === "identity") &&
+      input.tab !== "media";
     const [
       recentPages,
       homePage,
@@ -21,10 +22,12 @@ export class PrismaWorkspaceContentReader implements WorkspaceContentReader {
       draftCount,
       totalMedia,
       pagesForTab,
+      allPagesForNavigation,
       mediaForTab,
       fullMediaForEditor,
       publishedServices,
       selectedPage,
+      siteIdentity,
     ] = await Promise.all([
       this.database.page.findMany({
         where: { worldKey: input.worldKey },
@@ -39,7 +42,7 @@ export class PrismaWorkspaceContentReader implements WorkspaceContentReader {
         where: { worldKey: input.worldKey, lifecycle: "PUBLISHED" },
       }),
       this.database.page.count({
-        where: { worldKey: input.worldKey, lifecycle: "DRAFT" },
+        where: { worldKey: input.worldKey, draftRevisionId: { not: null } },
       }),
       this.database.mediaAsset.count({ where: { worldKey: input.worldKey } }),
       input.tab === "pages"
@@ -48,6 +51,12 @@ export class PrismaWorkspaceContentReader implements WorkspaceContentReader {
             orderBy: { updatedAt: "desc" },
             skip: input.skip,
             take: input.take,
+          })
+        : Promise.resolve([]),
+      input.tab === "identity"
+        ? this.database.page.findMany({
+            where: { worldKey: input.worldKey },
+            orderBy: [{ title: "asc" }, { createdAt: "asc" }],
           })
         : Promise.resolve([]),
       input.tab === "media"
@@ -70,7 +79,21 @@ export class PrismaWorkspaceContentReader implements WorkspaceContentReader {
       input.selectedPageId
         ? this.database.page.findFirst({
             where: { id: input.selectedPageId, worldKey: input.worldKey },
-            include: { sections: { orderBy: { order: "asc" } } },
+            include: {
+              sections: { orderBy: { order: "asc" } },
+              draftRevision: {
+                include: { sections: { orderBy: { order: "asc" } } },
+              },
+              publishedRevision: {
+                include: { sections: { orderBy: { order: "asc" } } },
+              },
+            },
+          })
+        : Promise.resolve(null),
+      input.tab === "identity"
+        ? this.database.siteSettings.findUnique({
+            where: { worldKey: input.worldKey },
+            include: { draftRevision: true, publishedRevision: true },
           })
         : Promise.resolve(null),
     ]);
@@ -83,10 +106,12 @@ export class PrismaWorkspaceContentReader implements WorkspaceContentReader {
       draftCount,
       totalMedia,
       pagesForTab,
+      allPagesForNavigation,
       mediaForTab,
       fullMediaForEditor,
       publishedServices,
       selectedPage,
+      siteIdentity,
     };
   }
 }

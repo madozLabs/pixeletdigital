@@ -22,4 +22,8 @@ export type EnquiryApplicationError =
   | Readonly<{
       code: "FORBIDDEN";
       message: string;
+    }>
+  | Readonly<{
+      code: "DEPENDENCY_UNAVAILABLE";
+      message: string;
     }>;

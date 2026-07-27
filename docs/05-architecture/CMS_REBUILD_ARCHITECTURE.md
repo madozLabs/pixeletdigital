@@ -11,9 +11,10 @@ implemented directly in React. Published records cannot be revised without
 changing the live record, media usages are hidden inside JSON payloads, and
 Kwaliti Print CMS pages other than `accueil` have no public route.
 
-The target is a structured CMS owned by the existing Content module. It is not
-an unrestricted page builder and does not introduce WordPress or another
-external source of truth.
+The target is a structured visual page builder owned by the existing Content
+module. It allows non-technical users to compose and create pages from a
+controlled, extensible block library. It deliberately avoids arbitrary HTML or
+executable code and does not introduce WordPress or another source of truth.
 
 ## 2. Non-negotiable outcomes
 
@@ -77,9 +78,9 @@ items referencing pages or allow-listed external URLs.
 
 ## 4. Rendering contract
 
-Public routes load `publishedRevisionId` only. Preview routes load an authorized
-draft revision through a short-lived preview token. Both use the same section
-registry and rendering components.
+Public routes load `publishedRevisionId` only. Preview routes resolve an opaque
+draft revision identifier only after a Workspace session and world-scope check.
+Both use the same section registry and rendering components.
 
 Service records continue to own catalogue facts and availability. Each service
 is linked to a Page whose revision owns the actual landing-page narrative,
@@ -96,6 +97,27 @@ The editor provides structured fields, section reordering, media selection,
 desktop/mobile preview, save state, conflict recovery, review and publication.
 Raw JSON is restricted to technical administration and is never the default
 editing surface.
+
+The implemented block library includes hero, rich text, media, gallery,
+feature grid, steps, service index, testimonial, case study, FAQ, CTA and form.
+Blocks support visual addition, duplication, deletion and accessible drag and
+drop ordering. Every block also exposes controlled presentation fields for a
+primary image where relevant, an optional background image, its focal position
+and overlay, plus per-block heading/body font, weight and style overrides. The
+renderer allow-lists these values and records background media through an
+explicit `SectionMediaUsage` slot. Both worlds expose dynamic CMS routes, so
+creating an ordinary page does not require a code change.
+
+Global brand content is governed separately through versioned SiteSettings:
+site name, tagline, logo, favicon, heading/body fonts, navigation, footer,
+contact CTA and WhatsApp contact number have an isolated
+draft/review/publication lifecycle. Public layouts read only the published
+identity revision.
+
+Code-owned system forms (Contact and Kwaliti Print quote) expose their
+surrounding copy as `HERO` and `FORM` blocks. Validation and submission stay in
+code, while headings, explanatory text and reassurance points are editable and
+follow the same draft/review/publication workflow.
 
 ## 6. Authorization and audit
 

@@ -1,6 +1,6 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 
-import { PrismaClient } from "@/generated/prisma/client";
+import { Prisma, PrismaClient } from "@/generated/prisma/client";
 import {
   createDraftServiceFamily,
   listServiceFamilies,
@@ -221,17 +221,20 @@ async function main() {
 }
 
 async function ensureCmsRouteInventory(client: PrismaClient): Promise<void> {
-  const pixelServices = await client.service.findMany({
-    where: { worldKey: "pixel-digital" },
+  const publicServices = await client.service.findMany({
+    where: { worldKey: { in: ["pixel-digital", "kwaliti-print"] } },
   });
-  for (const service of pixelServices) {
+  for (const service of publicServices) {
     await ensureCmsPage(client, {
       id: `service-page:${service.id}`,
       worldKey: service.worldKey,
       pageType: "SERVICE",
       pageKind: "SERVICE",
       templateKey: "SERVICE_DETAIL",
-      routePath: `/services/${service.slug}`,
+      routePath:
+        service.worldKey === "kwaliti-print"
+          ? `/kwaliti-print/${service.slug}`
+          : `/services/${service.slug}`,
       title: service.name,
       slug: service.slug,
       lifecycle: service.lifecycle,
@@ -239,6 +242,35 @@ async function ensureCmsRouteInventory(client: PrismaClient): Promise<void> {
       serviceId: service.id,
     });
   }
+
+  await ensureCmsPage(client, {
+    id: "home-page:pixel-digital",
+    worldKey: "pixel-digital",
+    pageType: "LANDING",
+    pageKind: "LANDING",
+    templateKey: "HOME",
+    routePath: "/",
+    title: "Accueil",
+    slug: "accueil",
+    lifecycle: "PUBLISHED",
+    publishedAt: new Date(),
+    serviceId: null,
+    sections: homeSections("pixel-digital"),
+  });
+  await ensureCmsPage(client, {
+    id: "home-page:kwaliti-print",
+    worldKey: "kwaliti-print",
+    pageType: "LANDING",
+    pageKind: "LANDING",
+    templateKey: "HOME",
+    routePath: "/kwaliti-print",
+    title: "Accueil",
+    slug: "accueil",
+    lifecycle: "PUBLISHED",
+    publishedAt: new Date(),
+    serviceId: null,
+    sections: homeSections("kwaliti-print"),
+  });
 
   await ensureCmsPage(client, {
     id: "system-page:pixel-digital:contact",
@@ -252,6 +284,7 @@ async function ensureCmsRouteInventory(client: PrismaClient): Promise<void> {
     lifecycle: "PUBLISHED",
     publishedAt: new Date(),
     serviceId: null,
+    sections: formPageSections("pixel-digital"),
   });
   await ensureCmsPage(client, {
     id: "system-page:kwaliti-print:devis",
@@ -265,6 +298,7 @@ async function ensureCmsRouteInventory(client: PrismaClient): Promise<void> {
     lifecycle: "PUBLISHED",
     publishedAt: new Date(),
     serviceId: null,
+    sections: formPageSections("kwaliti-print"),
   });
 }
 
@@ -282,6 +316,11 @@ async function ensureCmsPage(
     lifecycle: "DRAFT" | "IN_REVIEW" | "SCHEDULED" | "PUBLISHED" | "ARCHIVED";
     publishedAt: Date | null;
     serviceId: string | null;
+    sections?: readonly Readonly<{
+      key: string;
+      type: string;
+      payload: Record<string, unknown>;
+    }>[];
   }>,
 ): Promise<void> {
   const existing = await client.page.findFirst({
@@ -296,9 +335,10 @@ async function ensureCmsPage(
 
   await client.$transaction(async (transaction) => {
     const now = new Date();
+    const { sections, ...pageInput } = input;
     await transaction.page.create({
       data: {
-        ...input,
+        ...pageInput,
         version: 1,
         createdAt: now,
         updatedAt: now,
@@ -324,6 +364,21 @@ async function ensureCmsPage(
         publishedAt: input.publishedAt,
         createdAt: now,
         updatedAt: now,
+        sections: sections
+          ? {
+              create: sections.map((section, order) => ({
+                id: `${revisionId}:${section.key}`,
+                sectionKey: section.key,
+                sectionType: section.type,
+                order,
+                payload: section.payload as Prisma.InputJsonValue,
+                payloadSchemaVersion: 1,
+                version: 1,
+                createdAt: now,
+                updatedAt: now,
+              })),
+            }
+          : undefined,
       },
     });
     await transaction.page.update({
@@ -334,6 +389,193 @@ async function ensureCmsPage(
           : { draftRevisionId: revisionId },
     });
   });
+}
+
+function homeSections(worldKey: string) {
+  if (worldKey === "kwaliti-print") {
+    return [
+      {
+        key: "hero",
+        type: "HERO",
+        payload: {
+          eyebrow: "Impression · Personnalisation · Production",
+          title: "Vos idées méritent de sortir de l’écran.",
+          text: "Kwaliti Print transforme vos visuels en supports concrets, visibles et bien finis — du prototype à la série.",
+          label: "Demander un devis",
+          href: "/kwaliti-print/devis",
+          mediaId: "",
+        },
+      },
+      {
+        key: "services",
+        type: "SERVICE_INDEX",
+        payload: {
+          eyebrow: "Ce qu’on produit",
+          title:
+            "Des supports qui font exister votre marque dans le vrai monde.",
+        },
+      },
+      {
+        key: "quality",
+        type: "FEATURE_GRID",
+        payload: {
+          eyebrow: "Notre exigence",
+          title: "Le bon support. La bonne finition. Le bon délai.",
+          text: "",
+          items: [
+            "Conseil matière",
+            "Contrôle des fichiers",
+            "Production suivie",
+            "Finition propre",
+          ].map((title) => ({ title, text: "" })),
+        },
+      },
+      {
+        key: "closing",
+        type: "CTA",
+        payload: {
+          eyebrow: "Un besoin précis ou juste une idée ?",
+          title: "On vous aide à choisir la bonne manière de l’imprimer.",
+          text: "",
+          label: "Obtenir un devis",
+          href: "/kwaliti-print/devis",
+        },
+      },
+    ];
+  }
+  return [
+    {
+      key: "hero",
+      type: "HERO",
+      payload: {
+        eyebrow: "Agence créative & digitale",
+        title: "Avec nous,\nvous allez\nprendre terrain.",
+        text: "Nous construisons des marques visibles, crédibles et difficiles à oublier de la stratégie à l’exécution.",
+        label: "Lancer un projet",
+        href: "/contact",
+        mediaId: "",
+      },
+    },
+    {
+      key: "manifesto",
+      type: "RICH_TEXT",
+      payload: {
+        eyebrow: "Notre façon de voir les choses",
+        title:
+          "Les likes paient rarement les factures.\nLes bonnes stratégies, si.",
+        text: "",
+      },
+    },
+    {
+      key: "services",
+      type: "SERVICE_INDEX",
+      payload: {
+        eyebrow: "Ce qu’on sait faire",
+        title: "Une seule équipe pour faire avancer toute la marque.",
+      },
+    },
+    {
+      key: "method",
+      type: "STEPS",
+      payload: {
+        eyebrow: "Une méthode simple",
+        title: "On pense juste. On crée fort. On exécute proprement.",
+        text: "",
+        items: ["Comprendre", "Positionner", "Créer", "Déployer"].map(
+          (title) => ({ title, text: "" }),
+        ),
+      },
+    },
+    {
+      key: "kwaliti-promo",
+      type: "MEDIA",
+      payload: {
+        eyebrow: "Notre bras production",
+        title: "Kwaliti Print transforme vos idées en objets qu’on remarque.",
+        text: "",
+        label: "Découvrir Kwaliti Print",
+        href: "/kwaliti-print",
+        mediaId: "",
+      },
+    },
+    {
+      key: "closing",
+      type: "CTA",
+      payload: {
+        eyebrow:
+          "Être partout ne sert à rien si personne ne se souvient de vous.",
+        title: "Faisons quelque chose qu’on ne peut pas ignorer.",
+        text: "",
+        label: "Parler à Pixel&Digital",
+        href: "/contact",
+      },
+    },
+  ];
+}
+
+function formPageSections(worldKey: string) {
+  if (worldKey === "kwaliti-print") {
+    return [
+      {
+        key: "intro",
+        type: "HERO",
+        payload: {
+          eyebrow: "Demande de devis",
+          title:
+            "Parlez-nous du support. On s’occupe de le rendre remarquable.",
+          text: "Quantité, format, matière, délai, finition : donnez-nous les éléments disponibles. Nous vous aidons à cadrer le reste.",
+          label: "",
+          href: "",
+          mediaId: "",
+        },
+      },
+      {
+        key: "quote-form",
+        type: "FORM",
+        payload: {
+          eyebrow: "Votre besoin",
+          title: "Décrivez le projet.",
+          text: "",
+          formKey: "kwaliti-quote",
+          items: [
+            "Réponse humaine",
+            "Conseil sur le support",
+            "Devis adapté au besoin",
+          ].map((title) => ({ title, text: "" })),
+        },
+      },
+    ];
+  }
+  return [
+    {
+      key: "intro",
+      type: "HERO",
+      payload: {
+        eyebrow: "On parle de votre projet ?",
+        title:
+          "Vous avez le terrain. Nous apportons la stratégie et la force d’exécution.",
+        text: "Dites-nous où vous en êtes, ce que vous voulez changer et ce que le projet doit produire concrètement.",
+        label: "",
+        href: "",
+        mediaId: "",
+      },
+    },
+    {
+      key: "contact-form",
+      type: "FORM",
+      payload: {
+        eyebrow: "Votre brief",
+        title: "Parlons concret.",
+        text: "",
+        formKey: "contact",
+        items: [
+          "Réponse humaine",
+          "Brief confidentiel",
+          "Projet cadré avant production",
+        ].map((title) => ({ title, text: "" })),
+      },
+    },
+  ];
 }
 
 async function ensureWorld(

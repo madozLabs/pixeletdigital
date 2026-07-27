@@ -1,35 +1,60 @@
+import Image from "next/image";
 import Link from "next/link";
+
+import type { PublishedSiteIdentity } from "@/app/_lib/site-identity";
 
 import { WorldSwitcher } from "./world-switcher";
 
-const NavigationLinks = () => (
-  <>
-    <Link href="/#capacites">Expertises</Link>
-    <Link href="/#preuve">M&eacute;thode</Link>
-    <WorldSwitcher />
-    <Link href="/contact" className="site-header__cta">
-      Lancer un projet
-    </Link>
-  </>
-);
+function NavigationLinks({ identity }: { identity: PublishedSiteIdentity }) {
+  const items =
+    identity.navigationItems.length > 0
+      ? identity.navigationItems
+      : [
+          { label: "Expertises", href: "/#capacites" },
+          { label: "Méthode", href: "/#preuve" },
+        ];
+  return (
+    <>
+      {items.map((item) => (
+        <Link key={`${item.label}-${item.href}`} href={item.href}>
+          {item.label}
+        </Link>
+      ))}
+      <WorldSwitcher />
+      <Link href={identity.contactHref} className="site-header__cta">
+        {identity.contactLabel}
+      </Link>
+    </>
+  );
+}
 
-export function SiteHeader() {
+export function SiteHeader({ identity }: { identity: PublishedSiteIdentity }) {
   return (
     <header className="site-header">
       <Link
         href="/"
         className="site-header__mark"
-        aria-label="Pixel and Digital, accueil"
+        aria-label={`${identity.siteName}, accueil`}
       >
-        Pixel<span className="site-header__mark-accent">&amp;</span>Digital
+        {identity.logoUrl ? (
+          <Image
+            className="site-header__logo"
+            src={identity.logoUrl}
+            alt={identity.logoAlt}
+            width={180}
+            height={60}
+          />
+        ) : (
+          identity.siteName
+        )}
       </Link>
       <nav className="site-header__nav" aria-label="Navigation principale">
-        <NavigationLinks />
+        <NavigationLinks identity={identity} />
       </nav>
       <details className="site-header__mobile">
         <summary>Menu</summary>
         <nav aria-label="Navigation mobile">
-          <NavigationLinks />
+          <NavigationLinks identity={identity} />
         </nav>
       </details>
     </header>

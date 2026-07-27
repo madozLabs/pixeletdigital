@@ -18,6 +18,7 @@ import {
   type WorkspaceEditablePageDto,
   type WorkspaceMediaDto,
   type WorkspacePageDto,
+  type WorkspaceRevisionSectionDto,
 } from "@/modules/content/application/workspace-content-query";
 import { PrismaWorkspaceContentReader } from "@/modules/content/infrastructure/prisma-workspace-content-query";
 import { countWorkspaceEnquiries } from "@/modules/enquiries/application/workspace-enquiry-query";
@@ -28,24 +29,40 @@ import { Pagination } from "../_components/pagination";
 import { actorHasWorldAccess } from "../_lib/authorization";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import {
-  CreatePageForm,
   DeleteMediaForm,
   DeleteSectionForm,
-  PageTransitionForm,
+  RevisionEditor,
+  SiteIdentityEditor,
   SectionFieldsForm,
   SectionJsonForm,
-  UpdatePageForm,
   UploadMediaForm,
 } from "./site-content-forms";
 import { MediaUrlField } from "./media-url-field";
+import { PageBuilder } from "./page-builder";
 
 const TYPED_SECTION_TYPES = new Set([
   "HERO",
   "TEXT",
+  "RICH_TEXT",
   "MEDIA",
+  "GALLERY",
+  "FEATURE_GRID",
+  "STEPS",
+  "SERVICE_INDEX",
+  "FAQ",
+  "FORM",
   "CTA",
   "CASE_STUDY",
   "TESTIMONIAL",
+  "BANNER",
+  "COLUMNS",
+  "STATS",
+  "LOGO_CLOUD",
+  "TEAM",
+  "PORTFOLIO",
+  "PRICING",
+  "VIDEO",
+  "CONTACT_INFO",
 ]);
 
 const CONTENT_WORLDS = [
@@ -57,6 +74,8 @@ type MediaAsset = WorkspaceMediaDto;
 
 export default async function SiteContentPage({
   searchParams,
+  standalone = false,
+  identityFocus = "all",
 }: {
   searchParams: Promise<{
     world?: string;
@@ -64,6 +83,8 @@ export default async function SiteContentPage({
     tab?: string;
     listPage?: string;
   }>;
+  standalone?: boolean;
+  identityFocus?: "all" | "appearance" | "navigation" | "settings";
 }) {
   const context = await getWorkspaceRequestContext();
   if (!context) redirect("/login");
@@ -71,6 +92,11 @@ export default async function SiteContentPage({
   const params = await searchParams;
   const worldKey = params.world ?? "pixel-digital";
   const tab = params.tab ?? "overview";
+  if (params.page) {
+    redirect(
+      `/workspace/site-content/pages/${encodeURIComponent(params.page)}/edit?world=${worldKey}`,
+    );
+  }
   const listPageParams = parsePage(params.listPage);
   const { skip: listSkip, take: listTake } = toSkipTake(listPageParams);
 
@@ -86,11 +112,13 @@ export default async function SiteContentPage({
         take: listTake,
       },
     ),
-    countWorkspaceEnquiries(
-      { workspaceEnquiryReader: new PrismaWorkspaceEnquiryReader(prisma) },
-      context,
-      { worldKey },
-    ),
+    tab === "overview"
+      ? countWorkspaceEnquiries(
+          { workspaceEnquiryReader: new PrismaWorkspaceEnquiryReader(prisma) },
+          context,
+          { worldKey },
+        )
+      : Promise.resolve(null),
   ]);
   if (!contentResult.ok) return <p role="alert">Accès refusé.</p>;
   const {
@@ -101,12 +129,14 @@ export default async function SiteContentPage({
     draftCount,
     totalMedia,
     pagesForTab,
+    allPagesForNavigation,
     mediaForTab,
     fullMediaForEditor,
     publishedServices,
     selectedPage,
+    siteIdentity,
   } = contentResult.value;
-  const enquiryCount = enquiryResult.ok ? enquiryResult.value : 0;
+  const enquiryCount = enquiryResult?.ok ? enquiryResult.value : null;
 
   const totalListPages = Math.max(
     1,
@@ -120,62 +150,67 @@ export default async function SiteContentPage({
 
   return (
     <>
-      <div className="admin-page-heading">
-        <div>
-          <h1 className="admin-content__title">Site &amp; contenus</h1>
-          <p className="admin-content__lede">
-            Pilotez le site public : pages, sections, médias et publication.
-          </p>
-        </div>
-        <span className="admin-metric">
-          {publishedCount} page{publishedCount > 1 ? "s" : ""} en ligne
-        </span>
-      </div>
+      {!standalone ? (
+        <>
+          <div className="admin-page-heading">
+            <div>
+              <h1 className="admin-content__title">Site &amp; contenus</h1>
+              <p className="admin-content__lede">
+                Pilotez le site public : pages, sections, médias et publication.
+              </p>
+            </div>
+            <span className="admin-metric">
+              {publishedCount} page{publishedCount > 1 ? "s" : ""} en ligne
+            </span>
+          </div>
 
-      <nav className="admin-tabs" aria-label="Univers du contenu">
-        {availableWorlds.map((world) => (
-          <Link
-            key={world.key}
-            className={
-              world.key === worldKey
-                ? "admin-tabs__item admin-tabs__item--active"
-                : "admin-tabs__item"
-            }
-            href={`/workspace/site-content?world=${world.key}&tab=${tab}`}
-            aria-current={world.key === worldKey ? "page" : undefined}
-          >
-            {world.label}
-          </Link>
-        ))}
-      </nav>
+          <nav className="admin-tabs" aria-label="Univers du contenu">
+            {availableWorlds.map((world) => (
+              <Link
+                key={world.key}
+                className={
+                  world.key === worldKey
+                    ? "admin-tabs__item admin-tabs__item--active"
+                    : "admin-tabs__item"
+                }
+                href={`/workspace/site-content?world=${world.key}&tab=${tab}`}
+                aria-current={world.key === worldKey ? "page" : undefined}
+              >
+                {world.label}
+              </Link>
+            ))}
+          </nav>
 
-      <div className="admin-tabs" role="tablist">
-        {(
-          [
-            ["overview", "Vue d’ensemble"],
-            ["pages", "Pages"],
-            ["media", "Médiathèque"],
-          ] as const
-        ).map(([id, label]) => (
-          <Link
-            key={id}
-            className={
-              tab === id
-                ? "admin-tabs__item admin-tabs__item--active"
-                : "admin-tabs__item"
-            }
-            href={`/workspace/site-content?world=${worldKey}&tab=${id}`}
-          >
-            {label}
-            {id === "pages" ? (
-              <span className="admin-tabs__count">{totalPages}</span>
-            ) : null}
-            {id === "media" ? (
-              <span className="admin-tabs__count">{totalMedia}</span>
-            ) : null}
-          </Link>
-        ))}
-      </div>
+          <div className="admin-tabs" role="tablist">
+            {(
+              [
+                ["overview", "Vue d’ensemble"],
+                ["pages", "Pages"],
+                ["media", "Médiathèque"],
+                ["identity", "Identité du site"],
+              ] as const
+            ).map(([id, label]) => (
+              <Link
+                key={id}
+                className={
+                  tab === id
+                    ? "admin-tabs__item admin-tabs__item--active"
+                    : "admin-tabs__item"
+                }
+                href={`/workspace/site-content?world=${worldKey}&tab=${id}`}
+              >
+                {label}
+                {id === "pages" ? (
+                  <span className="admin-tabs__count">{totalPages}</span>
+                ) : null}
+                {id === "media" ? (
+                  <span className="admin-tabs__count">{totalMedia}</span>
+                ) : null}
+              </Link>
+            ))}
+          </div>
+        </>
+      ) : null}
 
       {tab === "overview" ? (
         <OverviewPanel
@@ -192,13 +227,30 @@ export default async function SiteContentPage({
         <>
           <MediaPanel worldKey={worldKey} media={mediaForTab} now={now} />
           <Pagination
-            basePath="/workspace/site-content"
-            searchParams={{ world: worldKey, tab: "media" }}
+            basePath={
+              standalone
+                ? "/workspace/site-content/media"
+                : "/workspace/site-content"
+            }
+            searchParams={{
+              world: worldKey,
+              ...(standalone ? {} : { tab: "media" }),
+            }}
             page={listPageParams.page}
             totalPages={totalListPages}
             total={totalMedia}
           />
         </>
+      ) : tab === "identity" ? (
+        <SiteIdentityEditor
+          worldKey={worldKey}
+          identity={siteIdentity}
+          focus={identityFocus}
+          images={fullMediaForEditor.filter((asset) =>
+            asset.mimeType.startsWith("image/"),
+          )}
+          pages={allPagesForNavigation}
+        />
       ) : selectedPage ? (
         <PageEditor
           worldKey={worldKey}
@@ -209,8 +261,15 @@ export default async function SiteContentPage({
         <>
           <PagesPanel worldKey={worldKey} pages={pagesForTab} />
           <Pagination
-            basePath="/workspace/site-content"
-            searchParams={{ world: worldKey, tab: "pages" }}
+            basePath={
+              standalone
+                ? "/workspace/site-content/pages"
+                : "/workspace/site-content"
+            }
+            searchParams={{
+              world: worldKey,
+              ...(standalone ? {} : { tab: "pages" }),
+            }}
             page={listPageParams.page}
             totalPages={totalListPages}
             total={totalPages}
@@ -238,7 +297,7 @@ function OverviewPanel({
   draftCount: number;
   mediaCount: number;
   publishedServices: number;
-  enquiryCount: number;
+  enquiryCount: number | null;
 }) {
   const recent = recentPages;
   return (
@@ -249,21 +308,21 @@ function OverviewPanel({
           icon={<Globe size={20} />}
           label="Pages publiées"
           value={publishedCount}
-          href={`/workspace/site-content?world=${worldKey}&tab=pages`}
+          href={`/workspace/site-content/pages?world=${worldKey}`}
         />
         <GlanceCard
           tone="info"
           icon={<FileText size={20} />}
           label="Brouillons"
           value={draftCount}
-          href={`/workspace/site-content?world=${worldKey}&tab=pages`}
+          href={`/workspace/site-content/pages?world=${worldKey}`}
         />
         <GlanceCard
           tone="violet"
           icon={<ImageIcon size={20} />}
           label="Médias"
           value={mediaCount}
-          href={`/workspace/site-content?world=${worldKey}&tab=media`}
+          href={`/workspace/site-content/media?world=${worldKey}`}
         />
         <GlanceCard
           tone="success"
@@ -288,7 +347,7 @@ function OverviewPanel({
                 <li key={page.id}>
                   <strong>
                     <Link
-                      href={`/workspace/site-content?world=${worldKey}&tab=pages&page=${page.id}`}
+                      href={`/workspace/site-content/pages/${encodeURIComponent(page.id)}/edit?world=${worldKey}`}
                     >
                       {page.title}
                     </Link>
@@ -308,16 +367,14 @@ function OverviewPanel({
             <li>
               <PlusCircle size={16} />
               <Link
-                href={`/workspace/site-content?world=${worldKey}&tab=pages`}
+                href={`/workspace/site-content/pages/new?world=${worldKey}`}
               >
                 Créer ou éditer une page
               </Link>
             </li>
             <li>
               <UploadCloud size={16} />
-              <Link
-                href={`/workspace/site-content?world=${worldKey}&tab=media`}
-              >
+              <Link href={`/workspace/site-content/media?world=${worldKey}`}>
                 Ajouter un média
               </Link>
             </li>
@@ -342,7 +399,7 @@ function OverviewPanel({
             {homePage
               ? `La page « accueil » pilote le hero et l’appel à l’action du site ${worldKey === "kwaliti-print" ? "Kwaliti Print" : "Pixel&Digital"}.`
               : "Astuce : une page publiée avec le slug « accueil » remplace les textes du hero et du bloc final du site public."}{" "}
-            {enquiryCount > 0
+            {enquiryCount !== null && enquiryCount > 0
               ? `${enquiryCount} demande${enquiryCount > 1 ? "s" : ""} de contact reçue${enquiryCount > 1 ? "s" : ""} via le site.`
               : ""}
           </p>
@@ -376,7 +433,7 @@ function GlanceCard({
   );
 }
 
-function PagesPanel({
+export function PagesPanel({
   worldKey,
   pages,
 }: {
@@ -384,8 +441,20 @@ function PagesPanel({
   pages: readonly WorkspacePageDto[];
 }) {
   return (
-    <div className="cms-layout">
-      <CreatePageForm worldKey={worldKey} />
+    <div className="cms-pages-screen">
+      <div className="cms-screen-heading">
+        <div>
+          <span>Contenu</span>
+          <h2>Pages</h2>
+          <p>Créez, organisez et publiez les pages des deux sites.</p>
+        </div>
+        <Link
+          className="button button--primary"
+          href={`/workspace/site-content/pages/new?world=${worldKey}`}
+        >
+          <PlusCircle size={16} /> Nouvelle page
+        </Link>
+      </div>
       <section className="cms-list-panel">
         <h2>Pages de l’univers</h2>
         {pages.length === 0 ? (
@@ -416,11 +485,18 @@ function PagesPanel({
                     </td>
                     <td>
                       <LifecycleBadge lifecycle={page.lifecycle} />
+                      {page.draftRevisionId &&
+                      page.lifecycle === "PUBLISHED" ? (
+                        <span className="admin-table__note">
+                          {" "}
+                          · brouillon en cours
+                        </span>
+                      ) : null}
                     </td>
                     <td>
                       <Link
                         className="admin-table__action"
-                        href={`/workspace/site-content?world=${worldKey}&tab=pages&page=${page.id}`}
+                        href={`/workspace/site-content/pages/${encodeURIComponent(page.id)}/edit?world=${worldKey}`}
                       >
                         Éditer
                       </Link>
@@ -438,7 +514,7 @@ function PagesPanel({
 
 type EditablePage = WorkspaceEditablePageDto;
 
-function PageEditor({
+export function PageEditor({
   worldKey,
   page,
   media,
@@ -447,37 +523,75 @@ function PageEditor({
   page: EditablePage;
   media: readonly MediaAsset[];
 }) {
+  const activeRevision = page.draftRevision ?? page.publishedRevision;
+  const sections = activeRevision?.sections ?? page.sections;
+  const editable = page.draftRevision?.status === "DRAFT";
+  const publicPath =
+    page.routePath ??
+    `${page.worldKey === "kwaliti-print" ? "/kwaliti-print" : ""}/${page.slug}`;
+  const previewUrl = page.draftRevision
+    ? `${publicPath}?preview=${page.draftRevision.id}&visualEditor=1`
+    : `${publicPath}?visualEditor=1`;
   return (
-    <div className="cms-editor">
+    <div className="cms-editor cms-editor--visual">
       <EditPresence entityType="PAGE" entityId={page.id} />
-      <div className="cms-editor__top">
-        <Link href={`/workspace/site-content?world=${worldKey}&tab=pages`}>
-          ← Toutes les pages
-        </Link>
-        <LifecycleBadge lifecycle={page.lifecycle} />
+      <div className="cms-visual-editor-bar">
+        <div>
+          <Link href={`/workspace/site-content/pages?world=${worldKey}`}>
+            ← Pages
+          </Link>
+          <span className="cms-visual-editor-bar__divider" />
+          <strong>{activeRevision?.title ?? page.title}</strong>
+          <LifecycleBadge lifecycle={page.lifecycle} />
+        </div>
+        {previewUrl ? (
+          <a href={previewUrl} target="_blank" rel="noreferrer">
+            Ouvrir l’aperçu
+          </a>
+        ) : null}
       </div>
-      <UpdatePageForm
-        id={page.id}
-        version={page.version}
-        title={page.title}
-        slug={page.slug}
-        editable={page.lifecycle === "DRAFT"}
-      />
-      <PageWorkflow page={page} />
-      <h2>Sections</h2>
-      <div className="cms-sections">
-        {page.sections.map((section) => (
+      <PageBuilder
+        key={`${activeRevision?.id ?? "legacy"}-${activeRevision?.version ?? 0}`}
+        pageId={page.id}
+        revisionId={page.draftRevision?.id ?? null}
+        revisionVersion={page.draftRevision?.version ?? null}
+        sectionIds={sections.map((section) => section.id)}
+        sectionTypes={sections.map((section) => section.sectionType)}
+        sectionVersions={sections.map((section) => section.version)}
+        sectionMediaIds={sections.map((section) => {
+          const payload = section.payload as Record<string, unknown>;
+          return typeof payload.mediaId === "string" ? payload.mediaId : "";
+        })}
+        sectionGalleryMediaIds={sections.map((section) => {
+          const payload = section.payload as Record<string, unknown>;
+          return Array.isArray(payload.mediaIds)
+            ? payload.mediaIds.filter(
+                (id): id is string => typeof id === "string",
+              )
+            : [];
+        })}
+        mediaAssets={media}
+        editable={editable}
+        previewUrl={previewUrl}
+        settings={
+          <RevisionEditor
+            pageId={page.id}
+            draft={page.draftRevision}
+            published={page.publishedRevision}
+          />
+        }
+      >
+        {sections.map((section) => (
           <SectionEditor
             key={section.id}
             page={page}
             section={section}
             media={media}
+            revisionId={page.draftRevision?.id ?? null}
+            editable={editable}
           />
         ))}
-        {page.lifecycle === "DRAFT" ? (
-          <NewSectionForm pageId={page.id} order={page.sections.length} />
-        ) : null}
-      </div>
+      </PageBuilder>
     </div>
   );
 }
@@ -486,15 +600,19 @@ function SectionEditor({
   page,
   section,
   media,
+  revisionId,
+  editable,
 }: {
   page: EditablePage;
-  section: EditablePage["sections"][number];
+  section: EditablePage["sections"][number] | WorkspaceRevisionSectionDto;
   media: readonly MediaAsset[];
+  revisionId: string | null;
+  editable: boolean;
 }) {
   const payload = section.payload as Record<string, unknown>;
   const value = (key: string) =>
     typeof payload[key] === "string" ? (payload[key] as string) : "";
-  const disabled = page.lifecycle !== "DRAFT";
+  const disabled = !editable || !revisionId;
   const typed = TYPED_SECTION_TYPES.has(section.sectionType);
   const images = media.filter((asset) => asset.mimeType.startsWith("image/"));
 
@@ -504,14 +622,21 @@ function SectionEditor({
         <h3>
           {section.sectionType} · position {section.order}
         </h3>
-        {!disabled ? <DeleteSectionForm sectionId={section.id} /> : null}
+        {!disabled && revisionId ? (
+          <DeleteSectionForm
+            sectionId={section.id}
+            pageId={page.id}
+            revisionId={revisionId}
+          />
+        ) : null}
       </header>
 
-      {typed ? (
+      {typed && !disabled ? (
         <SectionFieldsForm
           sectionId={section.id}
           version={section.version}
           pageId={page.id}
+          revisionId={revisionId ?? ""}
           sectionType={section.sectionType}
           order={section.order}
           eyebrow={value("eyebrow")}
@@ -525,57 +650,30 @@ function SectionEditor({
           editable={!disabled}
           evidencePayload={payload}
         />
+      ) : (
+        <div className="cms-builder__summary">
+          <strong>
+            {value("title") || value("quote") || "Bloc sans titre"}
+          </strong>
+          {value("text") ? <p>{value("text")}</p> : null}
+        </div>
+      )}
+
+      {!disabled ? (
+        <details className="admin-user-card__details">
+          <summary>{typed ? "Mode avancé (JSON)" : "Contenu (JSON)"}</summary>
+          <SectionJsonForm
+            sectionId={section.id}
+            version={section.version}
+            pageId={page.id}
+            revisionId={revisionId ?? ""}
+            sectionType={section.sectionType}
+            order={section.order}
+            payload={JSON.stringify(section.payload, null, 2)}
+            editable={!disabled}
+          />
+        </details>
       ) : null}
-
-      <details className="admin-user-card__details">
-        <summary>{typed ? "Mode avancé (JSON)" : "Contenu (JSON)"}</summary>
-        <SectionJsonForm
-          sectionId={section.id}
-          version={section.version}
-          pageId={page.id}
-          sectionType={section.sectionType}
-          order={section.order}
-          payload={JSON.stringify(section.payload, null, 2)}
-          editable={!disabled}
-        />
-      </details>
-    </div>
-  );
-}
-
-function NewSectionForm({ pageId, order }: { pageId: string; order: number }) {
-  return (
-    <SectionJsonForm
-      pageId={pageId}
-      order={order}
-      payload='{\n  "eyebrow": "",\n  "title": "",\n  "text": "",\n  "label": "",\n  "href": "",\n  "mediaId": ""\n}'
-      editable
-    />
-  );
-}
-function PageWorkflow({ page }: { page: EditablePage }) {
-  const transitions =
-    page.lifecycle === "DRAFT"
-      ? [["IN_REVIEW", "Soumettre en revue"]]
-      : page.lifecycle === "IN_REVIEW"
-        ? [
-            ["PUBLISHED", "Publier"],
-            ["DRAFT", "Renvoyer en brouillon"],
-          ]
-        : page.lifecycle === "PUBLISHED"
-          ? [["ARCHIVED", "Archiver"]]
-          : [];
-  return (
-    <div className="cms-workflow">
-      {transitions.map(([target, label]) => (
-        <PageTransitionForm
-          key={target}
-          id={page.id}
-          version={page.version}
-          target={target}
-          label={label}
-        />
-      ))}
     </div>
   );
 }
