@@ -164,7 +164,7 @@ Recherche exhaustive : aucun type de section "témoignage" ou "étude de cas" n'
 | I7 | `next/image`, sitemap, JSON-LD, métadonnées cohérentes | Important | Perf/SEO | Ouvert |
 | A1 | Brancher `KineticHeading` + transitions immersives entre univers | Amélioration | UX public | ✅ traité 2026-07-30 (déjà fait, session antérieure — vérifié) |
 | A2 | États de chargement/succès systématiques (skeletons, toasts) | Amélioration | UX Workspace | ✅ traité 2026-07-30 (déjà fait, session antérieure — vérifié) |
-| A3 | Formulaire devis Kwaliti Print avec champs métier structurés | Amélioration | Produit/UX public | Ouvert |
+| A3 | Formulaire devis Kwaliti Print avec champs métier structurés | Amélioration | Produit/UX public | ✅ traité 2026-07-30 (déjà fait, session antérieure — vérifié) |
 | A4 | Modularisation de `globals.css` | Amélioration | Archi | Ouvert |
 | N1 | Command Palette IA à commandes en langage naturel | Innovation | UX Workspace | Ouvert |
 | N2 | Copilote contextuel invisible (triage leads, pré-remplissage devis) | Innovation | Produit/IA | Ouvert |
@@ -561,7 +561,15 @@ Contraintes :
 Résultat attendu : Chaque navigation et chaque action a un retour visuel clair et cohérent, sans dépendance excessive ajoutée.
 ```
 
-**A3 — Formulaire devis Kwaliti Print structuré**
+**A3 — Formulaire devis Kwaliti Print structuré** — ✅ déjà traité avant ce lot (commit `3d949ee`, même commit que A1/A2, 26 juillet 2026, mergé sur `main`), vérifié à nouveau ici le 30 juillet 2026 sans code à écrire :
+- `contact-form.tsx` affiche un `<fieldset>` « Précisions du devis (optionnelles) » (quantité, format, matière, délai souhaité, finition) uniquement quand `worldKey === "kwaliti-print"` — le formulaire de contact général Pixel&Digital est structurellement inchangé pour les autres mondes.
+- Tous les champs sont réellement optionnels (aucun `required` HTML) — conforme à la contrainte du prompt (« l'information n'est pas toujours connue au moment de la demande »).
+- `src/modules/enquiries/application/kwaliti-quote-details.ts` (fonction domaine pure, aucun import framework — conforme à la règle `AGENTS.md` sur la couche domaine) valide chaque champ (quantité entière 1–1 000 000, longueur max 160, date ISO valide) et compose un message structuré lisible (« [Brief devis Kwaliti Print] Quantité : … ») plutôt que d'inventer de nouvelles colonnes Prisma — choix minimal cohérent avec le schéma `Enquiry` existant, pas de migration nécessaire. Erreurs remontées champ par champ via le même mécanisme `fieldErrors` déjà en place dans `actions.ts`.
+- Aucun catalogue de valeurs (liste déroulante matière/format) trouvé ni introduit — les champs restent du texte libre court, ce qui est fidèle à la contrainte « vérifier d'abord si un catalogue existe avant d'en inventer un » : aucun catalogue de ce type n'existe dans `src/modules/content`, donc rien à brancher.
+- Vérifié dans ce lot : `kwaliti-quote-details.test.ts` fait partie des 583 tests verts ; test manuel navigateur : `/contact` (Pixel&Digital) affiche le formulaire standard sans les 5 champs devis, `/kwaliti-print/devis` les affiche tous les cinq avec le bon libellé, aucune erreur console sur les deux pages.
+- **Non fait dans ce lot** : rien à coder — le prompt d'origine est déjà entièrement couvert. Non vérifié (nécessiterait une base de données joignable) : le trajet de soumission réelle (écriture en base du message structuré) — seule la composition du message et le rendu du formulaire ont pu être vérifiés dans cet environnement.
+
+Prompt d'origine conservé ci-dessous pour mémoire.
 ```text
 Contexte : src/app/kwaliti-print/devis/page.tsx (ligne 39) promet explicitement de recueillir "Quantité, format, matière, délai, finition", mais le formulaire réel (partagé avec le contact général via contact-form.tsx) ne contient qu'un champ message libre en plus de nom/email/téléphone — aucun champ structuré pour ces paramètres.
 
