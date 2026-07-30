@@ -22,6 +22,16 @@ import {
 
 type Option = Readonly<{ id: string; label: string }>;
 
+// Keep in sync with QUOTE_LINE_SLOTS in ./actions.ts (quoteLinesFromForm) --
+// this is the number of line-item slots rendered, not a hard cap on a
+// dynamic list, since the form is server-rendered with named fields rather
+// than client-side add/remove rows.
+const QUOTE_LINE_SLOTS = 12;
+const QUOTE_LINE_INDEXES = Array.from(
+  { length: QUOTE_LINE_SLOTS },
+  (_, index) => index + 1,
+);
+
 const QUOTE_STATUSES = [
   "DRAFT",
   "SENT",
@@ -66,7 +76,7 @@ export function CreateQuoteForm({
         Taxe (%)
         <input type="number" name="taxRate" min={0} max={100} step="0.01" />
       </label>
-      {[1, 2, 3].map((index) => (
+      {QUOTE_LINE_INDEXES.map((index) => (
         <div className="billing-line-row" key={index}>
           <span className="billing-line-row__eyebrow">Ligne {index}</span>
           <label>

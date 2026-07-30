@@ -119,22 +119,27 @@ export async function archiveCatalogueItemAction(
   return toActionState(result, "Élément archivé.");
 }
 
+// Keep in sync with QUOTE_LINE_SLOTS in ./billing-forms.tsx.
+const QUOTE_LINE_SLOTS = 12;
+
 function quoteLinesFromForm(formData: FormData) {
-  return [1, 2, 3].flatMap((index) => {
-    const label = String(formData.get(`lineLabel${index}`) ?? "").trim();
-    if (!label) return [];
-    return [
-      {
-        id: randomUUID(),
-        label,
-        quantity: Math.max(
-          1,
-          Number(formData.get(`lineQuantity${index}`)) || 1,
-        ),
-        unitPriceCents: xofToCents(formData.get(`lineUnitPrice${index}`)),
-      },
-    ];
-  });
+  return Array.from({ length: QUOTE_LINE_SLOTS }, (_, i) => i + 1).flatMap(
+    (index) => {
+      const label = String(formData.get(`lineLabel${index}`) ?? "").trim();
+      if (!label) return [];
+      return [
+        {
+          id: randomUUID(),
+          label,
+          quantity: Math.max(
+            1,
+            Number(formData.get(`lineQuantity${index}`)) || 1,
+          ),
+          unitPriceCents: xofToCents(formData.get(`lineUnitPrice${index}`)),
+        },
+      ];
+    },
+  );
 }
 
 export async function createQuoteAction(
