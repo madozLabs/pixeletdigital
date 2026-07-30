@@ -155,22 +155,22 @@ Recherche exhaustive : aucun type de section "témoignage" ou "étude de cas" n'
 | C6 | Retour utilisateur explicite sur chaque mutation (fin des échecs silencieux) | Critique | UX | ✅ traité 2026-07-26 (8/8 pages) |
 | C7 | Résilience du site public face à l'indisponibilité base de données | Critique | Archi/Fiabilité | ✅ traité 2026-07-26 |
 | C8 | Réparer la navigation mobile Kwaliti Print (menu, ancre, retour marque mère) | Critique | UX public | ✅ traité 2026-07-26 |
-| I1 | Command Palette + recherche globale (Cmd+K) | Important | UX Workspace | Ouvert |
-| I2 | Dashboard personnalisé par rôle ("mon travail" plutôt que mur de métriques) | Important | UX Workspace | Ouvert |
-| I3 | Unifier les formulaires (un seul standard, confirmations sur actions sensibles) | Important | UX Workspace | Ouvert |
-| I4 | Isoler les accès Prisma dans des Query Services + centraliser badges/dates | Important | Archi | Ouvert |
-| I5 | Module de preuve sociale (réalisations/témoignages) côté public | Important | Produit/UX public | Ouvert |
-| I6 | Refonte de l'identité visuelle Kwaliti Print conforme à son brand bible | Important | Brand/UX public | Ouvert |
-| I7 | `next/image`, sitemap, JSON-LD, métadonnées cohérentes | Important | Perf/SEO | Ouvert |
+| I1 | Command Palette + recherche globale (Cmd+K) | Important | UX Workspace | ✅ traité (session antérieure — vérifié 2026-07-30, `command-palette.tsx` câblé dans `admin-shell.tsx`) |
+| I2 | Dashboard personnalisé par rôle ("mon travail" plutôt que mur de métriques) | Important | UX Workspace | ✅ traité (session antérieure — vérifié 2026-07-30, `dashboard-sections.tsx` + `dashboard-personal-work.ts`) |
+| I3 | Unifier les formulaires (un seul standard, confirmations sur actions sensibles) | Important | UX Workspace | ✅ traité (session antérieure — vérifié 2026-07-30, `ConfirmAction` présent sur 8 modules) |
+| I4 | Isoler les accès Prisma dans des Query Services + centraliser badges/dates | Important | Archi | 🟡 Partiel — vérifié 2026-07-30 : query services faits pour access/billing/content/enquiries ; organization/projects/tasks restent en accès Prisma direct dans les pages, cohérent avec C2/ODR-025 (décision propriétaire de périmètre encore en attente) |
+| I5 | Module de preuve sociale (réalisations/témoignages) côté public | Important | Produit/UX public | 🟡 Infra faite (`EvidenceSection` disponible comme bloc CMS via `cms-section.tsx`) — vérifié 2026-07-30 ; reste à confirmer qu'un contenu réel l'utilise sur une page publiée |
+| I6 | Refonte de l'identité visuelle Kwaliti Print conforme à son brand bible | Important | Brand/UX public | 🟡 Progressé fort (tokens `--kp-magenta/cyan/yellow/paper` remplacent le reskin noir plat) — vérifié 2026-07-30 par lecture de code ; vérification visuelle navigateur pas encore faite |
+| I7 | `next/image`, sitemap, JSON-LD, métadonnées cohérentes | Important | Perf/SEO | 🟡 Partiel — vérifié 2026-07-30 : `sitemap.ts`/`robots.ts`/`OrganizationJsonLd` faits ; `next/image` seulement 10 usages, couverture à confirmer |
 | A1 | Brancher `KineticHeading` + transitions immersives entre univers | Amélioration | UX public | ✅ traité 2026-07-30 (déjà fait, session antérieure — vérifié) |
 | A2 | États de chargement/succès systématiques (skeletons, toasts) | Amélioration | UX Workspace | ✅ traité 2026-07-30 (déjà fait, session antérieure — vérifié) |
 | A3 | Formulaire devis Kwaliti Print avec champs métier structurés | Amélioration | Produit/UX public | ✅ traité 2026-07-30 (déjà fait, session antérieure — vérifié) |
 | A4 | Modularisation de `globals.css` | Amélioration | Archi | ✅ traité 2026-07-30 (vérifié, aucun code à changer) |
-| N1 | Command Palette IA à commandes en langage naturel | Innovation | UX Workspace | Ouvert |
-| N2 | Copilote contextuel invisible (triage leads, pré-remplissage devis) | Innovation | Produit/IA | Ouvert |
+| N1 | Command Palette IA à commandes en langage naturel | Innovation | UX Workspace | ❌ Abandonné (décision propriétaire 2026-07-30) |
+| N2 | Copilote contextuel invisible (triage leads, pré-remplissage devis) | Innovation | Produit/IA | ❌ Abandonné (décision propriétaire 2026-07-30) |
 | N3 | Transition immersive inter-univers (View Transitions) | Innovation | UX public | ✅ traité 2026-07-30 |
 | N4 | Présence collaborative temps réel dans le Workspace | Innovation | UX Workspace | ✅ traité 2026-07-30 (déjà fait, sessions antérieures — vérifié) |
-| N5 | Module de preuve interactif pour Kwaliti Print (matières, survol vidéo) | Innovation | UX public | Ouvert |
+| N5 | Module de preuve interactif pour Kwaliti Print (matières, survol vidéo) | Innovation | UX public | ❌ Abandonné (décision propriétaire 2026-07-30) |
 
 ---
 
