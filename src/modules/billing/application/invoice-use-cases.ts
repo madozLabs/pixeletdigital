@@ -78,30 +78,55 @@ export async function createDraftInvoice(
   if (world.mode === "INACTIVE") return forbidden();
 
   const now = context.clock.now();
-  const existingCount = await dependencies.invoices.countByWorld(world.key);
-  const prefix =
-    WORLD_INVOICE_PREFIXES[world.key] ?? world.key.slice(0, 2).toUpperCase();
-  const number = `${prefix}-${now.getUTCFullYear()}-${String(existingCount + 1).padStart(4, "0")}`;
 
-  const invoiceResult = createDraftInvoiceDomain({
-    id: input.id,
-    worldKey: world.key,
-    clientId: input.clientId,
-    quoteId: input.quoteId,
-    number,
-    lines: input.lines,
-    discountCents: input.discountCents,
-    taxRateBps: input.taxRateBps,
-    notes: input.notes,
-    issuedAt: input.issuedAt,
-    dueAt: input.dueAt,
-    createdAt: now,
-    updatedAt: now,
-  });
-  if (!invoiceResult.ok) return validationFailure(invoiceResult.error);
+  // (worldKey, number) is unique in the database. Under concurrent creation
+  // in the same world, two requests can both count N invoices and both
+  // compute number N+1 before either has saved -- the second save() then
+  // hits that unique constraint. Recomputing a fresh count and retrying
+  // (bounded) turns that into a transparent retry instead of a generic
+  // failure the user has to retry manually themselves.
+  const MAX_NUMBER_ATTEMPTS = 3;
+  for (let attempt = 1; attempt <= MAX_NUMBER_ATTEMPTS; attempt++) {
+    const existingCount = await dependencies.invoices.countByWorld(world.key);
+    const prefix =
+      WORLD_INVOICE_PREFIXES[world.key] ?? world.key.slice(0, 2).toUpperCase();
+    const number = `${prefix}-${now.getUTCFullYear()}-${String(existingCount + 1).padStart(4, "0")}`;
 
-  await dependencies.invoices.save(invoiceResult.value);
-  return { ok: true, value: invoiceResult.value };
+    const invoiceResult = createDraftInvoiceDomain({
+      id: input.id,
+      worldKey: world.key,
+      clientId: input.clientId,
+      quoteId: input.quoteId,
+      number,
+      lines: input.lines,
+      discountCents: input.discountCents,
+      taxRateBps: input.taxRateBps,
+      notes: input.notes,
+      issuedAt: input.issuedAt,
+      dueAt: input.dueAt,
+      createdAt: now,
+      updatedAt: now,
+    });
+    if (!invoiceResult.ok) return validationFailure(invoiceResult.error);
+
+    try {
+      await dependencies.invoices.save(invoiceResult.value);
+      return { ok: true, value: invoiceResult.value };
+    } catch (error) {
+      const isNumberCollision = isUniqueConstraintViolation(error);
+      if (!isNumberCollision || attempt === MAX_NUMBER_ATTEMPTS) throw error;
+    }
+  }
+  throw new Error("unreachable: retry loop always returns or throws");
+}
+
+function isUniqueConstraintViolation(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "P2002"
+  );
 }
 
 export type ListInvoicesByWorldInput = Readonly<{ worldKey: string }>;
@@ -219,8 +244,20 @@ async function withMutableInvoice(
   const transitioned = transition(invoice, context.clock.now());
   if (!transitioned.ok) return validationFailure(transitioned.error);
 
-  await dependencies.invoices.save(transitioned.value);
+  const saved = await dependencies.invoices.save(transitioned.value);
+  if (!saved) return conflict();
+
   return { ok: true, value: transitioned.value };
+}
+
+function conflict(): Result<never, BillingApplicationError> {
+  return {
+    ok: false,
+    error: {
+      code: "CONFLICT",
+      message: "The invoice has changed since it was last read.",
+    },
+  };
 }
 
 function notFound(): Result<never, BillingApplicationError> {

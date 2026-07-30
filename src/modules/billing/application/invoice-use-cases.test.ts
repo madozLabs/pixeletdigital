@@ -9,7 +9,11 @@ import type {
   RequestContext,
 } from "@/shared/request-context";
 
-import { createDraftInvoice as createDraftInvoiceDomain } from "../domain/invoice";
+import {
+  cancelInvoice as cancelInvoiceDomain,
+  createDraftInvoice as createDraftInvoiceDomain,
+  markInvoiceSent as markInvoiceSentDomain,
+} from "../domain/invoice";
 import {
   cancelInvoice,
   createDraftInvoice,
@@ -17,6 +21,28 @@ import {
   markInvoiceSent,
 } from "./invoice-use-cases";
 import { InMemoryInvoiceRepository } from "./testing/in-memory-invoice-repository";
+import type { Invoice } from "../domain/invoice";
+
+// Throws a P2002-shaped error on the very first save() call regardless of
+// state, then delegates to the real in-memory behavior -- exercises
+// createDraftInvoice's bounded retry without needing genuine concurrency.
+class CollidingOnceInvoiceRepository extends InMemoryInvoiceRepository {
+  saveAttempts = 0;
+  private hasThrown = false;
+
+  async save(invoice: Invoice): Promise<boolean> {
+    this.saveAttempts += 1;
+    if (!this.hasThrown) {
+      this.hasThrown = true;
+      const error = new Error(
+        "Unique constraint failed on the fields: (`worldKey`,`number`)",
+      ) as Error & { code: string };
+      error.code = "P2002";
+      throw error;
+    }
+    return super.save(invoice);
+  }
+}
 
 const createdAt = new Date("2026-07-15T08:00:00.000Z");
 const clockTime = new Date("2026-07-23T10:30:00.000Z");
@@ -75,6 +101,24 @@ describe("createDraftInvoice", () => {
     );
 
     expect(result).toMatchObject({ ok: true, value: { totalCents: 44000 } });
+  });
+
+  it("retries with a freshly computed number when a concurrent create collides on (worldKey, number)", async () => {
+    const dependencies = dependenciesWithWorld();
+    const collidingOnce = new CollidingOnceInvoiceRepository();
+    dependencies.invoices = collidingOnce;
+
+    const result = await createDraftInvoice(
+      dependencies,
+      context("ADMIN", [{ type: "GLOBAL" }]),
+      validCreateInput(),
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      value: { number: "PD-FA-2026-0001" },
+    });
+    expect(collidingOnce.saveAttempts).toBe(2);
   });
 
   it.each<ApprovedRole>(["EDITOR", "SALES", "CONTRIBUTOR", "READER"])(
@@ -148,6 +192,29 @@ describe("invoice lifecycle use-cases", () => {
     );
 
     expect(result).toMatchObject({ ok: false, error: { code: "CONFLICT" } });
+  });
+
+  it("loses the second write of two concurrent transitions computed from the same read", async () => {
+    // Regression test for the TOCTOU the version-guarded save() closes:
+    // two requests both reading version 1, both computing version 2 from
+    // it, must not both succeed -- only the first write should land.
+    const dependencies = dependenciesWithWorld();
+    const invoice = savedInvoice();
+    await dependencies.invoices.save(invoice);
+
+    const cancelled = cancelInvoiceDomain(invoice, clockTime);
+    const sent = markInvoiceSentDomain(invoice, clockTime);
+    if (!cancelled.ok || !sent.ok) throw new Error("expected both to succeed");
+
+    const firstWriteSucceeded = await dependencies.invoices.save(
+      cancelled.value,
+    );
+    const secondWriteSucceeded = await dependencies.invoices.save(sent.value);
+
+    expect(firstWriteSucceeded).toBe(true);
+    expect(secondWriteSucceeded).toBe(false);
+    const persisted = await dependencies.invoices.findById(invoice.id);
+    expect(persisted?.status).toBe("CANCELLED");
   });
 });
 

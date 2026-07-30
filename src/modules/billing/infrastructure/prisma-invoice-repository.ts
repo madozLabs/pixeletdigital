@@ -39,7 +39,7 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
   // (the domain never edits them after createDraftInvoice), so only the
   // create path needs to also persist lines -- later saves only touch the
   // invoice's own status/version/paidAt fields.
-  async save(invoice: Invoice): Promise<void> {
+  async save(invoice: Invoice): Promise<boolean> {
     const existing = await this.client.invoice.findUnique({
       where: { id: invoice.id },
       select: { id: true },
@@ -77,11 +77,16 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
           },
         });
       }
-      return;
+      return true;
     }
 
-    await this.client.invoice.update({
-      where: { id: invoice.id },
+    // Guarded by the version the caller read (invoice.version - 1, since
+    // every domain transition increments by exactly 1): a concurrent write
+    // that already bumped the row past that version makes this a no-op
+    // instead of a silent overwrite -- count === 0 signals the conflict to
+    // the caller rather than throwing.
+    const updated = await this.client.invoice.updateMany({
+      where: { id: invoice.id, version: invoice.version - 1 },
       data: {
         status: invoice.status,
         paidAt: invoice.paidAt,
@@ -89,6 +94,7 @@ export class PrismaInvoiceRepository implements InvoiceRepository {
         updatedAt: invoice.updatedAt,
       },
     });
+    return updated.count > 0;
   }
 }
 

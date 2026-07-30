@@ -94,6 +94,37 @@ describe("PrismaInvoiceRepository", () => {
   it("returns null for a missing invoice", async () => {
     expect(await repository.findById("missing-invoice")).toBeNull();
   });
+
+  it("rejects an update whose expected version no longer matches the row", async () => {
+    const invoice = validInvoice({
+      id: "billing_invoice_test_conflict",
+      number: "PD-FA-2026-CONFLICT",
+    });
+    await repository.save(invoice);
+
+    const paid = applyInvoicePayment(
+      invoice,
+      invoice.totalCents,
+      new Date("2026-07-23T10:00:00.000Z"),
+    );
+    if (!paid.ok) throw new Error("expected payment application to succeed");
+    const firstWriteSucceeded = await repository.save(paid.value);
+
+    // Simulates a second request that also read version 1 and computed its
+    // own version-2 transition, racing the write above.
+    const staleTransition = applyInvoicePayment(
+      invoice,
+      invoice.totalCents,
+      new Date("2026-07-23T10:00:05.000Z"),
+    );
+    if (!staleTransition.ok) throw new Error("expected transition to succeed");
+    const secondWriteSucceeded = await repository.save(staleTransition.value);
+
+    expect(firstWriteSucceeded).toBe(true);
+    expect(secondWriteSucceeded).toBe(false);
+    const persisted = await repository.findById(invoice.id);
+    expect(persisted?.paidAt).toEqual(paid.value.paidAt);
+  });
 });
 
 function validWorld() {

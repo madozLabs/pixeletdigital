@@ -102,8 +102,22 @@ export async function recordInvoicePayment(
   // Save the payment first: it's an immutable, append-only record that is
   // safe to have even if the invoice status update below fails (recoverable
   // by re-deriving the invoice status from its payments), matching the
-  // sequential-writes pattern used by PrismaEnquiryRepository.
+  // sequential-writes pattern used by PrismaEnquiryRepository. If the
+  // invoice's own version-guarded update loses a race, the payment is
+  // already durably recorded -- a retry re-reads the invoice and
+  // recomputes totalPaidCents from every payment, so it converges to the
+  // right status without losing this one.
   await dependencies.payments.save(paymentResult.value);
-  await dependencies.invoices.save(invoiceResult.value);
+  const invoiceSaved = await dependencies.invoices.save(invoiceResult.value);
+  if (!invoiceSaved) {
+    return {
+      ok: false,
+      error: {
+        code: "CONFLICT",
+        message:
+          "Le paiement a été enregistré, mais la facture a changé entre-temps. Rechargez la page pour voir le solde à jour.",
+      },
+    };
+  }
   return { ok: true, value: paymentResult.value };
 }

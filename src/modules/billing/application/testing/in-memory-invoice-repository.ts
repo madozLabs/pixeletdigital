@@ -25,8 +25,29 @@ export class InMemoryInvoiceRepository implements InvoiceRepository {
     ).length;
   }
 
-  async save(invoice: Invoice): Promise<void> {
+  async save(invoice: Invoice): Promise<boolean> {
+    const existing = this.invoicesById.get(invoice.id);
+    if (existing && existing.version !== invoice.version - 1) return false;
+    if (!existing) {
+      const numberTaken = [...this.invoicesById.values()].some(
+        (other) =>
+          other.worldKey === invoice.worldKey &&
+          other.number === invoice.number,
+      );
+      // Mirrors the @@unique([worldKey, number]) constraint enforced by
+      // Postgres, so createDraftInvoice's retry-on-collision logic can be
+      // exercised against this fake the same way it is against the real
+      // repository.
+      if (numberTaken) {
+        const error = new Error(
+          "Unique constraint failed on the fields: (`worldKey`,`number`)",
+        ) as Error & { code: string };
+        error.code = "P2002";
+        throw error;
+      }
+    }
     this.savedInvoices.push(invoice);
     this.invoicesById.set(invoice.id, invoice);
+    return true;
   }
 }
