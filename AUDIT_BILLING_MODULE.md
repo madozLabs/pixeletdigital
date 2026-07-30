@@ -121,8 +121,8 @@ Confirmé par recherche exhaustive : aucune dépendance d'e-mail (`nodemailer`, 
 | Facturation récurrente | Modèle + fréquence + génération auto | Absente | Total | Important pour un modèle retainer d'agence | Phase 2/3 du roadmap, XL |
 | Acomptes | Facture d'acompte déductible | Absente (seul un paiement partiel existe, pas de facture d'acompte dédiée) | Total | Moyen | Phase 3, M |
 | Pièces jointes | Contrats, BC, justificatifs | Absentes sur Quote/Invoice | Total | Moyen | Phase 2, S-M (réutiliser l'infra médias déjà présente pour le CMS) |
-| PDF autonome | Document serveur téléchargeable/archivable | Impression navigateur uniquement | Partiel | Important | Phase 2, M (première dépendance PDF à choisir et justifier) |
-| Envoi e-mail | Direct depuis l'outil, avec accusé | Absent (le statut « Envoyée » ne déclenche rien) | Total | Important | Phase 2, M-L (première dépendance e-mail à choisir et justifier) |
+| PDF autonome | Document serveur téléchargeable/archivable | Impression navigateur uniquement | Partiel | **Hors périmètre — décision propriétaire du 30/07/2026** | L'impression navigateur suffit à l'usage réel actuel (faible volume, envoi manuel) ; à reconsidérer seulement si un besoin d'envoi automatique ou d'archivage à grande échelle apparaît |
+| Envoi e-mail | Direct depuis l'outil, avec accusé | Absent (le statut « Envoyée » ne déclenche rien) | Total | **Hors périmètre — décision propriétaire du 30/07/2026** | Idem : pas de besoin réel identifié pour l'instant, ne pas construire par anticipation |
 | Signature électronique | Acceptation tracée du devis | Le statut `ACCEPTED` est positionné manuellement en interne, pas par le client | Total | Moyen | Phase 4 |
 | Workflow d'approbation | Seuil de validation | Aucun (un seul rôle suffit pour tout) | Total | Moyen | Phase 4, dépend d'une politique de seuils à définir par le propriétaire |
 | Relances automatiques | Devis expirant, facture en retard | Absentes (le statut `OVERDUE` existe dans le domaine mais rien ne le déclenche automatiquement) | Total | Important | Phase 4, nécessite un déclencheur planifié (tâche cron) |
@@ -230,8 +230,8 @@ Confirmé par recherche exhaustive : aucune dépendance d'e-mail (`nodemailer`, 
 | B2 | Avoir/note de crédit formel | Conformité comptable | Élevée | Critique | L (modèle de données + numérotation + UI) | Rend l'annulation de facture déjà envoyée/payée traçable et conforme |
 | B3 | Facturation directe (UI) | Flexibilité commerciale réelle | Moyenne-Élevée | Important | S (l'use case existe déjà) | Débloque un cas d'usage courant sans devis préalable |
 | B4 | Paiement antidatable | Rapprochement bancaire correct | Moyenne | Important | XS | Dates de paiement fidèles à la réalité |
-| B5 | PDF serveur autonome | Archivage, envoi, image professionnelle | Élevée | Important | M (choix + intégration d'une dépendance) | Documents utilisables hors session |
-| B6 | Envoi e-mail réel | Un des cas d'usage les plus attendus d'un outil de facturation | Élevée | Important | M-L (choix + intégration d'une dépendance) | Le statut « Envoyée » redevient vrai |
+| B5 | ~~PDF serveur autonome~~ | ~~Archivage, envoi, image professionnelle~~ | — | **Écarté (décision propriétaire 30/07/2026)** | — | L'impression navigateur couvre le besoin réel actuel ; pas de sur-ingénierie sans cas d'usage concret |
+| B6 | ~~Envoi e-mail réel~~ | ~~Un des cas d'usage les plus attendus d'un outil de facturation~~ | — | **Écarté (décision propriétaire 30/07/2026)** | — | Idem, pas de besoin identifié pour l'instant |
 | B7 | Job de passage automatique en retard (`OVERDUE`) | Visibilité réelle sur les impayés | Moyenne-Élevée | Important | S (tâche planifiée) | Le statut du domaine devient enfin exploitable |
 | B8 | Remise en pourcentage | Confort commercial courant | Moyenne | Amélioration | XS-S | Moins de calcul manuel pour le commercial |
 | B9 | Recherche/filtres devis-factures | Efficacité à volume | Moyenne | Amélioration | S | Retrouver un document en secondes, pas en scrollant |
@@ -255,7 +255,7 @@ Confirmé par recherche exhaustive : aucune dépendance d'e-mail (`nodemailer`, 
 2. **Critique / nécessite une décision propriétaire avant tout code** : régime fiscal réel de l'entité (pays UEMOA, identifiant fiscal, mentions légales obligatoires sur facture) — impossible à trancher depuis le dépôt seul.
 3. **Critique / nécessite une décision produit** : modélisation d'un avoir formel avant d'autoriser l'annulation d'une facture déjà envoyée/payée — actuellement le système le permet sans aucune trace comptable dédiée.
 4. **Important, sans dépendance ni décision propriétaire** : répliquer le correctif de concurrence sur `Quote` et `Client` (XS chacun).
-5. **Important, nécessite un choix de dépendance** (première dépendance PDF/e-mail du projet — à faire valider, `AGENTS.md` : « pas de nouvelle dépendance sans la justifier ») : PDF serveur et envoi e-mail réel.
+5. ~~PDF serveur et envoi e-mail réel~~ — **écartés par décision propriétaire du 30 juillet 2026**, pas de besoin réel identifié pour justifier la première dépendance PDF/e-mail du projet à ce stade.
 
 ---
 
@@ -283,8 +283,8 @@ Ce qui n'a **pas** été implémenté cette nuit, et pourquoi :
 - ⏳ Décision propriétaire : régime fiscal réel, avoir formel.
 
 **Phase 2 — Améliorations fonctionnelles majeures**
-- Facturation directe (UI), paiement antidatable, PDF serveur, envoi e-mail réel, pièces jointes.
-- Dépendances : choix d'une librairie PDF et d'un service d'e-mail (décision propriétaire sur le fournisseur, `AGENTS.md`).
+- Facturation directe (UI), paiement antidatable, pièces jointes.
+- ~~PDF serveur, envoi e-mail réel~~ — écartés par décision propriétaire du 30 juillet 2026 : l'impression navigateur couvre l'usage réel actuel, pas de besoin identifié pour justifier une nouvelle dépendance. À reconsidérer seulement si un vrai besoin (volume, automatisation) apparaît.
 
 **Phase 3 — UX/UI**
 - Total live à la saisie, recherche/filtres, duplication de devis, dashboard financier enrichi, remise en pourcentage.
