@@ -30,6 +30,7 @@ export type RecordPaymentInput = Readonly<{
   method: string;
   reference?: string | null;
   notes?: string | null;
+  paidAt?: Date | null;
 }>;
 
 export async function recordInvoicePayment(
@@ -62,6 +63,16 @@ export async function recordInvoicePayment(
   }
 
   const now = context.clock.now();
+  if (input.paidAt && input.paidAt.getTime() > now.getTime()) {
+    return {
+      ok: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        validationCode: "INVALID_PAID_AT",
+        message: "Payment date cannot be in the future.",
+      },
+    };
+  }
   const paymentResult = recordPaymentDomain({
     id: randomUUID(),
     invoiceId: input.invoiceId,
@@ -69,7 +80,7 @@ export async function recordInvoicePayment(
     method: input.method,
     reference: input.reference,
     notes: input.notes,
-    paidAt: now,
+    paidAt: input.paidAt ?? now,
     createdAt: now,
   });
   if (!paymentResult.ok) {

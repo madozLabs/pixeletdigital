@@ -10,6 +10,7 @@ import {
 } from "@/modules/billing/application/catalogue-item-use-cases";
 import {
   cancelInvoice,
+  createDraftInvoice,
   markInvoiceSent,
 } from "@/modules/billing/application/invoice-use-cases";
 import { recordInvoicePayment } from "@/modules/billing/application/payment-use-cases";
@@ -173,6 +174,60 @@ export async function createQuoteAction(
   return toActionState(result, "Devis créé.");
 }
 
+// Keep in sync with INVOICE_LINE_SLOTS in ./billing-forms.tsx.
+const INVOICE_LINE_SLOTS = 12;
+
+function invoiceLinesFromForm(formData: FormData) {
+  return Array.from({ length: INVOICE_LINE_SLOTS }, (_, i) => i + 1).flatMap(
+    (index) => {
+      const label = String(formData.get(`lineLabel${index}`) ?? "").trim();
+      if (!label) return [];
+      return [
+        {
+          id: randomUUID(),
+          label,
+          quantity: Math.max(
+            1,
+            Number(formData.get(`lineQuantity${index}`)) || 1,
+          ),
+          unitPriceCents: xofToCents(formData.get(`lineUnitPrice${index}`)),
+        },
+      ];
+    },
+  );
+}
+
+export async function createInvoiceAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const context = await getWorkspaceRequestContext();
+  if (!context) return { status: "error", message: "Session expirée." };
+
+  const dueAt = String(formData.get("dueAt") ?? "").trim();
+  const taxRate = Number(formData.get("taxRate"));
+  const result = await createDraftInvoice(
+    { invoices: new PrismaInvoiceRepository(prisma), ...worldDependencies() },
+    context,
+    {
+      id: randomUUID(),
+      worldKey: String(formData.get("worldKey")),
+      clientId: String(formData.get("clientId")),
+      lines: invoiceLinesFromForm(formData),
+      discountCents: xofToCents(formData.get("discount")),
+      taxRateBps: Number.isFinite(taxRate)
+        ? Math.max(0, Math.round(taxRate * 100))
+        : 0,
+      notes: String(formData.get("notes") ?? "").trim() || null,
+      issuedAt: context.clock.now(),
+      dueAt: dueAt ? new Date(dueAt) : null,
+    },
+  );
+  if (!result.ok) console.error("createDraftInvoice failed", result.error);
+  revalidatePath("/workspace/billing");
+  return toActionState(result, "Facture créée.");
+}
+
 export async function updateQuoteStatusAction(
   _state: ActionState,
   formData: FormData,
@@ -275,6 +330,7 @@ export async function recordPaymentAction(
   if (!context) return { status: "error", message: "Session expirée." };
 
   const amountCents = xofToCents(formData.get("amount"));
+  const paidAtRaw = String(formData.get("paidAt") ?? "").trim();
   const result = await recordInvoicePayment(
     {
       invoices: new PrismaInvoiceRepository(prisma),
@@ -287,6 +343,7 @@ export async function recordPaymentAction(
       amountCents,
       method: String(formData.get("method")),
       reference: String(formData.get("reference") ?? "").trim() || null,
+      paidAt: paidAtRaw ? new Date(paidAtRaw) : null,
     },
   );
   if (!result.ok) {

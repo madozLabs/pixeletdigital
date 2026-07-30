@@ -14,6 +14,7 @@ import {
   cancelInvoiceAction,
   convertQuoteToInvoiceAction,
   createCatalogueItemAction,
+  createInvoiceAction,
   createQuoteAction,
   markInvoiceSentAction,
   recordPaymentAction,
@@ -117,6 +118,92 @@ export function CreateQuoteForm({
   );
 }
 
+// Keep in sync with INVOICE_LINE_SLOTS in ./actions.ts (invoiceLinesFromForm).
+const INVOICE_LINE_SLOTS = 12;
+const INVOICE_LINE_INDEXES = Array.from(
+  { length: INVOICE_LINE_SLOTS },
+  (_, index) => index + 1,
+);
+
+export function CreateInvoiceForm({
+  worldKey,
+  clients,
+  catalogueDatalistId,
+}: Readonly<{
+  worldKey: string;
+  clients: Option[];
+  catalogueDatalistId: string;
+}>) {
+  const [state, action] = useActionState(
+    createInvoiceAction,
+    IDLE_ACTION_STATE,
+  );
+  return (
+    <form action={action} className="editorial-form">
+      <input type="hidden" name="worldKey" value={worldKey} />
+      <label>
+        Client
+        <select name="clientId" required>
+          {clients.map((client) => (
+            <option key={client.id} value={client.id}>
+              {client.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Échéance
+        <input type="date" name="dueAt" />
+      </label>
+      <label>
+        Remise (XOF)
+        <input type="number" name="discount" min={0} step={1} />
+      </label>
+      <label>
+        Taxe (%)
+        <input type="number" name="taxRate" min={0} max={100} step="0.01" />
+      </label>
+      {INVOICE_LINE_INDEXES.map((index) => (
+        <div className="billing-line-row" key={index}>
+          <span className="billing-line-row__eyebrow">Ligne {index}</span>
+          <label>
+            Libellé
+            <input
+              name={`lineLabel${index}`}
+              placeholder="Ex. Création de logo"
+              list={catalogueDatalistId}
+            />
+          </label>
+          <label>
+            Quantité
+            <input
+              name={`lineQuantity${index}`}
+              type="number"
+              min={1}
+              defaultValue={1}
+            />
+          </label>
+          <label>
+            Prix unitaire (XOF)
+            <input
+              name={`lineUnitPrice${index}`}
+              type="number"
+              min={0}
+              step={1}
+            />
+          </label>
+        </div>
+      ))}
+      <label>
+        Notes
+        <textarea name="notes" maxLength={1000} />
+      </label>
+      <Feedback state={state} />
+      <SubmitButton>Créer la facture</SubmitButton>
+    </form>
+  );
+}
+
 export function QuoteActionsForm({
   quoteId,
   version,
@@ -192,6 +279,13 @@ export function InvoiceActionsForm({
           step={1}
           placeholder="Montant XOF"
           required
+        />
+        <input
+          name="paidAt"
+          type="date"
+          defaultValue={new Date().toISOString().slice(0, 10)}
+          max={new Date().toISOString().slice(0, 10)}
+          aria-label="Date du paiement"
         />
         <select name="method" defaultValue="MOBILE_MONEY">
           <option value="MOBILE_MONEY">Mobile Money</option>

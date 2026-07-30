@@ -17,7 +17,8 @@ export type PaymentDomainErrorCode =
   | "INVALID_AMOUNT_CENTS"
   | "INVALID_METHOD"
   | "INVALID_REFERENCE"
-  | "INVALID_NOTES";
+  | "INVALID_NOTES"
+  | "INVALID_PAID_AT";
 
 export type PaymentDomainError = Readonly<{
   code: PaymentDomainErrorCode;

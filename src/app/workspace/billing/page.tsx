@@ -13,6 +13,7 @@ import { formatXof } from "./_lib/money";
 import {
   ArchiveCatalogueItemForm,
   CreateCatalogueItemForm,
+  CreateInvoiceForm,
   CreateQuoteForm,
   InvoiceActionsForm,
   QuoteActionsForm,
@@ -216,13 +217,29 @@ export default async function WorkspaceBillingPage({
         </section>
       ) : null}
       {activeTab === "invoices" ? (
-        <Pagination
-          basePath="/workspace/billing"
-          searchParams={{ world: worldKey, tab: "invoices" }}
-          page={pageParams.page}
-          totalPages={totalInvoicePages}
-          total={totalInvoices}
-        />
+        <>
+          <Pagination
+            basePath="/workspace/billing"
+            searchParams={{ world: worldKey, tab: "invoices" }}
+            page={pageParams.page}
+            totalPages={totalInvoicePages}
+            total={totalInvoices}
+          />
+          <h2 className="admin-content__subtitle">Nouvelle facture</h2>
+          <CreateInvoiceForm
+            worldKey={worldKey}
+            clients={clients.map((client) => ({
+              id: client.id,
+              label: client.name,
+            }))}
+            catalogueDatalistId="billing-catalogue-labels-invoices"
+          />
+          <datalist id="billing-catalogue-labels-invoices">
+            {catalogue.map((item) => (
+              <option key={item.id} value={item.label} />
+            ))}
+          </datalist>
+        </>
       ) : null}
       {activeTab === "balances" ? (
         <div className="admin-table-wrap">
