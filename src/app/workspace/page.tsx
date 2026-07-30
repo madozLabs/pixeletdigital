@@ -75,6 +75,12 @@ export default async function WorkspaceDashboardPage({
   const personalFilters = actorId
     ? buildPersonalWorkFilters({ actorId, worldKey })
     : null;
+  // T2: surface "my work" in the other world too, not just team-wide
+  // counts, so a user with cross-world reach doesn't have to switch worlds
+  // to see what's assigned to them there.
+  const personalFiltersOther = actorId
+    ? buildPersonalWorkFilters({ actorId, worldKey: otherWorldKey })
+    : null;
 
   const [
     activeClients,
@@ -96,6 +102,9 @@ export default async function WorkspaceDashboardPage({
     myReviewsPreview,
     myLeadsCount,
     myLeadsPreview,
+    myTasksCountOther,
+    myReviewsCountOther,
+    myLeadsCountOther,
   ] = await Promise.all([
     prisma.client.count({ where: { worldKey, status: "ACTIVE" } }),
     prisma.project.count({ where: lateProjectsWhere }),
@@ -182,6 +191,15 @@ export default async function WorkspaceDashboardPage({
           take: 6,
         })
       : Promise.resolve([]),
+    personalFiltersOther
+      ? prisma.task.count({ where: personalFiltersOther.tasks })
+      : Promise.resolve(0),
+    personalFiltersOther
+      ? prisma.editorialItem.count({ where: personalFiltersOther.reviews })
+      : Promise.resolve(0),
+    personalFiltersOther
+      ? prisma.lead.count({ where: personalFiltersOther.leads })
+      : Promise.resolve(0),
   ]);
 
   const sentAmount = invoices
@@ -359,6 +377,18 @@ export default async function WorkspaceDashboardPage({
                 </strong>
                 <span>Calendrier éditorial</span>
               </li>
+              {myTasksCountOther + myReviewsCountOther + myLeadsCountOther >
+              0 ? (
+                <li>
+                  <strong>
+                    {myTasksCountOther} tâche
+                    {myTasksCountOther > 1 ? "s" : ""}, {myReviewsCountOther}{" "}
+                    validation{myReviewsCountOther > 1 ? "s" : ""},{" "}
+                    {myLeadsCountOther} lead{myLeadsCountOther > 1 ? "s" : ""}
+                  </strong>
+                  <span>Assignés à vous dans cet univers</span>
+                </li>
+              ) : null}
             </ul>
             <Link
               className="admin-table__action"

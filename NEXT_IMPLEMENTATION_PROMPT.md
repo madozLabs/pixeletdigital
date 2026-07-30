@@ -154,6 +154,8 @@ Deux audits ont été menés et déjà partiellement implémentés (voir histori
 
 ### T1 — Dépendance de tâche appliquée
 
+**✅ Traité 2026-07-30, version avertissement (aucune décision propriétaire fournie avant de commencer — fallback du prompt appliqué).** `moveTaskAction` et `updateTaskAction` (`tasks/actions.ts`) vérifient désormais le statut de `dependencyTaskId` quand la cible est `DONE`, via `incompleteDependencyWarning()`. Le passage à `DONE` **n'est jamais bloqué** : si la dépendance n'est pas `DONE`, un avertissement est renvoyé en plus du succès (`{status:"success", message:"Tâche mise à jour. ⚠ ..."}` côté formulaire — remonte automatiquement en toast via `Feedback`, qui toaste déjà tout message de succès ; `{ok:true, warning}` côté drag-and-drop, affiché via `useToast()` dans `task-board.tsx` puisque ce chemin ne passe pas par `Feedback`). **Décision produit T1 reste ouverte** pour un futur choix de blocage strict — si le propriétaire tranche dans ce sens, il faudra transformer l'avertissement en refus (retourner une erreur au lieu de laisser passer) dans ces deux mêmes fonctions.
+
 **Contexte :** `dependencyTaskId` existe (`Task` schema) mais n'est jamais vérifié — rien n'empêche de passer une tâche à `DONE` alors que sa dépendance ne l'est pas.
 
 **Décision produit encore ouverte, à trancher AVANT de coder :** blocage strict (impossible de passer à `DONE` tant que la dépendance n'est pas terminée) ou simple avertissement (message affiché, action autorisée quand même) ? **Si cette information n'est pas fournie explicitement dans ce prompt ou par le propriétaire avant de commencer cet item, implémenter la version avertissement (moins intrusive, réversible) et le signaler clairement dans le rapport — ne pas bloquer silencieusement une action sans confirmation explicite du choix.**
@@ -164,6 +166,8 @@ Deux audits ont été menés et déjà partiellement implémentés (voir histori
 **Résultat attendu :** Le champ dépendance devient réellement fonctionnel, pas seulement informatif.
 
 ### T2 — Vue « mon travail » transverse
+
+**✅ Vérifié puis complété 2026-07-30.** Le gros du besoin était déjà couvert par I2 (`dashboard-personal-work.ts`/`dashboard-sections.tsx`, session antérieure) : mes tâches ouvertes, mes contenus à valider, mes leads — mais **scopés au monde actuellement sélectionné**, pas "tous mondes confondus". Seul ce manque précis a été comblé, pas une reconstruction : `workspace/page.tsx` calcule désormais aussi `personalFiltersOther` (mêmes filtres via `buildPersonalWorkFilters`, appliqués à `otherWorldKey`) et ajoute une ligne "assignés à vous" dans le panneau `dashboard-panel--crossworld` déjà existant ("{otherWorldLabel} en un coup d'œil"), visible seulement si au moins un des trois compteurs est non nul. Choix délibéré : pas de garde par rôle/portée globale (`scope.type === "GLOBAL"`) — le panneau crossworld existant ne filtre déjà par aucun rôle, ajouter une garde ici aurait introduit une incohérence avec le reste du panneau plutôt que la résoudre. Vérifié : `tsc --noEmit`, `eslint --max-warnings=0`, suite de tests complète (591/591) ; pas de vérification navigateur live (extension d'un panneau déjà vérifié visuellement).
 
 **Contexte :** Aucune vue ne filtre par utilisateur connecté, ni pour les tâches ni pour les contenus éditoriaux — seulement par projet/monde. Déjà noté comme manque général par l'audit précédent (item I2).
 
