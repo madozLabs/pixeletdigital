@@ -106,11 +106,13 @@ export function UpdateProjectForm({
   status,
   progress,
   version,
+  budgetCents,
 }: Readonly<{
   projectId: string;
   status: string;
   progress: number;
   version: number;
+  budgetCents: number | null;
 }>) {
   const [state, action] = useActionState(
     updateProjectAction,
@@ -151,6 +153,15 @@ export function UpdateProjectForm({
         max={100}
         defaultValue={progress}
         aria-label="Progression en pourcentage"
+      />
+      <input
+        name="budget"
+        type="number"
+        min={0}
+        step={1}
+        defaultValue={budgetCents ? budgetCents / 100 : ""}
+        aria-label="Budget en XOF"
+        placeholder="Budget (XOF)"
       />
       {nextStatus === "CANCELLED" && status !== "CANCELLED" ? (
         <ConfirmAction consequence="Le projet quittera les vues de production actives.">

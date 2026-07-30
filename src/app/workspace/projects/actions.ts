@@ -103,6 +103,7 @@ export async function updateProjectAction(
 
     const progress = Number(formData.get("progress"));
     const expectedVersion = Number(formData.get("expectedVersion"));
+    const budget = Number(formData.get("budget"));
     const updated = await prisma.project.updateMany({
       where: { id: projectId, version: expectedVersion },
       data: {
@@ -111,6 +112,10 @@ export async function updateProjectAction(
         progress: Number.isInteger(progress)
           ? Math.min(100, Math.max(0, progress))
           : 0,
+        budgetCents:
+          Number.isFinite(budget) && budget > 0
+            ? Math.round(budget * 100)
+            : null,
         updatedAt: context.clock.now(),
         version: { increment: 1 },
       },

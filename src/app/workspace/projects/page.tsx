@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import { parsePage, toSkipTake } from "@/shared/pagination";
+import { formatCurrency } from "@/shared/format";
 import { Pagination } from "../_components/pagination";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import { CreateProjectForm, UpdateProjectForm } from "./project-forms";
@@ -132,6 +133,14 @@ export default async function ProjectsPage({
                     : "Non définie"}
                 </dd>
               </div>
+              <div>
+                <dt>Budget</dt>
+                <dd>
+                  {project.budgetCents
+                    ? formatCurrency(project.budgetCents)
+                    : "Non défini"}
+                </dd>
+              </div>
             </dl>
             {project.description ? <p>{project.description}</p> : null}
             <div className="project-progress">
@@ -142,6 +151,7 @@ export default async function ProjectsPage({
               status={project.status}
               progress={project.progress}
               version={project.version}
+              budgetCents={project.budgetCents}
             />
           </article>
         ))}
