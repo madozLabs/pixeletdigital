@@ -162,7 +162,7 @@ Recherche exhaustive : aucun type de section "témoignage" ou "étude de cas" n'
 | I5 | Module de preuve sociale (réalisations/témoignages) côté public | Important | Produit/UX public | Ouvert |
 | I6 | Refonte de l'identité visuelle Kwaliti Print conforme à son brand bible | Important | Brand/UX public | Ouvert |
 | I7 | `next/image`, sitemap, JSON-LD, métadonnées cohérentes | Important | Perf/SEO | Ouvert |
-| A1 | Brancher `KineticHeading` + transitions immersives entre univers | Amélioration | UX public | Ouvert |
+| A1 | Brancher `KineticHeading` + transitions immersives entre univers | Amélioration | UX public | ✅ traité 2026-07-30 (déjà fait, session antérieure — vérifié) |
 | A2 | États de chargement/succès systématiques (skeletons, toasts) | Amélioration | UX Workspace | Ouvert |
 | A3 | Formulaire devis Kwaliti Print avec champs métier structurés | Amélioration | Produit/UX public | Ouvert |
 | A4 | Modularisation de `globals.css` | Amélioration | Archi | Ouvert |
@@ -514,7 +514,13 @@ Résultat attendu : Images optimisées via next/image, métadonnées cohérentes
 
 ### Priorité Amélioration
 
-**A1 — Brancher KineticHeading + transitions immersives**
+**A1 — Brancher KineticHeading + transitions immersives** — ✅ déjà traité avant ce lot (commit `3d949ee`, "feat: implement adjustment audit recommendations", 26 juillet 2026, mergé sur `main`), vérifié à nouveau ici le 30 juillet 2026 sans qu'aucun code n'ait été à écrire :
+- `src/app/(marketing)/page.tsx:155` utilise déjà `KineticHeading` (déplacé depuis vers `src/app/_components/kinetic-heading.tsx`) pour le titre du hero, avec repli `useReducedMotion` correct (rendu `<h1>` statique sans animation si l'utilisateur préfère moins de mouvement).
+- `src/app/_components/world-transition.tsx` fournit déjà `WorldTransitionProvider` (monté une seule fois dans `src/app/layout.tsx:54`, donc partagé entre les deux univers) et `WorldTransitionLink` : overlay `AnimatePresence`/`clipPath` (360ms, easing `[0.76,0,0.24,1]`), navigation réelle différée le temps de l'anim, repli instantané (`router.push` direct, sans overlay) si `useReducedMotion` est actif. Utilisé uniquement par `world-switcher.tsx` — pas branché sur la navigation interne normale, conforme à la contrainte du prompt d'origine.
+- Vérifié dans ce lot : `tsc --noEmit` et `eslint src --max-warnings=0` propres ; `npm run test:run` vert sauf une suite pré-existante et sans rapport (`site-content/page-builder.test.tsx`, 4 échecs — bug d'environnement jsdom `window.localStorage` déjà présent au commit `85fda89` avant toute intervention de ce lot, non lié à A1, non traité ici par respect du périmètre strict de l'item — à signaler séparément) ; test manuel navigateur (serveur de dev, DB volontairement injoignable pour isoler l'UI) : page d'accueil rendue sans mojibake, clic sur « Nos univers » → « Kwaliti Print » déclenche la transition et navigue correctement vers `/kwaliti-print`, aucune erreur console.
+- **Non fait dans ce lot** : rien à faire — le prompt d'origine est déjà entièrement couvert. Seule chose notée pour un futur item séparé (hors A1) : la suite `page-builder.test.tsx` cassée par un souci d'environnement de test, à corriger indépendamment.
+
+Prompt d'origine conservé ci-dessous pour mémoire.
 ```text
 Contexte : src/app/(marketing)/_components/kinetic-heading.tsx existe, implémente une révélation typographique mot-par-mot avec gestion de useReducedMotion, mais n'est importé nulle part ailleurs dans le code — le hero de la page d'accueil utilise un simple Reveal. docs/01-brand/BRAND_ARCHITECTURE.md §4 mentionne explicitement la typographie cinétique comme élément d'identité de mouvement Pixel&Digital. Par ailleurs, aucune transition n'existe entre les pages ou entre les univers (aucun AnimatePresence dans le code), alors que docs/03-ux/PUBLIC_JOURNEYS.md (Parcours 4) demande une transition "spectaculaire mais réversible" au changement d'univers.
 
