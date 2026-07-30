@@ -172,6 +172,7 @@ export function PageBuilder({
   );
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const sidebarRef = useRef<HTMLElement>(null);
+  const inspectorRef = useRef<HTMLDivElement>(null);
   const [reorderState, setReorderState] = useState(IDLE_ACTION_STATE);
   const [blockMutationState, setBlockMutationState] =
     useState(IDLE_ACTION_STATE);
@@ -549,6 +550,15 @@ export function PageBuilder({
         .querySelector<HTMLElement>(`[data-cms-section-id="${id}"]`)
         ?.scrollIntoView?.({ behavior: "smooth", block: "center" });
     }
+    // The fields form is appended after the (potentially long) block
+    // library and outline list -- without this, clicking a block feels
+    // like nothing happened unless you already know to scroll down.
+    requestAnimationFrame(() => {
+      inspectorRef.current?.scrollIntoView?.({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
   }
 
   function onDragEnd(result: DropResult) {
@@ -721,13 +731,25 @@ export function PageBuilder({
                 )}
               </Droppable>
             </DragDropContext>
-            <div className="cms-visual-builder__inspector">
-              {selectedId ? childById.get(selectedId) : null}
-              {!selectedId ? (
+            <div
+              ref={inspectorRef}
+              className="cms-visual-builder__inspector"
+            >
+              {selectedId ? (
+                <>
+                  <div className="cms-visual-builder__inspector-header">
+                    <strong>
+                      Bloc {orderedIds.indexOf(selectedId) + 1} ·{" "}
+                      {labelById.get(selectedId) ?? typeById.get(selectedId)}
+                    </strong>
+                  </div>
+                  {childById.get(selectedId)}
+                </>
+              ) : (
                 <p className="admin-empty">
                   Cliquez un bloc dans la page ou ajoutez-en un nouveau.
                 </p>
-              ) : null}
+              )}
             </div>
           </>
         )}
