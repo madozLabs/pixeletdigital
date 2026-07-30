@@ -13,8 +13,12 @@ import {
 import { EditorialPipeline, type PipelineItem } from "./pipeline-board";
 import {
   addDays,
+  addMonths,
   formatISODate,
+  formatMonthParam,
+  monthGridDays,
   parseISODate,
+  parseMonthParam,
   WEEKDAY_LABELS,
 } from "./_lib/week";
 
@@ -39,34 +43,46 @@ const CONTENT_LABEL: Readonly<Record<string, string>> = {
 export default async function WorkspaceEditorialPage({
   searchParams,
 }: Readonly<{
-  searchParams: Promise<{ world?: string; week?: string; view?: string }>;
+  searchParams: Promise<{
+    world?: string;
+    week?: string;
+    view?: string;
+    month?: string;
+  }>;
 }>) {
   const context = await getWorkspaceRequestContext();
   if (!context) redirect("/login");
 
-  const { world, week, view } = await searchParams;
+  const { world, week, view, month } = await searchParams;
   const worldKey = world ?? "pixel-digital";
-  const activeView = view === "pipeline" ? "pipeline" : "week";
+  const activeView =
+    view === "pipeline" ? "pipeline" : view === "month" ? "month" : "week";
   const now = context.clock.now();
   const weekStart = parseISODate(week, now);
   const weekEnd = addDays(weekStart, 6);
   const days = Array.from({ length: 7 }, (_, index) =>
     addDays(weekStart, index),
   );
+  const monthStart = parseMonthParam(month, now);
+  const monthEnd = addMonths(monthStart, 1);
+  const monthCells = monthGridDays(monthStart);
   const canMutate = Boolean(
     context.actor?.role && MUTATE_ROLES.includes(context.actor.role),
   );
 
-  // The week view only ever renders these 7 days -- bounding the query to
-  // that window keeps it from re-fetching the world's entire editorial
-  // history just to bucket it by day in JS. The pipeline view still needs
-  // the broader (unbounded) history to surface anything stuck in an early
-  // status regardless of how long ago it was scheduled; that's a known,
-  // separate scalability gap (see AUDIT_EDITORIAL_TASKS_MODULE.md §3.1).
+  // Both the week and month views only ever render their own fixed date
+  // window -- bounding the query to that window keeps it from re-fetching
+  // the world's entire editorial history just to bucket it by day in JS.
+  // The pipeline view still needs the broader (unbounded) history to
+  // surface anything stuck in an early status regardless of how long ago
+  // it was scheduled; that's a known, separate scalability gap (see
+  // AUDIT_EDITORIAL_TASKS_MODULE.md §3.1).
   const editorialWhere =
     activeView === "week"
       ? { worldKey, scheduledFor: { gte: weekStart, lt: addDays(weekEnd, 1) } }
-      : { worldKey };
+      : activeView === "month"
+        ? { worldKey, scheduledFor: { gte: monthStart, lt: monthEnd } }
+        : { worldKey };
 
   const [items, clients, projects, users] = await Promise.all([
     prisma.editorialItem.findMany({
@@ -93,6 +109,13 @@ export default async function WorkspaceEditorialPage({
 
   const previousWeekHref = `/workspace/editorial?world=${worldKey}&week=${formatISODate(addDays(weekStart, -7))}`;
   const nextWeekHref = `/workspace/editorial?world=${worldKey}&week=${formatISODate(addDays(weekStart, 7))}`;
+  const previousMonthHref = `/workspace/editorial?world=${worldKey}&view=month&month=${formatMonthParam(addMonths(monthStart, -1))}`;
+  const nextMonthHref = `/workspace/editorial?world=${worldKey}&view=month&month=${formatMonthParam(addMonths(monthStart, 1))}`;
+  const monthLabel = monthStart.toLocaleDateString("fr-FR", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 
   return (
     <>
@@ -121,6 +144,18 @@ export default async function WorkspaceEditorialPage({
           }
         >
           Semaine
+        </Link>
+        <Link
+          href={`/workspace/editorial?world=${worldKey}&view=month`}
+          role="tab"
+          aria-selected={activeView === "month"}
+          className={
+            activeView === "month"
+              ? "admin-tabs__item admin-tabs__item--active"
+              : "admin-tabs__item"
+          }
+        >
+          Mois
         </Link>
         <Link
           href={`/workspace/editorial?world=${worldKey}&view=pipeline`}
@@ -228,6 +263,64 @@ export default async function WorkspaceEditorialPage({
                     ))
                   )}
                 </section>
+              );
+            })}
+          </div>
+        </>
+      ) : null}
+
+      {activeView === "month" ? (
+        <>
+          <div className="editorial-week-nav">
+            <Link href={previousMonthHref} className="admin-table__action">
+              Mois précédent
+            </Link>
+            <span className="editorial-week-nav__label">{monthLabel}</span>
+            <Link href={nextMonthHref} className="admin-table__action">
+              Mois suivant
+            </Link>
+          </div>
+          <div className="editorial-month-grid">
+            {WEEKDAY_LABELS.map((label) => (
+              <div key={label} className="editorial-month-grid__weekday">
+                {label.slice(0, 3)}
+              </div>
+            ))}
+            {monthCells.map((day, index) => {
+              if (!day) {
+                return (
+                  <div
+                    key={`blank-${index}`}
+                    className="editorial-month-grid__day editorial-month-grid__day--blank"
+                  />
+                );
+              }
+              const key = formatISODate(day);
+              const dayItems = itemsByDay.get(key) ?? [];
+              return (
+                <div key={key} className="editorial-month-grid__day">
+                  <span className="editorial-month-grid__date">
+                    {day.getUTCDate()}
+                  </span>
+                  {dayItems.slice(0, 3).map((item) => (
+                    <Link
+                      key={item.id}
+                      href={`/workspace/editorial?world=${worldKey}&week=${formatISODate(day)}`}
+                      className="editorial-month-grid__item"
+                      title={item.title}
+                    >
+                      {item.title}
+                    </Link>
+                  ))}
+                  {dayItems.length > 3 ? (
+                    <Link
+                      href={`/workspace/editorial?world=${worldKey}&week=${formatISODate(day)}`}
+                      className="editorial-month-grid__more"
+                    >
+                      +{dayItems.length - 3}
+                    </Link>
+                  ) : null}
+                </div>
               );
             })}
           </div>
