@@ -481,6 +481,13 @@
   font-size: var(--step-2);
 }
 
+.invoice-print__logo {
+  max-height: 48px;
+  max-width: 200px;
+  object-fit: contain;
+  margin-bottom: var(--space-1);
+}
+
 .invoice-print__meta {
   color: var(--ink-faint);
   font-size: 0.9em;

@@ -1,16 +1,19 @@
 import { notFound as notFoundResponse, redirect } from "next/navigation";
+import Image from "next/image";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import { getInvoiceById } from "@/modules/billing/application/invoice-use-cases";
 import { PrismaClientRepository } from "@/modules/billing/infrastructure/prisma-client-repository";
 import { PrismaInvoiceRepository } from "@/modules/billing/infrastructure/prisma-invoice-repository";
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
+import { parseWorldKey } from "@/modules/worlds/domain/world";
 
 import { getWorkspaceRequestContext } from "../../../../get-workspace-context";
 import { PrintButton } from "../../../_components/print-button";
 import { formatXof } from "../../../_lib/money";
 import { formatDate } from "@/shared/format";
 import { getStatusLabel } from "../../../../_components/status-badge";
+import { getPublishedSiteIdentity } from "@/app/_lib/site-identity";
 
 export default async function InvoicePrintPage({
   params,
@@ -36,6 +39,14 @@ export default async function InvoicePrintPage({
   const client = await new PrismaClientRepository(prisma).findById(
     invoice.clientId,
   );
+  const worldKeyResult = parseWorldKey(invoice.worldKey);
+  const world = worldKeyResult.ok
+    ? await deps.worlds.findByKey(worldKeyResult.value)
+    : null;
+  const identity = await getPublishedSiteIdentity(
+    invoice.worldKey,
+    world?.displayName ?? invoice.worldKey,
+  );
 
   return (
     <div className="invoice-print">
@@ -43,7 +54,19 @@ export default async function InvoicePrintPage({
 
       <header className="invoice-print__header">
         <div>
-          <p className="invoice-print__brand">Pixel&Digital</p>
+          {identity.logoUrl ? (
+            <Image
+              className="invoice-print__logo"
+              src={identity.logoUrl}
+              alt={identity.logoAlt}
+              width={200}
+              height={48}
+            />
+          ) : null}
+          <p className="invoice-print__brand">{identity.siteName}</p>
+          {identity.address ? (
+            <p className="invoice-print__meta">{identity.address}</p>
+          ) : null}
           <p className="invoice-print__meta">Facture {invoice.number}</p>
           <p className="invoice-print__meta">
             Émise le {formatDate(invoice.issuedAt)}

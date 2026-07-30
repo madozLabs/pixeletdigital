@@ -27,6 +27,8 @@ Deux audits ont été menés et déjà partiellement implémentés (voir histori
 
 ### F1 — Identité émetteur configurable sur le document imprimé
 
+**✅ Traité 2026-07-30.** Réalisé plus simplement que prévu : aucune migration Prisma, aucun nouveau formulaire. `SiteSettings`/`SiteIdentityConfig` (module `content`, déjà utilisé par les layouts publics) exposait déjà `siteName`, `logoMediaId`→`logoUrl` et `address` par monde, éditables via l'onglet Identité existant (`workspace/site-content/settings`). `invoices/[id]/print/page.tsx` appelle désormais `getPublishedSiteIdentity(worldKey, ...)` (même fonction que `site-header.tsx`/`kwaliti-header.tsx`) au lieu du texte en dur, avec repli sur `displayName` du monde si l'identité n'est pas encore publiée. Logo rendu via `next/image` (cohérent avec le header public, pas `<img>` brut). Écarté : champ `legalName` distinct de `displayName`/`siteName` — non nécessaire, `siteName` suffisait déjà comme "nom d'émetteur affiché". Vérifié : `tsc --noEmit`, `eslint --max-warnings=0`, suite de tests complète (591/591) ; pas de vérification navigateur live (page nécessite auth + facture réelle, changement de lecture pure sur un mécanisme déjà exercé visuellement ailleurs).
+
 **Contexte :** `invoices/[id]/print/page.tsx:46` affiche `<p className="invoice-print__brand">Pixel&Digital</p>` en dur, sans lien avec le monde (`worldKey`) de la facture. Kwaliti Print (l'autre monde du projet) n'a donc jamais sa propre identité sur ses factures imprimées.
 
 **Objectif :** Rendre nom, logo et adresse de l'émetteur configurables par monde, affichés sur le document imprimé au lieu du texte en dur.
