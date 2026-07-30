@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import {
   Feedback,
@@ -10,6 +10,8 @@ import {
 import { createTaskAction } from "./actions";
 
 type Option = Readonly<{ id: string; label: string }>;
+
+const DEPENDENCY_DATALIST_ID = "create-task-dependency-options";
 
 export function CreateTaskForm({
   activeProjectId,
@@ -21,6 +23,10 @@ export function CreateTaskForm({
   tasks: Option[];
 }>) {
   const [state, action] = useActionState(createTaskAction, IDLE_ACTION_STATE);
+  const [dependencyQuery, setDependencyQuery] = useState("");
+  const matchedDependency = tasks.find(
+    (task) => task.label === dependencyQuery,
+  );
   return (
     <form action={action} className="admin-form-card">
       <input type="hidden" name="projectId" value={activeProjectId} />
@@ -71,14 +77,23 @@ export function CreateTaskForm({
         </label>
         <label>
           Dépend de
-          <select name="dependencyTaskId" defaultValue="">
-            <option value="">Aucune</option>
+          <input
+            list={DEPENDENCY_DATALIST_ID}
+            value={dependencyQuery}
+            onChange={(event) => setDependencyQuery(event.target.value)}
+            placeholder="Rechercher une tâche…"
+            autoComplete="off"
+          />
+          <datalist id={DEPENDENCY_DATALIST_ID}>
             {tasks.map((task) => (
-              <option key={task.id} value={task.id}>
-                {task.label}
-              </option>
+              <option key={task.id} value={task.label} />
             ))}
-          </select>
+          </datalist>
+          <input
+            type="hidden"
+            name="dependencyTaskId"
+            value={matchedDependency?.id ?? ""}
+          />
         </label>
       </div>
       <label>

@@ -192,6 +192,8 @@ Deux audits ont été menés et déjà partiellement implémentés (voir histori
 
 ### T4 — Filtrage du sélecteur de tâche dépendante
 
+**✅ Traité 2026-07-30.** Le patron billing (`<input list>` + `<datalist>`) ne se transpose pas tel quel : en Facturation, la valeur soumise EST le libellé (le catalogue est recherché par nom côté serveur) ; ici `dependencyTaskId` doit rester un identifiant (FK), pas un libellé. Solution : champ de recherche visible (`value`/`onChange` en état local, `list=` pointant vers un `<datalist>` des libellés de tâches) + `<input type="hidden" name="dependencyTaskId">` dont la valeur est résolue en cherchant la tâche dont le libellé correspond exactement au texte tapé. Fragilité assumée : deux tâches de même libellé dans un même projet ne seraient pas différenciables par ce mécanisme — acceptable pour un premier passage, cohérent avec le niveau de rigueur déjà accepté pour le datalist catalogue en Facturation. **Non traité (hors périmètre demandé, signalé pour transparence)** : le sélecteur « Sous-tâche de » (`parentTaskId`), juste au-dessus dans le même formulaire, a exactement le même problème d'exhaustivité et n'a pas été touché — le prompt ne visait explicitement que `dependencyTaskId`. Vérifié : `tsc --noEmit`, `eslint --max-warnings=0`, suite de tests complète (591/591) ; pas de test dédié ni de vérification navigateur live (aucun composant de formulaire du Workspace n'a de test dédié dans ce dépôt, convention existante).
+
 **Contexte :** Le formulaire de création de tâche liste toutes les tâches existantes du projet sans filtre (`create-task-form.tsx`) — impraticable au-delà de quelques dizaines de tâches.
 
 **Objectif :** Remplacer le `<select>` exhaustif par une recherche/filtre texte.
