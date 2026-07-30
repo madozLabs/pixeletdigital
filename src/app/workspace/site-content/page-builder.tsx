@@ -474,13 +474,49 @@ export function PageBuilder({
         .forEach((mediaSlot) => {
           mediaSlot.style.cursor = editable ? "pointer" : "default";
           mediaSlot.title = editable
-            ? "Cliquer pour choisir le média de ce bloc"
+            ? "Cliquer pour sélectionner ce bloc (recadrage, position, remplacement dans le panneau de gauche)"
             : "";
+          // Clicking only selects the block -- it used to jump straight into
+          // "replace this image", which assumed that's what you wanted to do
+          // with it (as opposed to just repositioning/cropping it via the
+          // sidebar's existing sliders). Replacing is now a deliberate
+          // secondary action via the pill button below, same pattern as the
+          // block's own "glisser ce bloc" handle.
           mediaSlot.onclick = (event) => {
             event.preventDefault();
             event.stopPropagation();
             selectSection(sectionId);
-            if (editable) {
+          };
+          if (
+            editable &&
+            !mediaSlot.querySelector("[data-cms-media-replace]")
+          ) {
+            if (getComputedStyle(mediaSlot).position === "static") {
+              mediaSlot.style.position = "relative";
+            }
+            const replaceButton = document.createElement("button");
+            replaceButton.type = "button";
+            replaceButton.dataset.cmsMediaReplace = "true";
+            replaceButton.textContent = "Remplacer l'image";
+            Object.assign(replaceButton.style, {
+              position: "absolute",
+              zIndex: "1000",
+              inset: "auto 0.4rem 0.4rem auto",
+              padding: "0.35rem 0.55rem",
+              color: "white",
+              background: "var(--accent)",
+              borderRadius: "999px",
+              border: "0",
+              fontFamily: "system-ui, sans-serif",
+              fontSize: "0.7rem",
+              fontWeight: "700",
+              cursor: "pointer",
+              boxShadow: "0 2px 8px rgb(0 0 0 / 22%)",
+            });
+            replaceButton.onclick = (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              selectSection(sectionId);
               const slot =
                 mediaSlot.dataset.cmsMediaSlot === "gallery"
                   ? "gallery"
@@ -490,8 +526,9 @@ export function PageBuilder({
                 ...(galleryBySectionId.get(sectionId) ?? []),
               ]);
               setMediaPickerId(sectionId);
-            }
-          };
+            };
+            mediaSlot.appendChild(replaceButton);
+          }
         });
     });
     const main = document.querySelector<HTMLElement>("main");

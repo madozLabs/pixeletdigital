@@ -141,7 +141,7 @@ describe("PageBuilder canvas", () => {
     await waitFor(() => expect(mocks.remove).toHaveBeenCalled());
   });
 
-  it("selects a media slot directly from the preview canvas", async () => {
+  it("selecting a media slot only selects the block, not the replace dialog", async () => {
     const { container } = renderBuilder();
     const frame = container.querySelector("iframe") as HTMLIFrameElement;
     const previewDocument =
@@ -154,6 +154,27 @@ describe("PageBuilder canvas", () => {
       "[data-cms-media-slot]",
     )!;
     mediaSlot.onclick?.({
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+    } as unknown as PointerEvent);
+    expect(
+      screen.queryByRole("dialog", { name: "Choisir un média" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("replacing a media slot from the preview canvas opens the picker", async () => {
+    const { container } = renderBuilder();
+    const frame = container.querySelector("iframe") as HTMLIFrameElement;
+    const previewDocument =
+      document.implementation.createHTMLDocument("preview");
+    Object.defineProperty(frame, "contentDocument", { value: previewDocument });
+    previewDocument.body.innerHTML =
+      '<main><section data-cms-section-type="HERO"><button data-cms-media-slot="primary">Image</button></section><section data-cms-section-type="CTA"></section></main>';
+    fireEvent.load(frame);
+    const replaceButton = previewDocument.querySelector<HTMLElement>(
+      "[data-cms-media-replace]",
+    )!;
+    replaceButton.onclick?.({
       preventDefault: vi.fn(),
       stopPropagation: vi.fn(),
     } as unknown as PointerEvent);
