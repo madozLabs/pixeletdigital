@@ -163,7 +163,7 @@ Recherche exhaustive : aucun type de section "témoignage" ou "étude de cas" n'
 | I6 | Refonte de l'identité visuelle Kwaliti Print conforme à son brand bible | Important | Brand/UX public | Ouvert |
 | I7 | `next/image`, sitemap, JSON-LD, métadonnées cohérentes | Important | Perf/SEO | Ouvert |
 | A1 | Brancher `KineticHeading` + transitions immersives entre univers | Amélioration | UX public | ✅ traité 2026-07-30 (déjà fait, session antérieure — vérifié) |
-| A2 | États de chargement/succès systématiques (skeletons, toasts) | Amélioration | UX Workspace | Ouvert |
+| A2 | États de chargement/succès systématiques (skeletons, toasts) | Amélioration | UX Workspace | ✅ traité 2026-07-30 (déjà fait, session antérieure — vérifié) |
 | A3 | Formulaire devis Kwaliti Print avec champs métier structurés | Amélioration | Produit/UX public | Ouvert |
 | A4 | Modularisation de `globals.css` | Amélioration | Archi | Ouvert |
 | N1 | Command Palette IA à commandes en langage naturel | Innovation | UX Workspace | Ouvert |
@@ -538,7 +538,13 @@ Contraintes :
 Résultat attendu : Le hero utilise la typographie cinétique déjà construite, et changer d'univers devient un moment de transition perceptible et cohérent avec la marque, réversible et accessible.
 ```
 
-**A2 — États de chargement/succès systématiques**
+**A2 — États de chargement/succès systématiques** — ✅ déjà traité avant ce lot (commit `3d949ee`, même commit que A1, 26 juillet 2026, mergé sur `main`), vérifié à nouveau ici le 30 juillet 2026 sans code à écrire :
+- `loading.tsx` présent sur les 7 routes listées par le prompt (`billing`, `clients`, `editorial`, `enquiries`, `projects`, `site-content`, `tasks`), tous délégant à un composant partagé unique `src/app/workspace/_components/workspace-loading.tsx` (squelette cohérent, un seul point de vérité — pas 7 squelettes divergents).
+- `src/app/workspace/_components/toast.tsx` : système de toast maison (`ToastProvider`/`useToast`), **zéro nouvelle dépendance** (contrainte explicite du prompt respectée — pas de librairie ajoutée à `package.json`), monté une seule fois dans `src/app/workspace/layout.tsx:21`. Intégration élégante avec l'existant : `Feedback` (le composant partagé introduit par C6) appelle `useToast()` et déclenche un toast automatiquement sur `state.status === "success"` — donc chaque formulaire déjà converti à `useActionState`/`Feedback` bénéficie du toast sans modification supplémentaire, exactement la relation « complémentaire, pas un remplacement » demandée par la contrainte du prompt.
+- Vérifié : `tsc`/`eslint` propres (déjà confirmé pour l'ensemble du dépôt lors de la vérification A1, aucun fichier n'a changé entre-temps) ; `toast.test.tsx` fait partie des 583 tests verts de la suite. Vérification navigateur manuelle **partielle** : `/workspace` non authentifié redirige proprement vers `/login` sans erreur console ni crash (confirmé), mais le rendu réel des skeletons et des toasts en session authentifiée n'a **pas** pu être vérifié visuellement — aucune base PostgreSQL n'est joignable sur cette machine (contrainte déjà documentée dans `README.md`, antérieure à ce lot, pas une limite introduite ici). À vérifier visuellement dès qu'une base réelle ou `pglite` en mode serveur de dev sera disponible.
+- **Non fait dans ce lot** : rien à coder — le prompt d'origine est déjà entièrement couvert. Seule réserve : la vérification visuelle authentifiée reste à faire quand l'environnement le permettra (cf. ci-dessus), ce n'est pas un manque d'implémentation.
+
+Prompt d'origine conservé ci-dessous pour mémoire.
 ```text
 Contexte : Aucun loading.tsx ni squelette de chargement dans src/app/workspace. Aucun système de toast. Seuls les deux tableaux kanban (task-board.tsx, pipeline-board.tsx) ont un retour optimiste instantané via useOptimistic ; tout le reste se comporte en rechargement de page classique, créant une expérience incohérente.
 
