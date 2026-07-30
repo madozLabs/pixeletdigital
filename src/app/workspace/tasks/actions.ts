@@ -20,6 +20,24 @@ function mayManageTasks(role: string | null | undefined): boolean {
   return role !== null && role !== undefined && role !== "READER";
 }
 
+// T1 (audit éditorial/tâches) : la dépendance n'est pas un blocage strict --
+// décision produit non tranchée par le propriétaire au moment de ce
+// correctif, donc on choisit l'option la moins intrusive et réversible
+// (avertissement, pas de blocage) plutôt que d'imposer un comportement non
+// validé. À revoir si le propriétaire tranche explicitement pour un
+// blocage strict.
+async function incompleteDependencyWarning(
+  dependencyTaskId: string | null,
+): Promise<string | null> {
+  if (!dependencyTaskId) return null;
+  const dependency = await prisma.task.findUnique({
+    where: { id: dependencyTaskId },
+    select: { title: true, status: true },
+  });
+  if (!dependency || dependency.status === "DONE") return null;
+  return `Terminée, mais sa dépendance « ${dependency.title} » ne l'est pas encore.`;
+}
+
 export async function createTaskAction(
   _state: ActionState,
   formData: FormData,
@@ -95,7 +113,7 @@ function isTaskStatus(value: string): value is TaskStatus {
 }
 
 export type MoveTaskResult = Readonly<
-  { ok: true } | { ok: false; message: string }
+  { ok: true; warning?: string } | { ok: false; message: string }
 >;
 
 // Drag-and-drop column move: only touches status + position, never
@@ -122,7 +140,11 @@ export async function moveTaskAction(
   try {
     const task = await prisma.task.findUnique({
       where: { id: taskId },
-      select: { projectId: true, project: { select: { worldKey: true } } },
+      select: {
+        projectId: true,
+        dependencyTaskId: true,
+        project: { select: { worldKey: true } },
+      },
     });
     if (!task) return { ok: false, message: "Cette tâche n'existe plus." };
     requireWorldAccess(context.actor, task.project.worldKey);
@@ -142,7 +164,11 @@ export async function moveTaskAction(
       },
     });
     revalidatePath("/workspace/tasks");
-    return { ok: true };
+    const warning =
+      status === "DONE"
+        ? await incompleteDependencyWarning(task.dependencyTaskId)
+        : null;
+    return warning ? { ok: true, warning } : { ok: true };
   } catch (error) {
     console.error("moveTask failed", error);
     return {
@@ -169,7 +195,10 @@ export async function updateTaskAction(
   try {
     const task = await prisma.task.findUnique({
       where: { id: taskId },
-      select: { project: { select: { worldKey: true } } },
+      select: {
+        dependencyTaskId: true,
+        project: { select: { worldKey: true } },
+      },
     });
     if (!task) {
       return { status: "error", message: "Cette tâche n'existe plus." };
@@ -179,17 +208,18 @@ export async function updateTaskAction(
     const expectedVersion = Number(formData.get("expectedVersion"));
     const progress = Number(formData.get("progress"));
     const actualHours = Number(formData.get("actualHours"));
+    const status = text(formData, "status") as
+      | "BACKLOG"
+      | "TODO"
+      | "IN_PROGRESS"
+      | "BLOCKED"
+      | "REVIEW"
+      | "DONE"
+      | "CANCELLED";
     const updated = await prisma.task.updateMany({
       where: { id: taskId, version: expectedVersion },
       data: {
-        status: text(formData, "status") as
-          | "BACKLOG"
-          | "TODO"
-          | "IN_PROGRESS"
-          | "BLOCKED"
-          | "REVIEW"
-          | "DONE"
-          | "CANCELLED",
+        status,
         progress: Number.isInteger(progress)
           ? Math.min(100, Math.max(0, progress))
           : 0,
@@ -207,7 +237,14 @@ export async function updateTaskAction(
       };
     }
     revalidatePath("/workspace/tasks");
-    return { status: "success", message: "Tâche mise à jour." };
+    const warning =
+      status === "DONE"
+        ? await incompleteDependencyWarning(task.dependencyTaskId)
+        : null;
+    return {
+      status: "success",
+      message: warning ? `Tâche mise à jour. ${warning}` : "Tâche mise à jour.",
+    };
   } catch (error) {
     console.error("updateTask failed", error);
     return {
