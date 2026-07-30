@@ -57,9 +57,20 @@ export default async function WorkspaceEditorialPage({
     context.actor?.role && MUTATE_ROLES.includes(context.actor.role),
   );
 
+  // The week view only ever renders these 7 days -- bounding the query to
+  // that window keeps it from re-fetching the world's entire editorial
+  // history just to bucket it by day in JS. The pipeline view still needs
+  // the broader (unbounded) history to surface anything stuck in an early
+  // status regardless of how long ago it was scheduled; that's a known,
+  // separate scalability gap (see AUDIT_EDITORIAL_TASKS_MODULE.md §3.1).
+  const editorialWhere =
+    activeView === "week"
+      ? { worldKey, scheduledFor: { gte: weekStart, lt: addDays(weekEnd, 1) } }
+      : { worldKey };
+
   const [items, clients, projects, users] = await Promise.all([
     prisma.editorialItem.findMany({
-      where: { worldKey },
+      where: editorialWhere,
       include: { client: true, project: true, owner: true, reviewer: true },
       orderBy: { scheduledFor: "asc" },
     }),
