@@ -86,6 +86,7 @@ function toBoardTask(
     status: task.status,
     priority: task.priority,
     progress: task.progress,
+    version: task.version,
     dueDate: task.dueDate ? task.dueDate.toLocaleDateString("fr-FR") : null,
     assigneeName: task.assignee?.displayName ?? null,
     actualHours: task.actualMinutes ? task.actualMinutes / 60 : 0,

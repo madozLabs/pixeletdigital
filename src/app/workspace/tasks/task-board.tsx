@@ -28,6 +28,7 @@ export type BoardTask = Readonly<{
   status: string;
   priority: string;
   progress: number;
+  version: number;
   dueDate: string | null;
   assigneeName: string | null;
   actualHours: number;
@@ -71,14 +72,18 @@ export function TaskBoard({
     if (!destinationStatus || destinationStatus === result.source.droppableId)
       return;
     const taskId = result.draggableId;
+    const draggedTask = tasks.find((task) => task.id === taskId);
+    if (!draggedTask) return;
 
     startTransition(() => {
       setDragError(null);
       setOptimisticStatus({ id: taskId, status: destinationStatus });
-      void moveTaskAction(taskId, destinationStatus).then((moveResult) => {
-        if (!moveResult.ok) setDragError(moveResult.message);
-        router.refresh();
-      });
+      void moveTaskAction(taskId, destinationStatus, draggedTask.version).then(
+        (moveResult) => {
+          if (!moveResult.ok) setDragError(moveResult.message);
+          router.refresh();
+        },
+      );
     });
   }
 
@@ -196,6 +201,7 @@ function TaskCardControls({ task }: Readonly<{ task: BoardTask }>) {
     <form action={action} className="task-card__controls">
       <input type="hidden" name="taskId" value={task.id} />
       <input type="hidden" name="status" value={task.status} />
+      <input type="hidden" name="expectedVersion" value={task.version} />
       <input
         name="progress"
         type="number"

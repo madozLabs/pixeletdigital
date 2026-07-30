@@ -106,6 +106,7 @@ export type MoveTaskResult = Readonly<
 export async function moveTaskAction(
   taskId: string,
   status: string,
+  expectedVersion: number,
 ): Promise<MoveTaskResult> {
   const context = await getWorkspaceRequestContext();
   if (!context?.actor || !mayManageTasks(context.actor.role)) {
@@ -133,8 +134,12 @@ export async function moveTaskAction(
     });
 
     await prisma.task.update({
-      where: { id: taskId },
-      data: { status, position: (last?.position ?? -1) + 1 },
+      where: { id: taskId, version: expectedVersion },
+      data: {
+        status,
+        position: (last?.position ?? -1) + 1,
+        version: { increment: 1 },
+      },
     });
     revalidatePath("/workspace/tasks");
     return { ok: true };
@@ -142,7 +147,8 @@ export async function moveTaskAction(
     console.error("moveTask failed", error);
     return {
       ok: false,
-      message: "Le déplacement n'a pas pu être enregistré. Merci de réessayer.",
+      message:
+        "Le déplacement n'a pas pu être enregistré (la tâche a peut-être changé entre-temps).",
     };
   }
 }
@@ -170,10 +176,11 @@ export async function updateTaskAction(
     }
     requireWorldAccess(context.actor, task.project.worldKey);
 
+    const expectedVersion = Number(formData.get("expectedVersion"));
     const progress = Number(formData.get("progress"));
     const actualHours = Number(formData.get("actualHours"));
-    await prisma.task.update({
-      where: { id: taskId },
+    const updated = await prisma.task.updateMany({
+      where: { id: taskId, version: expectedVersion },
       data: {
         status: text(formData, "status") as
           | "BACKLOG"
@@ -190,8 +197,15 @@ export async function updateTaskAction(
           Number.isFinite(actualHours) && actualHours >= 0
             ? Math.round(actualHours * 60)
             : null,
+        version: { increment: 1 },
       },
     });
+    if (updated.count === 0) {
+      return {
+        status: "error",
+        message: "Cette tâche a changé depuis son dernier chargement.",
+      };
+    }
     revalidatePath("/workspace/tasks");
     return { status: "success", message: "Tâche mise à jour." };
   } catch (error) {
