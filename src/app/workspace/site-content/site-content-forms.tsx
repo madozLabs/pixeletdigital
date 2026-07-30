@@ -31,13 +31,12 @@ import {
   saveSectionAction,
   saveSectionFieldsAction,
   saveSiteIdentityDraftAction,
+  restorePageRevisionAction,
   startPageRevisionAction,
   startSiteIdentityDraftAction,
   transitionSiteIdentityAction,
   transitionPageRevisionAction,
-  transitionPageAction,
   updatePageRevisionMetadataAction,
-  updatePageAction,
   uploadMediaAction,
 } from "./actions";
 
@@ -96,10 +95,20 @@ export function RevisionEditor({
   pageId,
   draft,
   published,
+  history,
+  changeSummary,
 }: Readonly<{
   pageId: string;
   draft: WorkspaceRevisionDto | null;
   published: WorkspaceRevisionDto | null;
+  history: readonly WorkspaceRevisionDto[];
+  changeSummary: Readonly<{
+    added: readonly string[];
+    removed: readonly string[];
+    modified: readonly string[];
+    moved: readonly string[];
+    totalChanges: number;
+  }> | null;
 }>) {
   const [startState, startAction] = useActionState(
     startPageRevisionAction,
@@ -120,10 +129,111 @@ export function RevisionEditor({
           <SubmitButton>Créer un brouillon</SubmitButton>
           <Feedback state={startState} />
         </form>
+        <RevisionHistory pageId={pageId} revisions={history} restorable />
       </section>
     );
   }
-  return <ActiveRevisionEditor pageId={pageId} revision={draft} />;
+  return (
+    <>
+      <ActiveRevisionEditor pageId={pageId} revision={draft} />
+      {changeSummary ? <RevisionChangeSummary summary={changeSummary} /> : null}
+      <RevisionHistory pageId={pageId} revisions={history} restorable={false} />
+    </>
+  );
+}
+
+function RevisionChangeSummary({
+  summary,
+}: Readonly<{
+  summary: Readonly<{
+    added: readonly string[];
+    removed: readonly string[];
+    modified: readonly string[];
+    moved: readonly string[];
+    totalChanges: number;
+  }>;
+}>) {
+  const groups = [
+    ["Ajoutés", summary.added],
+    ["Supprimés", summary.removed],
+    ["Modifiés", summary.modified],
+    ["Déplacés", summary.moved],
+  ] as const;
+  return (
+    <section className="admin-form-card cms-revision-summary">
+      <h3>Changements avant publication</h3>
+      {summary.totalChanges === 0 ? (
+        <p className="admin-table__note">
+          Aucune différence avec la version publiée.
+        </p>
+      ) : (
+        groups.map(([label, values]) =>
+          values.length ? (
+            <div key={label}>
+              <strong>
+                {label} · {values.length}
+              </strong>
+              <ul>
+                {values.map((value, index) => (
+                  <li key={`${label}-${index}`}>{value}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null,
+        )
+      )}
+    </section>
+  );
+}
+
+function RevisionHistory({
+  pageId,
+  revisions,
+  restorable,
+}: Readonly<{
+  pageId: string;
+  revisions: readonly WorkspaceRevisionDto[];
+  restorable: boolean;
+}>) {
+  const candidates = revisions.filter((revision) =>
+    ["PUBLISHED", "SUPERSEDED", "ARCHIVED"].includes(revision.status),
+  );
+  return (
+    <details className="admin-user-card__details">
+      <summary>Historique des révisions ({candidates.length})</summary>
+      <ol className="cms-revision-history">
+        {candidates.map((revision) => (
+          <li key={revision.id}>
+            <span>
+              Version {revision.revisionNumber} · {revision.status}
+            </span>
+            {restorable ? (
+              <RestoreRevisionForm pageId={pageId} revisionId={revision.id} />
+            ) : null}
+          </li>
+        ))}
+      </ol>
+    </details>
+  );
+}
+
+function RestoreRevisionForm({
+  pageId,
+  revisionId,
+}: Readonly<{ pageId: string; revisionId: string }>) {
+  const [state, action] = useActionState(
+    restorePageRevisionAction,
+    IDLE_ACTION_STATE,
+  );
+  useRefreshOnSuccess(state.status);
+  return (
+    <form action={action}>
+      <input type="hidden" name="pageId" value={pageId} />
+      <input type="hidden" name="sourceRevisionId" value={revisionId} />
+      <SubmitButton>Restaurer</SubmitButton>
+      <Feedback state={state} />
+    </form>
+  );
 }
 
 export function SiteIdentityEditor({
@@ -1222,45 +1332,6 @@ function RevisionTransitionForm({
   );
 }
 
-export function UpdatePageForm({
-  id,
-  version,
-  title,
-  slug,
-  editable,
-}: Readonly<{
-  id: string;
-  version: number;
-  title: string;
-  slug: string;
-  editable: boolean;
-}>) {
-  const [state, action] = useActionState(updatePageAction, IDLE_ACTION_STATE);
-  return (
-    <form action={action} className="admin-form-card">
-      <input type="hidden" name="id" value={id} />
-      <input type="hidden" name="expectedVersion" value={version} />
-      <div className="admin-form-grid">
-        <label>
-          Titre
-          <input name="title" defaultValue={title} required />
-        </label>
-        <label>
-          Slug
-          <input name="slug" defaultValue={slug} required />
-        </label>
-      </div>
-      <Feedback state={state} />
-      <SubmitButton>Enregistrer</SubmitButton>
-      {!editable ? (
-        <p className="admin-table__note">
-          Cette page n&apos;est plus en brouillon.
-        </p>
-      ) : null}
-    </form>
-  );
-}
-
 export function DeleteSectionForm({
   sectionId,
   pageId,
@@ -1497,6 +1568,44 @@ function SectionDesignFields({
         conserve l’identité définie dans Apparence.
       </p>
       <div className="admin-form-grid cms-section-design-fields__grid">
+        <label>
+          Fond sémantique
+          <select
+            name="surfaceTone"
+            defaultValue={selected("surfaceTone", "DEFAULT")}
+            disabled={!editable}
+          >
+            <option value="DEFAULT">Standard</option>
+            <option value="SUBTLE">Discret</option>
+            <option value="BRAND">Marque</option>
+            <option value="INVERSE">Contrasté</option>
+          </select>
+        </label>
+        <label>
+          Largeur du contenu
+          <select
+            name="contentWidth"
+            defaultValue={selected("contentWidth", "STANDARD")}
+            disabled={!editable}
+          >
+            <option value="NARROW">Étroite</option>
+            <option value="STANDARD">Standard</option>
+            <option value="WIDE">Large</option>
+            <option value="FULL">Pleine largeur</option>
+          </select>
+        </label>
+        <label>
+          Densité
+          <select
+            name="sectionDensity"
+            defaultValue={selected("sectionDensity", "COMFORTABLE")}
+            disabled={!editable}
+          >
+            <option value="COMPACT">Compacte</option>
+            <option value="COMFORTABLE">Confortable</option>
+            <option value="SPACIOUS">Aérée</option>
+          </select>
+        </label>
         <label>
           Police du titre
           <select name="headingFont" defaultValue={selected("headingFont", "")}>
@@ -2138,33 +2247,6 @@ export function SectionJsonForm({
           Cette page n&apos;est plus en brouillon.
         </p>
       ) : null}
-    </form>
-  );
-}
-
-export function PageTransitionForm({
-  id,
-  version,
-  target,
-  label,
-}: Readonly<{ id: string; version: number; target: string; label: string }>) {
-  const [state, action] = useActionState(
-    transitionPageAction,
-    IDLE_ACTION_STATE,
-  );
-  return (
-    <form action={action}>
-      <input type="hidden" name="id" value={id} />
-      <input type="hidden" name="expectedVersion" value={version} />
-      <input type="hidden" name="target" value={target} />
-      {target === "ARCHIVED" ? (
-        <ConfirmAction consequence="La page sera retirée du site public et archivée.">
-          {label}
-        </ConfirmAction>
-      ) : (
-        <SubmitButton>{label}</SubmitButton>
-      )}
-      <Feedback state={state} />
     </form>
   );
 }

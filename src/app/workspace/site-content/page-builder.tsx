@@ -20,9 +20,17 @@ import {
 import {
   Blocks,
   Copy,
+  ChevronDown,
+  ChevronUp,
   ExternalLink,
   GripVertical,
   Monitor,
+  MoreVertical,
+  Search,
+  Smartphone,
+  Tablet,
+  Trash2,
+  Undo2,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
@@ -48,8 +56,11 @@ import {
 } from "../_components/feedback";
 import {
   addPageBlockAction,
+  copyPageBlockToPageAction,
+  deleteSectionAction,
   duplicatePageBlockAction,
   reorderPageBlocksAction,
+  restoreLastDeletedBlockAction,
   setPageBlockMediaAction,
 } from "./actions";
 
@@ -98,6 +109,10 @@ export function PageBuilder({
   mediaAssets,
   editable,
   previewUrl,
+  publishedPreviewUrl,
+  targetPages,
+  sectionLabels,
+  sectionErrors,
   settings,
   children,
 }: Readonly<{
@@ -118,6 +133,14 @@ export function PageBuilder({
   }>[];
   editable: boolean;
   previewUrl: string | null;
+  publishedPreviewUrl: string | null;
+  targetPages: readonly Readonly<{
+    id: string;
+    title: string;
+    draftRevisionId: string | null;
+  }>[];
+  sectionLabels: readonly string[];
+  sectionErrors: readonly (readonly string[])[];
   settings: React.ReactNode;
   children: React.ReactNode;
 }>) {
@@ -139,6 +162,7 @@ export function PageBuilder({
     sectionIds.map((id, index) => [id, sectionGalleryMediaIds[index] ?? []]),
   );
   const [orderedIds, setOrderedIds] = useState(sectionIds);
+  const [undoOrder, setUndoOrder] = useState<readonly string[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(
     sectionIds[0] ?? null,
   );
@@ -159,6 +183,22 @@ export function PageBuilder({
   const [gallerySelection, setGallerySelection] = useState<string[]>([]);
   const [mediaState, setMediaState] = useState(IDLE_ACTION_STATE);
   const [isMediaSaving, startMediaTransition] = useTransition();
+  const [viewport, setViewport] = useState<
+    "desktop" | "tablet" | "mobile" | "custom"
+  >("desktop");
+  const [customWidth, setCustomWidth] = useState(1100);
+  const [showPublished, setShowPublished] = useState(false);
+  const [overflowCount, setOverflowCount] = useState(0);
+  const [outlineSearch, setOutlineSearch] = useState("");
+  const labelById = new Map(
+    sectionIds.map((id, index) => [
+      id,
+      sectionLabels[index] ?? sectionTypes[index] ?? id,
+    ]),
+  );
+  const errorsById = new Map(
+    sectionIds.map((id, index) => [id, sectionErrors[index] ?? []]),
+  );
 
   function toggleSidebar() {
     setIsSidebarCollapsed((current) => {
@@ -168,8 +208,9 @@ export function PageBuilder({
     });
   }
 
-  function persistOrder(next: string[]) {
+  function persistOrder(next: string[], remember = true) {
     if (!editable || !revisionId || revisionVersion === null) return;
+    if (remember) setUndoOrder(orderedIds);
     setOrderedIds(next);
     const data = new FormData();
     data.set("pageId", pageId);
@@ -182,6 +223,19 @@ export function PageBuilder({
       if (state.status === "error") setOrderedIds(sectionIds);
       else router.refresh();
     });
+  }
+
+  function detectOverflow() {
+    const document = iframeRef.current?.contentDocument;
+    if (!document) return;
+    const viewportWidth = document.documentElement.clientWidth;
+    const overflowing = Array.from(
+      document.body.querySelectorAll<HTMLElement>("*"),
+    ).filter(
+      (element) =>
+        element.scrollWidth > Math.max(element.clientWidth, viewportWidth) + 2,
+    );
+    setOverflowCount(overflowing.length);
   }
 
   function insertBlock(
@@ -349,9 +403,7 @@ export function PageBuilder({
       element.onclick = (event) => {
         event.preventDefault();
         event.stopPropagation();
-        setSelectedId(sectionId);
-        setPanel("blocks");
-        highlightSelectedSection(document, sectionId);
+        selectSection(sectionId);
       };
       element
         .querySelectorAll<HTMLElement>("[data-cms-field]")
@@ -365,9 +417,7 @@ export function PageBuilder({
             ? "Cliquez puis saisissez votre texte"
             : "";
           editableField.onfocus = () => {
-            setSelectedId(sectionId);
-            setPanel("blocks");
-            highlightSelectedSection(document, sectionId);
+            selectSection(sectionId);
           };
           editableField.oninput = () => {
             syncInspectorField(
@@ -391,9 +441,7 @@ export function PageBuilder({
             ? "Cliquez puis modifiez cet élément"
             : "";
           editableItem.onfocus = () => {
-            setSelectedId(sectionId);
-            setPanel("blocks");
-            highlightSelectedSection(document, sectionId);
+            selectSection(sectionId);
           };
           editableItem.oninput = () => {
             syncInspectorField(
@@ -417,9 +465,7 @@ export function PageBuilder({
           mediaSlot.onclick = (event) => {
             event.preventDefault();
             event.stopPropagation();
-            setSelectedId(sectionId);
-            setPanel("blocks");
-            highlightSelectedSection(document, sectionId);
+            selectSection(sectionId);
             if (editable) {
               const slot =
                 mediaSlot.dataset.cmsMediaSlot === "gallery"
@@ -453,6 +499,7 @@ export function PageBuilder({
       };
     }
     highlightSelectedSection(document, selectedId);
+    detectOverflow();
   }
 
   const previewConnectorRef = useRef(connectPreview);
@@ -477,12 +524,17 @@ export function PageBuilder({
   function selectSection(id: string) {
     setSelectedId(id);
     setPanel("blocks");
+    window.dispatchEvent(
+      new CustomEvent("cms:section-selected", {
+        detail: { sectionId: id, label: labelById.get(id) },
+      }),
+    );
     const document = iframeRef.current?.contentDocument;
     if (document) {
       highlightSelectedSection(document, id);
       document
         .querySelector<HTMLElement>(`[data-cms-section-id="${id}"]`)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        ?.scrollIntoView?.({ behavior: "smooth", block: "center" });
     }
   }
 
@@ -568,6 +620,16 @@ export function PageBuilder({
             </div>
             <Feedback state={blockMutationState} />
             <Feedback state={reorderState} />
+            <label className="cms-outline-search">
+              <Search size={15} />
+              <span className="sr-only">Rechercher un bloc</span>
+              <input
+                type="search"
+                placeholder="Rechercher dans les blocs"
+                value={outlineSearch}
+                onChange={(event) => setOutlineSearch(event.target.value)}
+              />
+            </label>
             <DragDropContext onDragEnd={onDragEnd}>
               <Droppable droppableId="page-blocks" isDropDisabled={!editable}>
                 {(provided) => (
@@ -576,52 +638,71 @@ export function PageBuilder({
                     {...provided.droppableProps}
                     className="cms-visual-builder__outline"
                   >
-                    {orderedIds.map((id, index) => (
-                      <Draggable
-                        key={id}
-                        draggableId={id}
-                        index={index}
-                        isDragDisabled={!editable}
-                      >
-                        {(dragProvided) => (
-                          <div
-                            ref={dragProvided.innerRef}
-                            {...dragProvided.draggableProps}
-                            className={
-                              id === selectedId
-                                ? "cms-outline-item is-selected"
-                                : "cms-outline-item"
-                            }
+                    {orderedIds
+                      .filter((id) =>
+                        `${labelById.get(id)} ${typeById.get(id)}`
+                          .toLowerCase()
+                          .includes(outlineSearch.toLowerCase()),
+                      )
+                      .map((id) => {
+                        const index = orderedIds.indexOf(id);
+                        return (
+                          <Draggable
+                            key={id}
+                            draggableId={id}
+                            index={index}
+                            isDragDisabled={!editable}
                           >
-                            <button
-                              type="button"
-                              className="cms-outline-item__select"
-                              onClick={() => selectSection(id)}
-                            >
-                              <span
-                                {...dragProvided.dragHandleProps}
-                                className="cms-outline-item__handle"
+                            {(dragProvided) => (
+                              <div
+                                ref={dragProvided.innerRef}
+                                {...dragProvided.draggableProps}
+                                className={
+                                  id === selectedId
+                                    ? "cms-outline-item is-selected"
+                                    : "cms-outline-item"
+                                }
                               >
-                                <GripVertical size={15} />
-                              </span>
-                              <span>
-                                <small>Bloc {index + 1}</small>
-                                <strong>
-                                  {typeById.get(id) ?? `Section ${index + 1}`}
-                                </strong>
-                              </span>
-                            </button>
-                            {editable && revisionId ? (
-                              <DuplicateBlockButton
-                                pageId={pageId}
-                                revisionId={revisionId}
-                                sectionId={id}
-                              />
-                            ) : null}
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
+                                <button
+                                  type="button"
+                                  className="cms-outline-item__select"
+                                  onClick={() => selectSection(id)}
+                                >
+                                  <span
+                                    {...dragProvided.dragHandleProps}
+                                    className="cms-outline-item__handle"
+                                  >
+                                    <GripVertical size={15} />
+                                  </span>
+                                  <span>
+                                    <small>Bloc {index + 1}</small>
+                                    <strong>
+                                      {labelById.get(id) ??
+                                        `Section ${index + 1}`}
+                                    </strong>
+                                    {(errorsById.get(id)?.length ?? 0) > 0 ? (
+                                      <em className="cms-outline-item__error">
+                                        {errorsById.get(id)?.length} erreur(s)
+                                      </em>
+                                    ) : null}
+                                  </span>
+                                </button>
+                                {editable && revisionId ? (
+                                  <BlockContextMenu
+                                    pageId={pageId}
+                                    revisionId={revisionId}
+                                    sectionId={id}
+                                    index={index}
+                                    orderedIds={orderedIds}
+                                    targetPages={targetPages}
+                                    onMove={persistOrder}
+                                  />
+                                ) : null}
+                              </div>
+                            )}
+                          </Draggable>
+                        );
+                      })}
                     {provided.placeholder}
                   </div>
                 )}
@@ -669,6 +750,50 @@ export function PageBuilder({
               <Monitor size={16} /> Aperçu ordinateur
             </span>
           </div>
+          <div
+            className="cms-viewport-controls"
+            aria-label="Largeur de l’aperçu"
+          >
+            <button
+              type="button"
+              aria-label="Ordinateur"
+              className={viewport === "desktop" ? "is-active" : ""}
+              onClick={() => setViewport("desktop")}
+            >
+              <Monitor size={16} />
+            </button>
+            <button
+              type="button"
+              aria-label="Tablette"
+              className={viewport === "tablet" ? "is-active" : ""}
+              onClick={() => setViewport("tablet")}
+            >
+              <Tablet size={16} />
+            </button>
+            <button
+              type="button"
+              aria-label="Mobile"
+              className={viewport === "mobile" ? "is-active" : ""}
+              onClick={() => setViewport("mobile")}
+            >
+              <Smartphone size={16} />
+            </button>
+            <input
+              aria-label="Largeur personnalisée du canvas"
+              type="range"
+              min="320"
+              max="1440"
+              step="10"
+              value={customWidth}
+              onChange={(event) => {
+                setCustomWidth(Number(event.target.value));
+                setViewport("custom");
+              }}
+            />
+            <output>
+              {viewport === "custom" ? `${customWidth}px` : viewport}
+            </output>
+          </div>
           <span className="cms-visual-builder__stage-help">
             {!editable
               ? "Créez une version de travail dans Page & SEO pour modifier"
@@ -678,6 +803,32 @@ export function PageBuilder({
           </span>
           {previewUrl ? (
             <div>
+              {undoOrder ? (
+                <button
+                  type="button"
+                  aria-label="Annuler le dernier déplacement"
+                  onClick={() => {
+                    persistOrder([...undoOrder], false);
+                    setUndoOrder(null);
+                  }}
+                >
+                  <Undo2 size={16} />
+                </button>
+              ) : null}
+              {editable && revisionId ? (
+                <RestoreDeletedBlockButton
+                  pageId={pageId}
+                  revisionId={revisionId}
+                />
+              ) : null}
+              {publishedPreviewUrl ? (
+                <button
+                  type="button"
+                  onClick={() => setShowPublished((value) => !value)}
+                >
+                  {showPublished ? "Voir brouillon" : "Comparer publié"}
+                </button>
+              ) : null}
               <button
                 type="button"
                 aria-label="Actualiser l’aperçu"
@@ -803,13 +954,34 @@ export function PageBuilder({
           </div>
         ) : null}
         {previewUrl ? (
-          <div className="cms-visual-builder__frame-wrap">
+          <div
+            className="cms-visual-builder__frame-wrap"
+            style={
+              {
+                "--cms-canvas-width": `${viewport === "desktop" ? 1280 : viewport === "tablet" ? 768 : viewport === "mobile" ? 390 : customWidth}px`,
+              } as React.CSSProperties
+            }
+          >
             <iframe
               ref={iframeRef}
-              src={previewUrl}
+              src={
+                showPublished && publishedPreviewUrl
+                  ? publishedPreviewUrl
+                  : previewUrl
+              }
               title="Aperçu fidèle de la page"
               className="cms-visual-builder__frame"
+              onLoad={() => {
+                connectPreview();
+                detectOverflow();
+              }}
             />
+            {overflowCount > 0 ? (
+              <p className="cms-responsive-warning" role="status">
+                Attention : {overflowCount} élément(s) semblent déborder à cette
+                largeur.
+              </p>
+            ) : null}
           </div>
         ) : (
           <div className="cms-visual-builder__empty-preview">
@@ -818,6 +990,32 @@ export function PageBuilder({
         )}
       </section>
     </div>
+  );
+}
+
+function RestoreDeletedBlockButton({
+  pageId,
+  revisionId,
+}: Readonly<{ pageId: string; revisionId: string }>) {
+  const router = useRouter();
+  const [state, setState] = useState(IDLE_ACTION_STATE);
+  return (
+    <form
+      action={(data) =>
+        startTransition(async () => {
+          const result = await restoreLastDeletedBlockAction(data);
+          setState(result);
+          if (result.status === "success") router.refresh();
+        })
+      }
+    >
+      <input type="hidden" name="pageId" value={pageId} />
+      <input type="hidden" name="revisionId" value={revisionId} />
+      <button type="submit" aria-label="Restaurer le dernier bloc supprimé">
+        <Undo2 size={16} />
+      </button>
+      <Feedback state={state} />
+    </form>
   );
 }
 
@@ -997,5 +1195,105 @@ function DuplicateBlockButton({
       </button>
       <Feedback state={state} />
     </form>
+  );
+}
+
+function BlockContextMenu({
+  pageId,
+  revisionId,
+  sectionId,
+  index,
+  orderedIds,
+  targetPages,
+  onMove,
+}: Readonly<{
+  pageId: string;
+  revisionId: string;
+  sectionId: string;
+  index: number;
+  orderedIds: readonly string[];
+  targetPages: readonly Readonly<{ id: string; title: string }>[];
+  onMove: (ids: string[]) => void;
+}>) {
+  const router = useRouter();
+  const [deleteState, deleteAction] = useActionState(
+    deleteSectionAction,
+    IDLE_ACTION_STATE,
+  );
+  const [copyState, copyAction] = useActionState(
+    copyPageBlockToPageAction,
+    IDLE_ACTION_STATE,
+  );
+  useEffect(() => {
+    if (deleteState.status === "success" || copyState.status === "success")
+      router.refresh();
+  }, [copyState.status, deleteState.status, router]);
+  function move(offset: number) {
+    const target = index + offset;
+    if (target < 0 || target >= orderedIds.length) return;
+    const next = [...orderedIds];
+    const [item] = next.splice(index, 1);
+    if (!item) return;
+    next.splice(target, 0, item);
+    onMove(next);
+  }
+  return (
+    <details className="cms-block-context-menu">
+      <summary aria-label="Actions du bloc">
+        <MoreVertical size={16} />
+      </summary>
+      <div>
+        <button type="button" onClick={() => move(-1)} disabled={index === 0}>
+          <ChevronUp size={14} /> Monter
+        </button>
+        <button
+          type="button"
+          onClick={() => move(1)}
+          disabled={index === orderedIds.length - 1}
+        >
+          <ChevronDown size={14} /> Descendre
+        </button>
+        <DuplicateBlockButton
+          pageId={pageId}
+          revisionId={revisionId}
+          sectionId={sectionId}
+        />
+        {targetPages.length ? (
+          <form action={copyAction}>
+            <input type="hidden" name="pageId" value={pageId} />
+            <input type="hidden" name="revisionId" value={revisionId} />
+            <input type="hidden" name="sectionId" value={sectionId} />
+            <select
+              name="targetPageId"
+              aria-label="Page de destination"
+              required
+              defaultValue=""
+            >
+              <option value="" disabled>
+                Copier vers…
+              </option>
+              {targetPages.map((page) => (
+                <option key={page.id} value={page.id}>
+                  {page.title}
+                </option>
+              ))}
+            </select>
+            <button type="submit">
+              <Copy size={14} /> Copier
+            </button>
+            <Feedback state={copyState} />
+          </form>
+        ) : null}
+        <form action={deleteAction}>
+          <input type="hidden" name="pageId" value={pageId} />
+          <input type="hidden" name="revisionId" value={revisionId} />
+          <input type="hidden" name="id" value={sectionId} />
+          <button type="submit" className="is-danger">
+            <Trash2 size={14} /> Supprimer
+          </button>
+          <Feedback state={deleteState} />
+        </form>
+      </div>
+    </details>
   );
 }

@@ -6,7 +6,7 @@ import {
   isEvidencePublishable,
   type EvidenceSectionType,
 } from "@/modules/content/domain/evidence-section";
-import type { PageSectionPayload } from "@/modules/content/domain/page-section";
+type PageSectionPayload = Readonly<Record<string, unknown>>;
 import type { CmsMediaAsset } from "./cms-section";
 import {
   CmsPrimaryImageOverlay,

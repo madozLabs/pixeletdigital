@@ -1,4 +1,4 @@
-import type { PageSectionPayload } from "./page-section";
+type PageSectionPayload = Readonly<Record<string, unknown>>;
 
 export const EVIDENCE_SECTION_TYPES = ["CASE_STUDY", "TESTIMONIAL"] as const;
 export type EvidenceSectionType = (typeof EVIDENCE_SECTION_TYPES)[number];

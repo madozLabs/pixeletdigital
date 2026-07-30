@@ -46,7 +46,6 @@ export async function getCmsFormPageContent(
           : { lifecycle: "PUBLISHED" as const }),
       },
       include: {
-        sections: { orderBy: { order: "asc" } },
         draftRevision: {
           include: { sections: { orderBy: { order: "asc" } } },
         },
@@ -59,8 +58,8 @@ export async function getCmsFormPageContent(
   if (!page) return EMPTY_CONTENT;
 
   const sections = previewRevisionId
-    ? (page.draftRevision?.sections ?? page.sections)
-    : (page.publishedRevision?.sections ?? page.sections);
+    ? (page.draftRevision?.sections ?? [])
+    : (page.publishedRevision?.sections ?? []);
   const hero = sections.find((section) => section.sectionType === "HERO");
   const form = sections.find((section) => section.sectionType === "FORM");
   const heroPayload = (hero?.payload ?? {}) as Record<string, unknown>;

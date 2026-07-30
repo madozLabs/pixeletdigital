@@ -451,7 +451,6 @@ model Page {
   createdAt           DateTime
   updatedAt           DateTime
 
-  sections          PageSection[]
   revisions         PageRevision[] @relation("PageRevisions")
   draftRevision     PageRevision?  @relation("PageDraftRevision", fields: [draftRevisionId], references: [id], onDelete: SetNull)
   publishedRevision PageRevision?  @relation("PagePublishedRevision", fields: [publishedRevisionId], references: [id], onDelete: SetNull)
@@ -526,20 +525,21 @@ model SectionMediaUsage {
   @@map("section_media_usages")
 }
 
-model PageSection {
-  id                   String   @id
+model PageBlockDeletion {
+  id                   String    @id @default(cuid())
   pageId               String
-  page                 Page     @relation(fields: [pageId], references: [id], onDelete: Restrict)
+  revisionId           String
   sectionType          String
   order                Int
   payload              Json
   payloadSchemaVersion Int
-  version              Int
-  createdAt            DateTime
-  updatedAt            DateTime
+  mediaUsages          Json
+  deletedById          String
+  createdAt            DateTime  @default(now())
+  restoredAt           DateTime?
 
-  @@index([pageId, order])
-  @@map("page_sections")
+  @@index([pageId, revisionId, createdAt])
+  @@map("page_block_deletions")
 }
 
 model MediaAsset {
@@ -915,12 +915,13 @@ model Project {
 }
 
 model EditPresence {
-  id         String   @id @default(cuid())
-  userId     String
-  entityType String
-  entityId   String
-  lastSeenAt DateTime @default(now())
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  userId       String
+  entityType   String
+  entityId     String
+  contextLabel String?
+  lastSeenAt   DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, entityType, entityId])
   @@index([entityType, entityId, lastSeenAt])

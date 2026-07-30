@@ -3279,6 +3279,30 @@
   border-bottom: 1px solid #e3e5ea;
 }
 
+.cms-outline-search {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0.85rem 0.55rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #dfe2e8;
+  border-radius: 0.5rem;
+}
+
+.cms-outline-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+}
+
+.cms-outline-item__error {
+  display: block;
+  margin-top: 0.15rem;
+  color: #a52a2a;
+  font-size: 0.65rem;
+  font-style: normal;
+}
+
 .cms-outline-item {
   display: flex;
   align-items: center;
@@ -3335,6 +3359,56 @@
 
 .cms-outline-item .cms-builder__duplicate svg {
   color: #676c76;
+}
+
+.cms-block-context-menu {
+  position: relative;
+  margin-right: 0.35rem;
+}
+
+.cms-block-context-menu > summary {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  list-style: none;
+  cursor: pointer;
+}
+
+.cms-block-context-menu > div {
+  position: absolute;
+  z-index: 12;
+  top: 100%;
+  right: 0;
+  display: grid;
+  gap: 0.25rem;
+  width: 13rem;
+  padding: 0.45rem;
+  background: #fff;
+  border: 1px solid var(--wk-border);
+  border-radius: 0.55rem;
+  box-shadow: 0 10px 30px rgb(25 30 42 / 18%);
+}
+
+.cms-block-context-menu button,
+.cms-block-context-menu select {
+  width: 100%;
+  min-height: 2rem;
+}
+
+.cms-block-context-menu button {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.cms-block-context-menu button.is-danger {
+  color: #a52a2a;
 }
 
 .cms-visual-builder__inspector .cms-section-card {
@@ -3518,13 +3592,37 @@
   opacity: 0.75;
 }
 
+.cms-viewport-controls output {
+  min-width: 3.5rem;
+}
+
+.cms-viewport-controls button.is-active {
+  color: #fff;
+  background: var(--accent);
+}
+
 .cms-visual-builder__frame-wrap {
+  position: relative;
+  width: min(100%, var(--cms-canvas-width, 1280px));
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  justify-self: center;
   background: #fff;
   border-radius: 0.7rem;
   box-shadow: 0 12px 40px rgb(25 30 42 / 18%);
+}
+
+.cms-responsive-warning {
+  position: absolute;
+  z-index: 5;
+  inset: auto 0.75rem 0.75rem;
+  padding: 0.5rem 0.7rem;
+  color: #7b3d00;
+  background: #fff3d6;
+  border: 1px solid #e4b765;
+  border-radius: 0.5rem;
+  font-size: 0.72rem;
 }
 
 .cms-visual-builder__frame {

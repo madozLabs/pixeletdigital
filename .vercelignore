@@ -1,0 +1,9 @@
+.claude/
+.env*
+.git/
+.next/
+.vercel/
+({src
+coverage/
+node_modules/
+public/uploads/media/

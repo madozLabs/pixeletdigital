@@ -20,23 +20,11 @@ export type WorkspacePageDto = Readonly<{
   updatedAt: Date;
 }>;
 
-export type WorkspaceSectionDto = Readonly<{
-  id: string;
-  pageId: string;
-  sectionType: string;
-  order: number;
-  payload: unknown;
-  payloadSchemaVersion: number;
-  version: number;
-  createdAt: Date;
-  updatedAt: Date;
-}>;
-
 export type WorkspaceEditablePageDto = WorkspacePageDto &
   Readonly<{
-    sections: readonly WorkspaceSectionDto[];
     draftRevision: WorkspaceRevisionDto | null;
     publishedRevision: WorkspaceRevisionDto | null;
+    revisionHistory: readonly WorkspaceRevisionDto[];
   }>;
 
 export type WorkspaceRevisionDto = Readonly<{

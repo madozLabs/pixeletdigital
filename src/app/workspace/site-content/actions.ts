@@ -26,11 +26,7 @@ import {
   defaultSiteIdentity,
   validateSiteIdentityConfig,
 } from "@/modules/content/domain/site-identity";
-import {
-  resolveWorkspacePageTransition,
-  sectionBelongsToPage,
-  validateWorkspaceMediaUpload,
-} from "@/modules/content/application/workspace-site-content-policy";
+import { validateWorkspaceMediaUpload } from "@/modules/content/application/workspace-site-content-policy";
 import {
   movePageRevision,
   startPageDraft,
@@ -109,6 +105,10 @@ const ERROR_MESSAGE: Readonly<Record<string, string>> = {
     "Le fichier n’a pas pu être supprimé du stockage. Aucune donnée n’a été retirée.",
   EDIT_CONFLICT:
     "Cet élément a été modifié par quelqu’un d’autre. Rechargez la page avant de réessayer.",
+  NOTHING_TO_RESTORE: "Aucun bloc supprimé ne peut être restauré.",
+  DRAFT_ALREADY_EXISTS:
+    "Un brouillon existe déjà. Publiez-le ou abandonnez-le avant de restaurer une ancienne révision.",
+  REVISION_NOT_RESTORABLE: "Cette révision ne peut pas être restaurée.",
   SUPABASE_STORAGE_NOT_CONFIGURED:
     "Le stockage média n'est pas configuré sur cet environnement.",
 };
@@ -520,6 +520,89 @@ export async function transitionPageRevisionAction(
   return resultState(result, "Étape de publication mise à jour.");
 }
 
+export async function restorePageRevisionAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const context = await getWorkspaceRequestContext();
+  if (!context) return toActionState(new Error("UNAUTHORIZED"));
+  try {
+    const pageId = text(formData, "pageId");
+    const sourceRevisionId = text(formData, "sourceRevisionId");
+    const page = await prisma.page.findUniqueOrThrow({ where: { id: pageId } });
+    const { actor } = await actorFor(page.worldKey);
+    if (page.draftRevisionId) throw new Error("DRAFT_ALREADY_EXISTS");
+    await prisma.$transaction(async (transaction) => {
+      const source = await transaction.pageRevision.findFirst({
+        where: {
+          id: sourceRevisionId,
+          pageId,
+          status: { in: ["PUBLISHED", "SUPERSEDED", "ARCHIVED"] },
+        },
+        include: {
+          sections: {
+            orderBy: { order: "asc" },
+            include: { mediaUsages: { orderBy: { order: "asc" } } },
+          },
+        },
+      });
+      if (!source) throw new Error("REVISION_NOT_RESTORABLE");
+      const aggregate = await transaction.pageRevision.aggregate({
+        where: { pageId },
+        _max: { revisionNumber: true },
+      });
+      const now = context.clock.now();
+      const restored = await transaction.pageRevision.create({
+        data: {
+          id: `revision_${randomUUID()}`,
+          pageId,
+          revisionNumber: (aggregate._max.revisionNumber ?? 0) + 1,
+          status: "DRAFT",
+          title: source.title,
+          seoTitle: source.seoTitle,
+          seoDescription: source.seoDescription,
+          version: 1,
+          createdById: actor.id,
+          createdAt: now,
+          updatedAt: now,
+          sections: {
+            create: source.sections.map((section) => ({
+              id: `revision_section_${randomUUID()}`,
+              sectionKey: section.sectionKey,
+              sectionType: section.sectionType,
+              order: section.order,
+              payload: section.payload as Prisma.InputJsonValue,
+              payloadSchemaVersion: section.payloadSchemaVersion,
+              version: 1,
+              createdAt: now,
+              updatedAt: now,
+              mediaUsages: {
+                create: section.mediaUsages.map((usage) => ({
+                  mediaId: usage.mediaId,
+                  slot: usage.slot,
+                  order: usage.order,
+                  createdAt: now,
+                })),
+              },
+            })),
+          },
+        },
+      });
+      await transaction.page.update({
+        where: { id: pageId },
+        data: { draftRevisionId: restored.id, updatedAt: now },
+      });
+    });
+    revalidatePath("/workspace/site-content");
+    return {
+      status: "success",
+      message: "Révision restaurée dans un nouveau brouillon.",
+    };
+  } catch (error) {
+    return toActionState(error);
+  }
+}
+
 export async function createPageAction(
   _state: ActionState,
   formData: FormData,
@@ -534,7 +617,7 @@ export async function createPageAction(
       throw new Error("INVALID_PAGE_SLUG");
     }
     // A new page starts as DRAFT, so nothing public changes yet -- no
-    // revalidation needed here (see transitionPageAction for publish).
+    // A new draft does not change the published revision.
     await prisma.$transaction(async (transaction) => {
       const pageId = randomUUID();
       createdPageId = pageId;
@@ -584,101 +667,6 @@ export async function createPageAction(
   redirect(
     `/workspace/site-content/pages/${encodeURIComponent(createdPageId ?? "")}/edit?world=${encodeURIComponent(worldKey)}`,
   );
-}
-
-export async function updatePageAction(
-  _state: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  try {
-    const id = text(formData, "id");
-    const page = await prisma.page.findUniqueOrThrow({ where: { id } });
-    await actorFor(page.worldKey);
-    if (page.lifecycle !== "DRAFT") throw new Error("PAGE_NOT_DRAFT");
-    await prisma.page.update({
-      where: { id, version: Number(formData.get("expectedVersion")) },
-      data: {
-        title: text(formData, "title"),
-        slug: text(formData, "slug"),
-        version: { increment: 1 },
-        updatedAt: new Date(),
-      },
-    });
-    revalidatePath("/workspace/site-content");
-    return { status: "success", message: "Page mise à jour." };
-  } catch (error) {
-    return toActionState(error);
-  }
-}
-
-export async function transitionPageAction(
-  _state: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  try {
-    const id = text(formData, "id");
-    const page = await prisma.page.findUniqueOrThrow({ where: { id } });
-    const transition = resolveWorkspacePageTransition(
-      page.lifecycle,
-      text(formData, "target"),
-    );
-    if (!transition) throw new Error("INVALID_PAGE_TRANSITION");
-    const target = transition.target;
-    const { actor, context } = await actorFor(
-      page.worldKey,
-      transition.requiresReviewRole,
-    );
-    if (target === "PUBLISHED") {
-      const evidenceSections = await prisma.pageSection.findMany({
-        where: {
-          pageId: id,
-          sectionType: { in: ["CASE_STUDY", "TESTIMONIAL"] },
-        },
-        select: { sectionType: true, payload: true },
-      });
-      const invalid = evidenceSections.some((section) => {
-        if (!isEvidenceSectionType(section.sectionType)) return false;
-        return (
-          evidencePublicationErrors(
-            section.sectionType,
-            section.payload as Record<string, unknown>,
-          ).length > 0
-        );
-      });
-      if (invalid) throw new Error("EVIDENCE_NOT_PUBLISHABLE");
-    }
-    await prisma.page.update({
-      where: { id, version: Number(formData.get("expectedVersion")) },
-      data: {
-        lifecycle: target,
-        publishedAt: target === "PUBLISHED" ? new Date() : page.publishedAt,
-        version: { increment: 1 },
-        updatedAt: new Date(),
-      },
-    });
-    revalidatePath("/workspace/site-content");
-    // Sections can only be edited while a page is DRAFT (see saveSectionAction),
-    // so publish/archive here is the only moment the public rendering changes.
-    if (transition.changesPublicContent) {
-      revalidatePublicPage(page.worldKey, page.slug);
-      await recordAuditEvent(prisma, {
-        action:
-          target === "PUBLISHED"
-            ? "CONTENT_PAGE_PUBLISHED"
-            : "CONTENT_PAGE_ARCHIVED",
-        targetType: "PAGE",
-        targetId: page.id,
-        actorId: actor.id,
-        correlationId: context.correlationId,
-        originChannel: context.origin.channel,
-        worldKey: page.worldKey,
-        occurredAt: context.clock.now(),
-      });
-    }
-    return { status: "success", message: "Statut de la page mis à jour." };
-  } catch (error) {
-    return toActionState(error);
-  }
 }
 
 function parsePayload(raw: string): Record<string, unknown> {
@@ -930,6 +918,76 @@ export async function duplicatePageBlockAction(
   }
 }
 
+export async function copyPageBlockToPageAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const sourcePageId = text(formData, "pageId");
+    const sourceRevisionId = text(formData, "revisionId");
+    const sectionId = text(formData, "sectionId");
+    const targetPageId = text(formData, "targetPageId");
+    const sourcePage = await prisma.page.findUniqueOrThrow({
+      where: { id: sourcePageId },
+    });
+    const targetPage = await prisma.page.findUniqueOrThrow({
+      where: { id: targetPageId },
+    });
+    await actorFor(sourcePage.worldKey);
+    if (targetPage.worldKey !== sourcePage.worldKey)
+      throw new Error("FORBIDDEN_WORLD_SCOPE");
+    if (!targetPage.draftRevisionId) throw new Error("PAGE_NOT_DRAFT");
+    await assertEditableRevision(sourcePageId, sourceRevisionId);
+    await assertEditableRevision(targetPageId, targetPage.draftRevisionId);
+    const source = await prisma.pageRevisionSection.findFirst({
+      where: { id: sectionId, revisionId: sourceRevisionId },
+      include: { mediaUsages: true },
+    });
+    if (!source) throw new Error("SECTION_PAGE_MISMATCH");
+    const aggregate = await prisma.pageRevisionSection.aggregate({
+      where: { revisionId: targetPage.draftRevisionId },
+      _max: { order: true },
+    });
+    const now = new Date();
+    await prisma.$transaction(async (transaction) => {
+      await transaction.pageRevisionSection.create({
+        data: {
+          id: `revision_section_${randomUUID()}`,
+          revisionId: targetPage.draftRevisionId!,
+          sectionKey: `section_${randomUUID()}`,
+          sectionType: source.sectionType,
+          order: (aggregate._max.order ?? -1) + 1,
+          payload: source.payload as Prisma.InputJsonValue,
+          payloadSchemaVersion: source.payloadSchemaVersion,
+          version: 1,
+          createdAt: now,
+          updatedAt: now,
+          mediaUsages: {
+            create: source.mediaUsages.map((usage) => ({
+              mediaId: usage.mediaId,
+              slot: usage.slot,
+              order: usage.order,
+              createdAt: now,
+            })),
+          },
+        },
+      });
+      await transaction.pageRevision.update({
+        where: { id: targetPage.draftRevisionId! },
+        data: { version: { increment: 1 }, updatedAt: now },
+      });
+      await transaction.page.update({
+        where: { id: targetPageId },
+        data: { updatedAt: now },
+      });
+    });
+    revalidatePath("/workspace/site-content");
+    return { status: "success", message: "Bloc copié vers l’autre page." };
+  } catch (error) {
+    return toActionState(error);
+  }
+}
+
 export async function reorderPageBlocksAction(
   formData: FormData,
 ): Promise<ActionState> {
@@ -1072,67 +1130,19 @@ export async function saveSectionAction(
     const page = await prisma.page.findUniqueOrThrow({ where: { id: pageId } });
     await actorFor(page.worldKey);
     const revisionId = text(formData, "revisionId");
-    if (revisionId) {
-      await assertEditableRevision(page.id, revisionId);
-      const payload = parsePayload(text(formData, "payload"));
-      await saveRevisionSection({
-        id: text(formData, "id") || null,
-        pageId,
-        revisionId,
-        expectedVersion: Number(formData.get("expectedVersion")),
-        sectionType: text(formData, "sectionType").toUpperCase(),
-        order: Number(formData.get("order")),
-        payload,
-        now: new Date(),
-      });
-      revalidatePath("/workspace/site-content");
-      return { status: "success", message: "Section enregistrée." };
-    }
-    if (page.lifecycle !== "DRAFT") throw new Error("PAGE_NOT_DRAFT");
-    const id = text(formData, "id") || randomUUID();
-    const now = new Date();
+    if (!revisionId) throw new Error("PAGE_NOT_DRAFT");
+    await assertEditableRevision(page.id, revisionId);
     const payload = parsePayload(text(formData, "payload"));
-    const existingId = text(formData, "id");
-    if (existingId) {
-      const existing = await prisma.pageSection.findUnique({
-        where: { id: existingId },
-        select: { pageId: true },
-      });
-      if (!existing || !sectionBelongsToPage(existing.pageId, pageId)) {
-        throw new Error("SECTION_PAGE_MISMATCH");
-      }
-    }
-    if (!existingId) {
-      await prisma.pageSection.create({
-        data: {
-          id,
-          pageId,
-          sectionType: text(formData, "sectionType").toUpperCase(),
-          order: Number(formData.get("order")),
-          payload: payload as Prisma.InputJsonValue,
-          payloadSchemaVersion: 1,
-          version: 1,
-          createdAt: now,
-          updatedAt: now,
-        },
-      });
-    } else {
-      const updated = await prisma.pageSection.updateMany({
-        where: {
-          id: existingId,
-          pageId,
-          version: Number(formData.get("expectedVersion")),
-        },
-        data: {
-          sectionType: text(formData, "sectionType").toUpperCase(),
-          order: Number(formData.get("order")),
-          payload: payload as Prisma.InputJsonValue,
-          version: { increment: 1 },
-          updatedAt: now,
-        },
-      });
-      if (updated.count === 0) throw new Error("EDIT_CONFLICT");
-    }
+    await saveRevisionSection({
+      id: text(formData, "id") || null,
+      pageId,
+      revisionId,
+      expectedVersion: Number(formData.get("expectedVersion")),
+      sectionType: text(formData, "sectionType").toUpperCase(),
+      order: Number(formData.get("order")),
+      payload,
+      now: new Date(),
+    });
     revalidatePath("/workspace/site-content");
     return { status: "success", message: "Section enregistrée." };
   } catch (error) {
@@ -1151,6 +1161,9 @@ const TYPED_PAYLOAD_KEYS = [
   "backgroundOverlay",
   "backgroundPosition",
   "textTone",
+  "surfaceTone",
+  "contentWidth",
+  "sectionDensity",
   "headingFont",
   "headingWeight",
   "headingStyle",
@@ -1212,90 +1225,43 @@ export async function saveSectionFieldsAction(
     const page = await prisma.page.findUniqueOrThrow({ where: { id: pageId } });
     await actorFor(page.worldKey);
     const revisionId = text(formData, "revisionId");
-    if (revisionId) {
-      await assertEditableRevision(page.id, revisionId);
-      const id = text(formData, "id");
-      const existing = await prisma.pageRevisionSection.findFirst({
-        where: { id, revisionId },
-      });
-      if (!existing) throw new Error("SECTION_PAGE_MISMATCH");
-      const payload: Record<string, unknown> = {
-        ...(existing.payload as Record<string, unknown>),
-      };
-      applyTypedPayloadFields(payload, formData);
-      if (formData.has("hasMediaIds")) {
-        payload.mediaIds = formData
-          .getAll("mediaIds")
-          .map(String)
-          .filter(Boolean);
-      }
-      if (formData.has("itemsText")) {
-        payload.items = text(formData, "itemsText")
-          .split("\n")
-          .map((line) => line.trim())
-          .filter(Boolean)
-          .map((line) => {
-            const [title, ...rest] = line.split("|");
-            return {
-              title: title?.trim() ?? "",
-              text: rest.join("|").trim(),
-            };
-          });
-      }
-      await saveRevisionSection({
-        id,
-        pageId,
-        revisionId,
-        expectedVersion: Number(formData.get("expectedVersion")),
-        sectionType: existing.sectionType,
-        order: Number(formData.get("order")),
-        payload,
-        now: new Date(),
-      });
-      revalidatePath("/workspace/site-content");
-      return { status: "success", message: "Section enregistrée." };
-    }
-    if (page.lifecycle !== "DRAFT") throw new Error("PAGE_NOT_DRAFT");
-    const id = text(formData, "id") || randomUUID();
-    const existing = await prisma.pageSection.findUnique({ where: { id } });
-    if (existing && !sectionBelongsToPage(existing.pageId, pageId)) {
-      throw new Error("SECTION_PAGE_MISMATCH");
-    }
+    if (!revisionId) throw new Error("PAGE_NOT_DRAFT");
+    await assertEditableRevision(page.id, revisionId);
+    const id = text(formData, "id");
+    const existing = await prisma.pageRevisionSection.findFirst({
+      where: { id, revisionId },
+    });
+    if (!existing) throw new Error("SECTION_PAGE_MISMATCH");
     const payload: Record<string, unknown> = {
-      ...((existing?.payload as Record<string, unknown> | null) ?? {}),
+      ...(existing.payload as Record<string, unknown>),
     };
     applyTypedPayloadFields(payload, formData);
-    const now = new Date();
-    if (!existing) {
-      await prisma.pageSection.create({
-        data: {
-          id,
-          pageId,
-          sectionType: text(formData, "sectionType").toUpperCase(),
-          order: Number(formData.get("order")),
-          payload: payload as Prisma.InputJsonValue,
-          payloadSchemaVersion: 1,
-          version: 1,
-          createdAt: now,
-          updatedAt: now,
-        },
-      });
-    } else {
-      const updated = await prisma.pageSection.updateMany({
-        where: {
-          id,
-          pageId,
-          version: Number(formData.get("expectedVersion")),
-        },
-        data: {
-          order: Number(formData.get("order")),
-          payload: payload as Prisma.InputJsonValue,
-          version: { increment: 1 },
-          updatedAt: now,
-        },
-      });
-      if (updated.count === 0) throw new Error("EDIT_CONFLICT");
+    if (formData.has("hasMediaIds")) {
+      payload.mediaIds = formData
+        .getAll("mediaIds")
+        .map(String)
+        .filter(Boolean);
     }
+    if (formData.has("itemsText")) {
+      payload.items = text(formData, "itemsText")
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+          const [title, ...rest] = line.split("|");
+          return { title: title?.trim() ?? "", text: rest.join("|").trim() };
+        });
+    }
+    await saveRevisionSection({
+      id,
+      pageId,
+      revisionId,
+      expectedVersion: Number(formData.get("expectedVersion")),
+      sectionType: existing.sectionType,
+      order: Number(formData.get("order")),
+      payload,
+      now: new Date(),
+    });
     revalidatePath("/workspace/site-content");
     return { status: "success", message: "Section enregistrée." };
   } catch (error) {
@@ -1311,42 +1277,137 @@ export async function deleteSectionAction(
     const id = text(formData, "id");
     const revisionId = text(formData, "revisionId");
     const pageId = text(formData, "pageId");
-    if (revisionId && pageId) {
-      const page = await prisma.page.findUniqueOrThrow({
+    if (!revisionId || !pageId) throw new Error("PAGE_NOT_DRAFT");
+    const page = await prisma.page.findUniqueOrThrow({ where: { id: pageId } });
+    const { actor } = await actorFor(page.worldKey);
+    await assertEditableRevision(pageId, revisionId);
+    await prisma.$transaction(async (transaction) => {
+      const section = await transaction.pageRevisionSection.findFirst({
+        where: { id, revisionId },
+        include: { mediaUsages: { orderBy: { order: "asc" } } },
+      });
+      if (!section) throw new Error("SECTION_PAGE_MISMATCH");
+      await transaction.pageBlockDeletion.create({
+        data: {
+          pageId,
+          revisionId,
+          sectionType: section.sectionType,
+          order: section.order,
+          payload: section.payload as Prisma.InputJsonValue,
+          payloadSchemaVersion: section.payloadSchemaVersion,
+          mediaUsages: section.mediaUsages.map((usage) => ({
+            mediaId: usage.mediaId,
+            slot: usage.slot,
+            order: usage.order,
+          })) as Prisma.InputJsonValue,
+          deletedById: actor.id,
+        },
+      });
+      await transaction.sectionMediaUsage.deleteMany({
+        where: { sectionId: id, section: { revisionId } },
+      });
+      const deleted = await transaction.pageRevisionSection.deleteMany({
+        where: { id, revisionId },
+      });
+      if (deleted.count !== 1) throw new Error("SECTION_PAGE_MISMATCH");
+      const now = new Date();
+      await transaction.pageRevision.update({
+        where: { id: revisionId },
+        data: { version: { increment: 1 }, updatedAt: now },
+      });
+      await transaction.page.update({
         where: { id: pageId },
+        data: { updatedAt: now },
       });
-      await actorFor(page.worldKey);
-      await assertEditableRevision(pageId, revisionId);
-      await prisma.$transaction(async (transaction) => {
-        await transaction.sectionMediaUsage.deleteMany({
-          where: { sectionId: id, section: { revisionId } },
-        });
-        const deleted = await transaction.pageRevisionSection.deleteMany({
-          where: { id, revisionId },
-        });
-        if (deleted.count !== 1) throw new Error("SECTION_PAGE_MISMATCH");
-        const now = new Date();
-        await transaction.pageRevision.update({
-          where: { id: revisionId },
-          data: { version: { increment: 1 }, updatedAt: now },
-        });
-        await transaction.page.update({
-          where: { id: pageId },
-          data: { updatedAt: now },
-        });
-      });
-      revalidatePath("/workspace/site-content");
-      return { status: "success", message: "Section supprimée." };
-    }
-    const section = await prisma.pageSection.findUniqueOrThrow({
-      where: { id },
-      include: { page: true },
     });
-    await actorFor(section.page.worldKey);
-    if (section.page.lifecycle !== "DRAFT") throw new Error("PAGE_NOT_DRAFT");
-    await prisma.pageSection.delete({ where: { id } });
     revalidatePath("/workspace/site-content");
     return { status: "success", message: "Section supprimée." };
+  } catch (error) {
+    return toActionState(error);
+  }
+}
+
+export async function restoreLastDeletedBlockAction(
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const pageId = text(formData, "pageId");
+    const revisionId = text(formData, "revisionId");
+    const page = await prisma.page.findUniqueOrThrow({ where: { id: pageId } });
+    await actorFor(page.worldKey);
+    await assertEditableRevision(pageId, revisionId);
+    await prisma.$transaction(async (transaction) => {
+      const deletion = await transaction.pageBlockDeletion.findFirst({
+        where: { pageId, revisionId, restoredAt: null },
+        orderBy: { createdAt: "desc" },
+      });
+      if (!deletion) throw new Error("NOTHING_TO_RESTORE");
+      const mediaUsages = Array.isArray(deletion.mediaUsages)
+        ? deletion.mediaUsages.flatMap((usage) => {
+            if (!usage || typeof usage !== "object" || Array.isArray(usage))
+              return [];
+            const record = usage as Record<string, unknown>;
+            return typeof record.mediaId === "string" &&
+              typeof record.slot === "string" &&
+              typeof record.order === "number"
+              ? [
+                  {
+                    mediaId: record.mediaId,
+                    slot: record.slot,
+                    order: record.order,
+                  },
+                ]
+              : [];
+          })
+        : [];
+      const availableMedia = mediaUsages.length
+        ? await transaction.mediaAsset.findMany({
+            where: {
+              id: { in: mediaUsages.map((usage) => usage.mediaId) },
+              worldKey: page.worldKey,
+            },
+            select: { id: true },
+          })
+        : [];
+      const availableIds = new Set(availableMedia.map((asset) => asset.id));
+      await transaction.pageRevisionSection.updateMany({
+        where: { revisionId, order: { gte: deletion.order } },
+        data: { order: { increment: 1 } },
+      });
+      const sectionId = `revision_section_${randomUUID()}`;
+      await transaction.pageRevisionSection.create({
+        data: {
+          id: sectionId,
+          revisionId,
+          sectionKey: `section_${randomUUID()}`,
+          sectionType: deletion.sectionType,
+          order: deletion.order,
+          payload: deletion.payload as Prisma.InputJsonValue,
+          payloadSchemaVersion: deletion.payloadSchemaVersion,
+          version: 1,
+          mediaUsages: {
+            create: mediaUsages
+              .filter((usage) => availableIds.has(usage.mediaId))
+              .map((usage) => ({ ...usage })),
+          },
+        },
+      });
+      const now = new Date();
+      await transaction.pageBlockDeletion.update({
+        where: { id: deletion.id },
+        data: { restoredAt: now },
+      });
+      await transaction.pageRevision.update({
+        where: { id: revisionId },
+        data: { version: { increment: 1 }, updatedAt: now },
+      });
+      await transaction.page.update({
+        where: { id: pageId },
+        data: { updatedAt: now },
+      });
+    });
+    revalidatePath("/workspace/site-content");
+    return { status: "success", message: "Dernier bloc supprimé restauré." };
   } catch (error) {
     return toActionState(error);
   }
@@ -1413,25 +1474,13 @@ export async function deleteMediaAction(
     const id = text(formData, "id");
     const asset = await prisma.mediaAsset.findUniqueOrThrow({ where: { id } });
     await actorFor(asset.worldKey);
-    const candidateUsages = await prisma.pageSection.findMany({
-      where: { page: { worldKey: asset.worldKey } },
-      select: { payload: true },
-    });
-    const inUse = candidateUsages.some((section) => {
-      const payload = section.payload as Record<string, unknown>;
-      return (
-        payload.mediaId === asset.id ||
-        payload.backgroundMediaId === asset.id ||
-        (Array.isArray(payload.mediaIds) && payload.mediaIds.includes(asset.id))
-      );
-    });
     const revisionUsageCount = await prisma.sectionMediaUsage.count({
       where: { mediaId: asset.id },
     });
     const identityUsageCount = await prisma.siteIdentityMediaUsage.count({
       where: { mediaId: asset.id },
     });
-    if (inUse || revisionUsageCount > 0 || identityUsageCount > 0) {
+    if (revisionUsageCount > 0 || identityUsageCount > 0) {
       throw new Error("MEDIA_IN_USE");
     }
     const supabaseUrl = process.env.SUPABASE_URL;

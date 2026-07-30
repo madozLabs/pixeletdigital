@@ -93,7 +93,6 @@ export async function getCmsHomeContent(
           : { lifecycle: "PUBLISHED" as const }),
       },
       include: {
-        sections: { orderBy: { order: "asc" } },
         draftRevision: {
           include: { sections: { orderBy: { order: "asc" } } },
         },
@@ -106,8 +105,8 @@ export async function getCmsHomeContent(
   if (!page) return emptyHomeContent();
 
   const sections = previewRevisionId
-    ? (page.draftRevision?.sections ?? page.sections)
-    : (page.publishedRevision?.sections ?? page.sections);
+    ? (page.draftRevision?.sections ?? [])
+    : (page.publishedRevision?.sections ?? []);
   const mediaIds = sections.flatMap((section) => {
     const payload = section.payload as Record<string, unknown>;
     return [

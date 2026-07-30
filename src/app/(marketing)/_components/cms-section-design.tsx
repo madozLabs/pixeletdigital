@@ -18,6 +18,9 @@ const FONT_VALUES = {
 const WEIGHTS = ["400", "500", "600", "700", "800", "900"] as const;
 const STYLES = ["normal", "italic"] as const;
 const TONES = ["AUTO", "LIGHT", "DARK"] as const;
+const SURFACE_TONES = ["DEFAULT", "SUBTLE", "BRAND", "INVERSE"] as const;
+const CONTENT_WIDTHS = ["NARROW", "STANDARD", "WIDE", "FULL"] as const;
+const SECTION_DENSITIES = ["COMPACT", "COMFORTABLE", "SPACIOUS"] as const;
 const OVERLAYS = ["NONE", "LIGHT", "MEDIUM", "STRONG"] as const;
 const POSITIONS = ["CENTER", "TOP", "BOTTOM"] as const;
 
@@ -75,9 +78,18 @@ export function cmsSectionDesignProps(
   const headingStyle = enumValue(payload.headingStyle, STYLES);
   const bodyStyle = enumValue(payload.bodyStyle, STYLES);
   const tone = enumValue(payload.textTone, TONES) ?? "AUTO";
+  const surfaceTone =
+    enumValue(payload.surfaceTone, SURFACE_TONES) ?? "DEFAULT";
+  const contentWidth =
+    enumValue(payload.contentWidth, CONTENT_WIDTHS) ?? "STANDARD";
+  const density =
+    enumValue(payload.sectionDensity, SECTION_DENSITIES) ?? "COMFORTABLE";
   const hasBackground = Boolean(stringValue(payload.backgroundMediaId));
   const resolvedTone = tone === "AUTO" && hasBackground ? "LIGHT" : tone;
   const classNames = [baseClassName, "cms-designed-section"];
+  classNames.push(`cms-section--surface-${surfaceTone.toLowerCase()}`);
+  classNames.push(`cms-section--width-${contentWidth.toLowerCase()}`);
+  classNames.push(`cms-section--density-${density.toLowerCase()}`);
   const style: DesignStyle = {};
 
   if (hasBackground) classNames.push("cms-section--has-background");

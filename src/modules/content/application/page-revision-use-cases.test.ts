@@ -104,6 +104,67 @@ describe("page revision use cases", () => {
       "SUPERSEDED",
     );
   });
+
+  it("runs the complete draft, edit, review, approval and publication journey", async () => {
+    const repository = new InMemoryRevisionRepository();
+    const started = await startPageDraft(
+      { revisions: repository },
+      context("EDITOR"),
+      { pageId: "page_1" },
+    );
+    expect(started.ok).toBe(true);
+
+    const edited = await updatePageDraftMetadata(
+      { revisions: repository },
+      context("EDITOR"),
+      {
+        pageId: "page_1",
+        revisionId: "revision_draft",
+        expectedVersion: 1,
+        title: "Ready for review",
+        seoTitle: "Reviewed SEO title",
+        seoDescription: "Reviewed SEO description",
+      },
+    );
+    expect(edited).toMatchObject({ ok: true, value: { version: 2 } });
+
+    const reviewed = await movePageRevision(
+      { revisions: repository },
+      context("EDITOR"),
+      transitionInput("IN_REVIEW", 2),
+    );
+    expect(reviewed).toMatchObject({
+      ok: true,
+      value: { status: "IN_REVIEW", version: 3 },
+    });
+
+    const approved = await movePageRevision(
+      { revisions: repository },
+      context("WORLD_MANAGER"),
+      transitionInput("APPROVED", 3),
+    );
+    expect(approved).toMatchObject({
+      ok: true,
+      value: { status: "APPROVED", version: 4 },
+    });
+
+    const published = await movePageRevision(
+      { revisions: repository },
+      context("WORLD_MANAGER"),
+      transitionInput("PUBLISHED", 4),
+    );
+    expect(published).toMatchObject({
+      ok: true,
+      value: { status: "PUBLISHED", version: 5 },
+    });
+    expect(repository.page).toMatchObject({
+      draftRevisionId: null,
+      publishedRevisionId: "revision_draft",
+    });
+    expect(repository.revisions.get("revision_published")?.status).toBe(
+      "SUPERSEDED",
+    );
+  });
 });
 
 class InMemoryRevisionRepository implements PageRevisionRepository {
@@ -231,11 +292,11 @@ function context(role: ApprovedRole): RequestContext {
   };
 }
 
-function transitionInput(target: PageRevision["status"]) {
+function transitionInput(target: PageRevision["status"], expectedVersion = 1) {
   return {
     pageId: "page_1",
     revisionId: "revision_draft",
-    expectedVersion: 1,
+    expectedVersion,
     target,
   };
 }

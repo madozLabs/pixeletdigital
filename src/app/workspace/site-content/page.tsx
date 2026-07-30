@@ -21,6 +21,8 @@ import {
   type WorkspaceRevisionSectionDto,
 } from "@/modules/content/application/workspace-content-query";
 import { PrismaWorkspaceContentReader } from "@/modules/content/infrastructure/prisma-workspace-content-query";
+import { comparePageRevisionSections } from "@/modules/content/domain/page-revision-diff";
+import { validatePageBlock } from "@/modules/content/domain/page-block-registry";
 import { countWorkspaceEnquiries } from "@/modules/enquiries/application/workspace-enquiry-query";
 import { PrismaWorkspaceEnquiryReader } from "@/modules/enquiries/infrastructure/prisma-workspace-enquiry-query";
 import { parsePage, toSkipTake } from "@/shared/pagination";
@@ -256,6 +258,7 @@ export default async function SiteContentPage({
           worldKey={worldKey}
           page={selectedPage}
           media={fullMediaForEditor}
+          pages={allPagesForNavigation}
         />
       ) : (
         <>
@@ -518,13 +521,15 @@ export function PageEditor({
   worldKey,
   page,
   media,
+  pages,
 }: {
   worldKey: string;
   page: EditablePage;
   media: readonly MediaAsset[];
+  pages: readonly WorkspacePageDto[];
 }) {
   const activeRevision = page.draftRevision ?? page.publishedRevision;
-  const sections = activeRevision?.sections ?? page.sections;
+  const sections = activeRevision?.sections ?? [];
   const editable = page.draftRevision?.status === "DRAFT";
   const publicPath =
     page.routePath ??
@@ -532,6 +537,15 @@ export function PageEditor({
   const previewUrl = page.draftRevision
     ? `${publicPath}?preview=${page.draftRevision.id}&visualEditor=1`
     : `${publicPath}?visualEditor=1`;
+  const publishedPreviewUrl = page.publishedRevision
+    ? `${publicPath}?visualEditor=1`
+    : null;
+  const changeSummary = page.draftRevision
+    ? comparePageRevisionSections(
+        page.publishedRevision?.sections ?? [],
+        page.draftRevision.sections,
+      )
+    : null;
   return (
     <div className="cms-editor cms-editor--visual">
       <EditPresence entityType="PAGE" entityId={page.id} />
@@ -551,12 +565,26 @@ export function PageEditor({
         ) : null}
       </div>
       <PageBuilder
-        key={`${activeRevision?.id ?? "legacy"}-${activeRevision?.version ?? 0}`}
+        key={`${activeRevision?.id ?? "empty"}-${activeRevision?.version ?? 0}`}
         pageId={page.id}
         revisionId={page.draftRevision?.id ?? null}
         revisionVersion={page.draftRevision?.version ?? null}
         sectionIds={sections.map((section) => section.id)}
         sectionTypes={sections.map((section) => section.sectionType)}
+        sectionLabels={sections.map((section) => {
+          const payload = section.payload as Record<string, unknown>;
+          const title = [payload.title, payload.heading, payload.name].find(
+            (value): value is string =>
+              typeof value === "string" && value.trim().length > 0,
+          );
+          return title?.trim() ?? section.sectionType;
+        })}
+        sectionErrors={sections.map((section) =>
+          validatePageBlock(
+            section.sectionType,
+            section.payload as Record<string, unknown>,
+          ),
+        )}
         sectionVersions={sections.map((section) => section.version)}
         sectionMediaIds={sections.map((section) => {
           const payload = section.payload as Record<string, unknown>;
@@ -573,11 +601,17 @@ export function PageEditor({
         mediaAssets={media}
         editable={editable}
         previewUrl={previewUrl}
+        publishedPreviewUrl={publishedPreviewUrl}
+        targetPages={pages.filter(
+          (candidate) => candidate.id !== page.id && candidate.draftRevisionId,
+        )}
         settings={
           <RevisionEditor
             pageId={page.id}
             draft={page.draftRevision}
             published={page.publishedRevision}
+            history={page.revisionHistory}
+            changeSummary={changeSummary}
           />
         }
       >
@@ -604,7 +638,7 @@ function SectionEditor({
   editable,
 }: {
   page: EditablePage;
-  section: EditablePage["sections"][number] | WorkspaceRevisionSectionDto;
+  section: WorkspaceRevisionSectionDto;
   media: readonly MediaAsset[];
   revisionId: string | null;
   editable: boolean;

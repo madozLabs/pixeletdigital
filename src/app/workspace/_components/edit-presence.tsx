@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   heartbeatEditPresence,
   leaveEditPresence,
@@ -15,25 +15,42 @@ export function EditPresence({
   entityId,
 }: Readonly<{ entityType: PresenceEntityType; entityId: string }>) {
   const [viewers, setViewers] = useState<readonly PresenceViewer[]>([]);
+  const contextLabel = useRef<string | null>(null);
 
   useEffect(() => {
     let active = true;
     const refresh = () => {
-      void heartbeatEditPresence(entityType, entityId)
+      void heartbeatEditPresence(entityType, entityId, contextLabel.current)
         .then((next) => active && setViewers(next))
         .catch(() => active && setViewers([]));
     };
     refresh();
+    const handleSectionSelection = (event: Event) => {
+      const detail = (event as CustomEvent<{ label?: string }>).detail;
+      contextLabel.current = detail?.label ?? null;
+      refresh();
+    };
+    window.addEventListener("cms:section-selected", handleSectionSelection);
     const interval = window.setInterval(refresh, HEARTBEAT_MS);
     return () => {
       active = false;
       window.clearInterval(interval);
+      window.removeEventListener(
+        "cms:section-selected",
+        handleSectionSelection,
+      );
       void leaveEditPresence(entityType, entityId);
     };
   }, [entityId, entityType]);
 
   if (viewers.length === 0) return null;
-  const names = viewers.map((viewer) => viewer.name).join(", ");
+  const names = viewers
+    .map((viewer) =>
+      viewer.contextLabel
+        ? `${viewer.name} (${viewer.contextLabel})`
+        : viewer.name,
+    )
+    .join(", ");
   return (
     <p className="edit-presence" role="status">
       Aussi consulté par {names}

@@ -5,7 +5,11 @@ import { requireWorldAccess } from "../_lib/authorization";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 
 export type PresenceEntityType = "PAGE" | "PROJECT";
-export type PresenceViewer = Readonly<{ id: string; name: string }>;
+export type PresenceViewer = Readonly<{
+  id: string;
+  name: string;
+  contextLabel: string | null;
+}>;
 
 const ACTIVE_WINDOW_MS = 75_000;
 
@@ -30,6 +34,7 @@ async function authorize(entityType: PresenceEntityType, entityId: string) {
 export async function heartbeatEditPresence(
   entityType: PresenceEntityType,
   entityId: string,
+  contextLabel?: string | null,
 ): Promise<readonly PresenceViewer[]> {
   const { actor, now } = await authorize(entityType, entityId);
   const activeSince = new Date(now.getTime() - ACTIVE_WINDOW_MS);
@@ -41,8 +46,14 @@ export async function heartbeatEditPresence(
       where: {
         userId_entityType_entityId: { userId: actor.id, entityType, entityId },
       },
-      create: { userId: actor.id, entityType, entityId, lastSeenAt: now },
-      update: { lastSeenAt: now },
+      create: {
+        userId: actor.id,
+        entityType,
+        entityId,
+        contextLabel,
+        lastSeenAt: now,
+      },
+      update: { contextLabel, lastSeenAt: now },
     }),
   ]);
   const viewers = await prisma.editPresence.findMany({
@@ -54,12 +65,14 @@ export async function heartbeatEditPresence(
     },
     select: {
       user: { select: { id: true, displayName: true, normalizedEmail: true } },
+      contextLabel: true,
     },
     orderBy: { lastSeenAt: "desc" },
   });
-  return viewers.map(({ user }) => ({
+  return viewers.map(({ user, contextLabel }) => ({
     id: user.id,
     name: user.displayName || user.normalizedEmail || "Un collègue",
+    contextLabel,
   }));
 }
 

@@ -2242,6 +2242,41 @@ a.world-switcher__item:focus-visible {
   overflow: clip;
 }
 
+.cms-section--surface-subtle {
+  background-color: color-mix(in srgb, var(--paper) 92%, var(--accent));
+}
+.cms-section--surface-brand {
+  background-color: var(--accent);
+}
+.cms-section--surface-inverse {
+  color: var(--paper);
+  background-color: var(--ink);
+}
+.cms-section--density-compact {
+  padding-block: clamp(2rem, 4vw, 3.5rem);
+}
+.cms-section--density-comfortable {
+  padding-block: clamp(3rem, 7vw, 6rem);
+}
+.cms-section--density-spacious {
+  padding-block: clamp(4rem, 10vw, 8rem);
+}
+.cms-section--width-narrow > :not(.cms-section-background) {
+  width: min(100% - 2rem, 46rem);
+  margin-inline: auto;
+}
+.cms-section--width-standard > :not(.cms-section-background) {
+  width: min(100% - 2rem, 72rem);
+  margin-inline: auto;
+}
+.cms-section--width-wide > :not(.cms-section-background) {
+  width: min(100% - 2rem, 90rem);
+  margin-inline: auto;
+}
+.cms-section--width-full > :not(.cms-section-background) {
+  width: 100%;
+}
+
 .cms-designed-section > :not(.cms-section-background) {
   position: relative;
   z-index: 1;

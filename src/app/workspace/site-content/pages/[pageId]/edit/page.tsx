@@ -44,6 +44,7 @@ export default async function VisualPageEditorRoute({
       worldKey={world}
       page={content.value.selectedPage}
       media={content.value.fullMediaForEditor}
+      pages={content.value.allPagesForNavigation}
     />
   );
 }

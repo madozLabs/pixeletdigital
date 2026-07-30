@@ -37,7 +37,6 @@ async function loadPage(
           draftRevisionId: previewRevisionId,
         },
         include: {
-          sections: { orderBy: { order: "asc" } },
           draftRevision: {
             include: { sections: { orderBy: { order: "asc" } } },
           },
@@ -52,7 +51,6 @@ async function loadPage(
     .findFirst({
       where: { worldKey, slug, lifecycle: "PUBLISHED" },
       include: {
-        sections: { orderBy: { order: "asc" } },
         draftRevision: {
           include: { sections: { orderBy: { order: "asc" } } },
         },
@@ -81,8 +79,8 @@ export async function generateMetadata({
     };
   }
   const sections = preview
-    ? (page.draftRevision?.sections ?? page.sections)
-    : (page.publishedRevision?.sections ?? page.sections);
+    ? (page.draftRevision?.sections ?? [])
+    : (page.publishedRevision?.sections ?? []);
   const description =
     sections
       .map((section) =>
@@ -119,8 +117,8 @@ export default async function CmsPublicPage({ params, searchParams }: Props) {
   if (!page) notFound();
 
   const sections = preview
-    ? (page.draftRevision?.sections ?? page.sections)
-    : (page.publishedRevision?.sections ?? page.sections);
+    ? (page.draftRevision?.sections ?? [])
+    : (page.publishedRevision?.sections ?? []);
   const mediaIds = sections.flatMap((section) => {
     const payload = section.payload as Record<string, unknown>;
     return [
