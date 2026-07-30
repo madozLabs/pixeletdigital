@@ -5,5 +5,8 @@ export interface QuoteRepository {
   listByWorld(worldKey: string): Promise<readonly Quote[]>;
   countByWorld(worldKey: string): Promise<number>;
   hasInvoice(quoteId: string): Promise<boolean>;
-  save(quote: Quote): Promise<void>;
+  // Returns false when a concurrent write already moved the row past the
+  // version this quote was read at (optimistic-lock conflict), true
+  // otherwise -- mirrors InvoiceRepository.save.
+  save(quote: Quote): Promise<boolean>;
 }

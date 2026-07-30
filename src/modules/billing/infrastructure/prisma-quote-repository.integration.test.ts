@@ -96,6 +96,37 @@ describe("PrismaQuoteRepository", () => {
   it("returns null for a missing quote", async () => {
     expect(await repository.findById("missing-quote")).toBeNull();
   });
+
+  it("rejects an update whose expected version no longer matches the row", async () => {
+    const quote = validQuote({
+      id: "billing_quote_test_conflict",
+      number: "PD-DV-2026-CONFLICT",
+    });
+    await repository.save(quote);
+
+    const sent = setQuoteStatus(
+      quote,
+      "SENT",
+      new Date("2026-07-23T10:00:00.000Z"),
+    );
+    if (!sent.ok) throw new Error("expected transition to succeed");
+    const firstWriteSucceeded = await repository.save(sent.value);
+
+    // Simulates a second request that also read version 1 and computed its
+    // own version-2 transition, racing the write above.
+    const staleTransition = setQuoteStatus(
+      quote,
+      "CANCELLED",
+      new Date("2026-07-23T10:00:05.000Z"),
+    );
+    if (!staleTransition.ok) throw new Error("expected transition to succeed");
+    const secondWriteSucceeded = await repository.save(staleTransition.value);
+
+    expect(firstWriteSucceeded).toBe(true);
+    expect(secondWriteSucceeded).toBe(false);
+    const persisted = await repository.findById(quote.id);
+    expect(persisted?.status).toBe("SENT");
+  });
 });
 
 function validWorld() {

@@ -19,8 +19,11 @@ export class InMemoryClientRepository implements ClientRepository {
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  async save(client: Client): Promise<void> {
+  async save(client: Client): Promise<boolean> {
+    const existing = this.clientsById.get(client.id);
+    if (existing && existing.version !== client.version - 1) return false;
     this.savedClients.push(client);
     this.clientsById.set(client.id, client);
+    return true;
   }
 }

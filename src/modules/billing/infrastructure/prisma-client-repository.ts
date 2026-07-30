@@ -22,30 +22,49 @@ export class PrismaClientRepository implements ClientRepository {
     return records.map(toDomain);
   }
 
-  async save(client: Client): Promise<void> {
-    await this.client.client.upsert({
+  // Split into explicit create/update instead of upsert(): upsert's update
+  // branch can only match on the unique id, so it can't carry a version
+  // guard. Same rationale as PrismaInvoiceRepository.save.
+  async save(client: Client): Promise<boolean> {
+    const existing = await this.client.client.findUnique({
       where: { id: client.id },
-      create: {
-        id: client.id,
-        worldKey: client.worldKey,
-        name: client.name,
-        legalName: client.legalName,
-        email: client.email,
-        phone: client.phone,
-        address: client.address,
-        website: client.website,
-        logoUrl: client.logoUrl,
-        industry: client.industry,
-        notes: client.notes,
-        accountManagerId: client.accountManagerId,
-        commercialOwnerId: client.commercialOwnerId,
-        teamId: client.teamId,
-        status: client.status,
-        version: client.version,
-        createdAt: client.createdAt,
-        updatedAt: client.updatedAt,
-      },
-      update: {
+      select: { id: true },
+    });
+
+    if (!existing) {
+      await this.client.client.create({
+        data: {
+          id: client.id,
+          worldKey: client.worldKey,
+          name: client.name,
+          legalName: client.legalName,
+          email: client.email,
+          phone: client.phone,
+          address: client.address,
+          website: client.website,
+          logoUrl: client.logoUrl,
+          industry: client.industry,
+          notes: client.notes,
+          accountManagerId: client.accountManagerId,
+          commercialOwnerId: client.commercialOwnerId,
+          teamId: client.teamId,
+          status: client.status,
+          version: client.version,
+          createdAt: client.createdAt,
+          updatedAt: client.updatedAt,
+        },
+      });
+      return true;
+    }
+
+    // Guarded by the version the caller read (client.version - 1, since
+    // every domain transition increments by exactly 1): a concurrent write
+    // that already bumped the row past that version makes this a no-op
+    // instead of a silent overwrite -- count === 0 signals the conflict to
+    // the caller rather than throwing. Mirrors PrismaInvoiceRepository.save.
+    const updated = await this.client.client.updateMany({
+      where: { id: client.id, version: client.version - 1 },
+      data: {
         name: client.name,
         legalName: client.legalName,
         email: client.email,
@@ -63,6 +82,7 @@ export class PrismaClientRepository implements ClientRepository {
         updatedAt: client.updatedAt,
       },
     });
+    return updated.count > 0;
   }
 }
 

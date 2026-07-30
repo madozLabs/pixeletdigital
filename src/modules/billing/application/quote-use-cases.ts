@@ -176,7 +176,8 @@ export async function updateQuoteStatus(
   );
   if (!transitioned.ok) return validationFailure(transitioned.error);
 
-  await dependencies.quotes.save(transitioned.value);
+  const saved = await dependencies.quotes.save(transitioned.value);
+  if (!saved) return conflict();
   return { ok: true, value: transitioned.value };
 }
 
@@ -273,8 +274,19 @@ export async function convertQuoteToInvoice(
   // two writes is an invoice without its quote marked CONVERTED, recoverable
   // by manual review -- same accepted-risk shape as PrismaEnquiryRepository.
   await dependencies.invoices.save(invoiceResult.value);
-  await dependencies.quotes.save(convertedQuote.value);
+  const quoteSaved = await dependencies.quotes.save(convertedQuote.value);
+  if (!quoteSaved) return conflict();
   return { ok: true, value: invoiceResult.value };
+}
+
+function conflict(): Result<never, BillingApplicationError> {
+  return {
+    ok: false,
+    error: {
+      code: "CONFLICT",
+      message: "The quote has changed since it was last read.",
+    },
+  };
 }
 
 function notFound(): Result<never, BillingApplicationError> {

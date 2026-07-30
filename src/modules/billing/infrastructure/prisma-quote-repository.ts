@@ -43,7 +43,7 @@ export class PrismaQuoteRepository implements QuoteRepository {
 
   // Same rationale as PrismaInvoiceRepository.save: no interactive
   // $transaction, lines are immutable after creation.
-  async save(quote: Quote): Promise<void> {
+  async save(quote: Quote): Promise<boolean> {
     const existing = await this.client.quote.findUnique({
       where: { id: quote.id },
       select: { id: true },
@@ -80,11 +80,16 @@ export class PrismaQuoteRepository implements QuoteRepository {
           },
         });
       }
-      return;
+      return true;
     }
 
-    await this.client.quote.update({
-      where: { id: quote.id },
+    // Guarded by the version the caller read (quote.version - 1, since every
+    // domain transition increments by exactly 1): a concurrent write that
+    // already bumped the row past that version makes this a no-op instead of
+    // a silent overwrite -- count === 0 signals the conflict to the caller
+    // rather than throwing. Mirrors PrismaInvoiceRepository.save.
+    const updated = await this.client.quote.updateMany({
+      where: { id: quote.id, version: quote.version - 1 },
       data: {
         status: quote.status,
         convertedAt: quote.convertedAt,
@@ -92,6 +97,7 @@ export class PrismaQuoteRepository implements QuoteRepository {
         updatedAt: quote.updatedAt,
       },
     });
+    return updated.count > 0;
   }
 }
 

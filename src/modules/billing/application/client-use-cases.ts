@@ -189,8 +189,19 @@ async function withMutableClient(
   const transitioned = transition(client, context.clock.now());
   if (!transitioned.ok) return validationFailure(transitioned.error);
 
-  await dependencies.clients.save(transitioned.value);
+  const saved = await dependencies.clients.save(transitioned.value);
+  if (!saved) return conflict();
   return { ok: true, value: transitioned.value };
+}
+
+function conflict(): Result<never, BillingApplicationError> {
+  return {
+    ok: false,
+    error: {
+      code: "CONFLICT",
+      message: "The client has changed since it was last read.",
+    },
+  };
 }
 
 function notFound(): Result<never, BillingApplicationError> {

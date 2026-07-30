@@ -34,9 +34,12 @@ export class InMemoryQuoteRepository implements QuoteRepository {
     this.invoicedQuoteIds.add(quoteId);
   }
 
-  async save(quote: Quote): Promise<void> {
+  async save(quote: Quote): Promise<boolean> {
+    const existing = this.quotesById.get(quote.id);
+    if (existing && existing.version !== quote.version - 1) return false;
     this.savedQuotes.push(quote);
     this.quotesById.set(quote.id, quote);
     if (quote.status === "CONVERTED") this.invoicedQuoteIds.add(quote.id);
+    return true;
   }
 }
