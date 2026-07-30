@@ -165,7 +165,7 @@ Recherche exhaustive : aucun type de section "témoignage" ou "étude de cas" n'
 | A1 | Brancher `KineticHeading` + transitions immersives entre univers | Amélioration | UX public | ✅ traité 2026-07-30 (déjà fait, session antérieure — vérifié) |
 | A2 | États de chargement/succès systématiques (skeletons, toasts) | Amélioration | UX Workspace | ✅ traité 2026-07-30 (déjà fait, session antérieure — vérifié) |
 | A3 | Formulaire devis Kwaliti Print avec champs métier structurés | Amélioration | Produit/UX public | ✅ traité 2026-07-30 (déjà fait, session antérieure — vérifié) |
-| A4 | Modularisation de `globals.css` | Amélioration | Archi | Ouvert |
+| A4 | Modularisation de `globals.css` | Amélioration | Archi | ✅ traité 2026-07-30 (vérifié, aucun code à changer) |
 | N1 | Command Palette IA à commandes en langage naturel | Innovation | UX Workspace | Ouvert |
 | N2 | Copilote contextuel invisible (triage leads, pré-remplissage devis) | Innovation | Produit/IA | Ouvert |
 | N3 | Transition immersive inter-univers (View Transitions) | Innovation | UX public | Ouvert |
@@ -587,7 +587,15 @@ Contraintes :
 Résultat attendu : Le formulaire devis Kwaliti Print recueille réellement ce que sa propre copie promet, sans dupliquer tout le composant de contact.
 ```
 
-**A4 — Modularisation de globals.css**
+**A4 — Modularisation de globals.css** — ✅ vérifié le 30 juillet 2026, **aucun changement de code nécessaire** :
+- Le découpage lui-même (fait dans une session antérieure) est confirmé propre : `src/app/globals.css` ne contient plus que 3 `@import` (`foundation.css`, `marketing.css`, `workspace.css`) ; total 7 165 lignes réparties entre les trois fichiers (172 / 3 078 / 3 912) au lieu d'un fichier unique de 4 846 lignes.
+- État des lieux demandé avant tout code (`grep -n "^\.dashboard-panel\b" src/app/styles/workspace.css`) : **zéro** bloc `.dashboard-panel` autonome dupliqué — le sélecteur n'apparaît qu'une seule fois comme règle propre (ligne 1225) ; ses autres occurrences (1916, 2137) sont des *membres* de listes de sélecteurs partagées (`.admin-form-card, .dashboard-panel, .client-card, ... {`), un usage CSS parfaitement normal, pas une duplication. Les trois exemples cités par l'audit d'origine (`.admin-shell`, `.admin-sidebar`, `.dashboard-metric-card`) sont eux aussi déjà résolus : chacun n'a plus qu'une seule déclaration autonome ; leurs autres occurrences sont des sélecteurs *différents* et légitimes (`.admin-shell[data-world="kwaliti-print"]`, `.dashboard-metric-card:hover`), pas des redéfinitions aveugles.
+- Recherche élargie (script one-off, non committé) à tous les sélecteurs `.classe { ... }` autonomes du fichier pour vérifier qu'aucune autre duplication de ce type n'a été introduite ailleurs : 18 sélecteurs supplémentaires ont bien deux blocs de déclaration distincts (ex. `.admin-nav`, `.status-badge`, `.admin-table__action`, `.cms-block-library__panel`…). Examen ligne par ligne de chaque paire : tous appartiennent à une seconde section explicitement documentée par un bandeau de commentaire dans le fichier lui-même (`workspace.css:1744-1747` : *« Workspace visual refresh — layered card UI inspired by the Jampack admin reference… Appended last so these override the earlier flat admin styles »*). C'est une couche de cascade CSS volontaire et assumée (base structurelle légère, puis un second passage esthétique qui surcharge des propriétés précises — bordures, ombres, espacements), pas le risque de divergence silencieuse que l'audit avait identifié pour les 3 cas déjà corrigés (qui, eux, redéfinissaient intégralement le même sélecteur à deux endroits sans aucune explication).
+- **Décision CTO : ne pas fusionner ces 18 sélecteurs.** Le periomètre du prompt d'origine limite explicitement l'intervention à « aucune régression visuelle » et « ne pas renommer de classes » ; fusionner une cascade intentionnelle et documentée en un seul bloc par sélecteur n'apporterait aucun bénéfice réel (le risque de divergence qui motivait le ticket ne s'applique pas ici, l'intention est écrite noir sur blanc dans le fichier) et introduirait un risque de régression visuelle non nul pour un gain nul — contraire au principe `AGENTS.md` "aucune complexité sans besoin démontré" appliqué à l'envers (ici : aucun refactoring sans besoin démontré).
+- Vérifié : aucun fichier source modifié pour cet item, donc `tsc`/`eslint`/`test:run` restent dans l'état déjà confirmé lors de la vérification A1 (aucune régression possible par construction).
+- **Non fait dans ce lot** : la fusion des 18 sélecteurs identifiés — délibérément, pour les raisons ci-dessus, pas par oubli.
+
+Prompt d'origine conservé ci-dessous pour mémoire.
 ```text
 Contexte : src/app/globals.css fait 4 846 lignes et contient des sélecteurs admin dupliqués deux fois dans le même fichier (.admin-shell aux lignes ~831 et ~4082, .admin-sidebar aux lignes ~838 et ~4086, .dashboard-metric-card aux lignes ~1945 et ~4322) — signe que le style admin a été ajouté après coup plutôt que pensé comme un système, avec un risque de divergence future.
 
