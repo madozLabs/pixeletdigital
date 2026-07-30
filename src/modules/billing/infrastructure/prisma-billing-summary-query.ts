@@ -1,6 +1,9 @@
 import type { BillingAttachment, PrismaClient } from "@/generated/prisma/client";
+import { isInvoiceStatus } from "../domain/invoice";
+import { isQuoteStatus } from "../domain/quote";
 import type {
   BillingAttachmentDto,
+  BillingSummaryFilters,
   BillingSummaryReader,
 } from "../application/billing-summary-query";
 
@@ -39,9 +42,36 @@ export class PrismaBillingSummaryReader implements BillingSummaryReader {
   constructor(private readonly database: PrismaClient) {}
 
   async list(
-    input: Readonly<{ worldKey: string; skip: number; take: number }>,
+    input: BillingSummaryFilters &
+      Readonly<{ worldKey: string; skip: number; take: number }>,
   ) {
     const where = { worldKey: input.worldKey };
+    const issuedAtRange =
+      input.from || input.to
+        ? {
+            issuedAt: {
+              ...(input.from ? { gte: input.from } : {}),
+              ...(input.to ? { lte: input.to } : {}),
+            },
+          }
+        : {};
+    const clientFilter = input.clientId ? { clientId: input.clientId } : {};
+    const quoteWhere = {
+      ...where,
+      ...clientFilter,
+      ...issuedAtRange,
+      ...(input.status && isQuoteStatus(input.status)
+        ? { status: input.status }
+        : {}),
+    };
+    const invoiceWhere = {
+      ...where,
+      ...clientFilter,
+      ...issuedAtRange,
+      ...(input.status && isInvoiceStatus(input.status)
+        ? { status: input.status }
+        : {}),
+    };
     const [
       clients,
       quotes,
@@ -57,21 +87,21 @@ export class PrismaBillingSummaryReader implements BillingSummaryReader {
         orderBy: { name: "asc" },
       }),
       this.database.quote.findMany({
-        where,
+        where: quoteWhere,
         include: { client: true, lines: true, invoice: true },
         orderBy: { issuedAt: "desc" },
         skip: input.skip,
         take: input.take,
       }),
-      this.database.quote.count({ where }),
+      this.database.quote.count({ where: quoteWhere }),
       this.database.invoice.findMany({
-        where,
+        where: invoiceWhere,
         include: { client: true, lines: true, payments: true },
         orderBy: { issuedAt: "desc" },
         skip: input.skip,
         take: input.take,
       }),
-      this.database.invoice.count({ where }),
+      this.database.invoice.count({ where: invoiceWhere }),
       this.database.invoice.findMany({
         where,
         include: { lines: true, payments: true },
@@ -140,14 +170,23 @@ export class PrismaBillingSummaryReader implements BillingSummaryReader {
       quotes: quotes.map((quote) => ({
         id: quote.id,
         number: quote.number,
+        clientId: quote.clientId,
         clientName: quote.client.name,
         status: quote.status,
         version: quote.version,
         lineCount: quote.lines.length,
         totalCents: total(quote),
+        discountCents: quote.discountCents,
+        taxRateBps: quote.taxRateBps,
+        notes: quote.notes,
         validUntil: quote.validUntil,
         canConvert: quote.status === "ACCEPTED" && !quote.invoice,
         attachments: attachmentsByQuote.get(quote.id) ?? [],
+        lines: quote.lines.map((line) => ({
+          label: line.label,
+          quantity: line.quantity,
+          unitPriceCents: line.unitPriceCents,
+        })),
       })),
       totalQuotes,
       invoices: invoices.map((invoice) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 
 import {
   Feedback,
@@ -9,6 +9,7 @@ import {
 } from "../_components/feedback";
 import { ConfirmAction } from "../_components/confirm-action";
 import { getStatusLabel } from "../_components/status-badge";
+import { formatXof } from "./_lib/money";
 import {
   archiveCatalogueItemAction,
   cancelInvoiceAction,
@@ -123,22 +124,97 @@ const QUOTE_STATUSES = [
   "CANCELLED",
 ] as const;
 
+type LiveTotal = Readonly<{
+  subtotalCents: number;
+  discountCents: number;
+  taxCents: number;
+  totalCents: number;
+}>;
+
+// Indicative only -- duplicates the domain's computeTotal formula
+// (subtotal - discount, then + tax on the taxable amount) for a live
+// preview. The source of truth stays the server-side calculation at
+// submission; this never has to match to the cent.
+function computeLiveTotal(form: HTMLFormElement): LiveTotal {
+  const data = new FormData(form);
+  const numberField = (name: string) => Number(data.get(name)) || 0;
+  let subtotalCents = 0;
+  for (let index = 1; index <= QUOTE_LINE_SLOTS; index += 1) {
+    const label = String(data.get(`lineLabel${index}`) ?? "").trim();
+    if (!label) continue;
+    const quantity = Math.max(1, numberField(`lineQuantity${index}`) || 1);
+    const unitPriceCents = Math.round(numberField(`lineUnitPrice${index}`) * 100);
+    subtotalCents += quantity * unitPriceCents;
+  }
+  const discountType = String(data.get("discountType") ?? "AMOUNT");
+  const rawDiscount = numberField("discount");
+  const discountCents =
+    discountType === "PERCENT"
+      ? Math.round((subtotalCents * Math.min(100, rawDiscount)) / 100)
+      : Math.round(rawDiscount * 100);
+  const taxRateBps = Math.round(numberField("taxRate") * 100);
+  const taxable = Math.max(0, subtotalCents - discountCents);
+  const taxCents = Math.round((taxable * taxRateBps) / 10_000);
+  return {
+    subtotalCents,
+    discountCents,
+    taxCents,
+    totalCents: taxable + taxCents,
+  };
+}
+
+type QuoteDuplicateSource = Readonly<{
+  clientId: string;
+  discountCents: number;
+  taxRateBps: number;
+  notes: string | null;
+  lines: readonly Readonly<{
+    label: string;
+    quantity: number;
+    unitPriceCents: number;
+  }>[];
+}>;
+
 export function CreateQuoteForm({
   worldKey,
   clients,
   catalogueDatalistId,
+  duplicateSource = null,
 }: Readonly<{
   worldKey: string;
   clients: Option[];
   catalogueDatalistId: string;
+  duplicateSource?: QuoteDuplicateSource | null;
 }>) {
   const [state, action] = useActionState(createQuoteAction, IDLE_ACTION_STATE);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [liveTotal, setLiveTotal] = useState<LiveTotal>({
+    subtotalCents: 0,
+    discountCents: 0,
+    taxCents: 0,
+    totalCents: 0,
+  });
+  function recompute() {
+    if (formRef.current) setLiveTotal(computeLiveTotal(formRef.current));
+  }
+  useEffect(() => {
+    recompute();
+  }, [duplicateSource]);
   return (
-    <form action={action} className="editorial-form">
+    <form
+      ref={formRef}
+      action={action}
+      className="editorial-form"
+      onChange={recompute}
+    >
       <input type="hidden" name="worldKey" value={worldKey} />
       <label>
         Client
-        <select name="clientId" required>
+        <select
+          name="clientId"
+          required
+          defaultValue={duplicateSource?.clientId}
+        >
           {clients.map((client) => (
             <option key={client.id} value={client.id}>
               {client.label}
@@ -151,48 +227,101 @@ export function CreateQuoteForm({
         <input type="date" name="validUntil" />
       </label>
       <label>
-        Remise (XOF)
-        <input type="number" name="discount" min={0} step={1} />
+        Remise
+        <input
+          type="number"
+          name="discount"
+          min={0}
+          step={1}
+          defaultValue={
+            duplicateSource ? duplicateSource.discountCents / 100 : undefined
+          }
+        />
+      </label>
+      <label>
+        Type de remise
+        <select name="discountType" defaultValue="AMOUNT">
+          <option value="AMOUNT">Montant (XOF)</option>
+          <option value="PERCENT">Pourcentage (%)</option>
+        </select>
       </label>
       <label>
         Taxe (%)
-        <input type="number" name="taxRate" min={0} max={100} step="0.01" />
+        <input
+          type="number"
+          name="taxRate"
+          min={0}
+          max={100}
+          step="0.01"
+          defaultValue={
+            duplicateSource ? duplicateSource.taxRateBps / 100 : undefined
+          }
+        />
       </label>
-      {QUOTE_LINE_INDEXES.map((index) => (
-        <div className="billing-line-row" key={index}>
-          <span className="billing-line-row__eyebrow">Ligne {index}</span>
-          <label>
-            Libellé
-            <input
-              name={`lineLabel${index}`}
-              placeholder="Ex. Création de logo"
-              list={catalogueDatalistId}
-            />
-          </label>
-          <label>
-            Quantité
-            <input
-              name={`lineQuantity${index}`}
-              type="number"
-              min={1}
-              defaultValue={1}
-            />
-          </label>
-          <label>
-            Prix unitaire (XOF)
-            <input
-              name={`lineUnitPrice${index}`}
-              type="number"
-              min={0}
-              step={1}
-            />
-          </label>
-        </div>
-      ))}
+      {QUOTE_LINE_INDEXES.map((index) => {
+        const sourceLine = duplicateSource?.lines[index - 1];
+        return (
+          <div className="billing-line-row" key={index}>
+            <span className="billing-line-row__eyebrow">Ligne {index}</span>
+            <label>
+              Libellé
+              <input
+                name={`lineLabel${index}`}
+                placeholder="Ex. Création de logo"
+                list={catalogueDatalistId}
+                defaultValue={sourceLine?.label}
+              />
+            </label>
+            <label>
+              Quantité
+              <input
+                name={`lineQuantity${index}`}
+                type="number"
+                min={1}
+                defaultValue={sourceLine?.quantity ?? 1}
+              />
+            </label>
+            <label>
+              Prix unitaire (XOF)
+              <input
+                name={`lineUnitPrice${index}`}
+                type="number"
+                min={0}
+                step={1}
+                defaultValue={
+                  sourceLine ? sourceLine.unitPriceCents / 100 : undefined
+                }
+              />
+            </label>
+          </div>
+        );
+      })}
       <label>
         Notes
-        <textarea name="notes" maxLength={1000} />
+        <textarea
+          name="notes"
+          maxLength={1000}
+          defaultValue={duplicateSource?.notes ?? undefined}
+        />
       </label>
+      <dl className="billing-live-total" aria-live="polite">
+        <div>
+          <dt>Sous-total</dt>
+          <dd>{formatXof(liveTotal.subtotalCents)}</dd>
+        </div>
+        <div>
+          <dt>Remise</dt>
+          <dd>-{formatXof(liveTotal.discountCents)}</dd>
+        </div>
+        <div>
+          <dt>Taxe</dt>
+          <dd>{formatXof(liveTotal.taxCents)}</dd>
+        </div>
+        <div>
+          <dt>Total</dt>
+          <dd>{formatXof(liveTotal.totalCents)}</dd>
+        </div>
+      </dl>
       <Feedback state={state} />
       <SubmitButton>Créer le devis</SubmitButton>
     </form>

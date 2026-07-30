@@ -103,6 +103,8 @@ Deux audits ont été menés et déjà partiellement implémentés (voir histori
 
 ### F5 — Remise en pourcentage
 
+**✅ Traité 2026-07-30 (Quote uniquement).** `discountType` (select AMOUNT/PERCENT) ajouté à `CreateQuoteForm`, converti en `discountCents` côté serveur (`discountCentsFromForm()` dans `billing/actions.ts`, calculé sur le sous-total réel des lignes soumises, arrondi `Math.round`, plafonné à 100%) avant l'appel à `createDraftQuote` — le domaine ne reçoit toujours qu'un `discountCents`, signature inchangée. **Non traité (hors périmètre demandé)** : `CreateInvoiceForm` a le même champ « Remise (XOF) » fixe et n'a pas été touché — le prompt ne visait explicitement que `CreateQuoteForm`. Vérifié : `tsc --noEmit`, `eslint --max-warnings=0`, suite de tests complète ; pas de vérification navigateur live.
+
 **Contexte :** `discountCents` est un montant fixe uniquement (`quote.ts`/`invoice.ts` domaine, `billing-forms.tsx` champ « Remise (XOF) »).
 
 **Objectif :** Permettre de saisir la remise en pourcentage OU en montant fixe, au choix.
@@ -118,6 +120,8 @@ Deux audits ont été menés et déjà partiellement implémentés (voir histori
 
 ### F6 — Recherche/filtres devis-factures
 
+**✅ Traité 2026-07-30.** `?client=&status=&from=&to=` ajoutés, propagés à travers `listBillingSummary`/`BillingSummaryReader.list()` jusqu'au `where` Prisma (`clientId`, `issuedAt` en plage, `status` — narrowé par `isQuoteStatus`/`isInvoiceStatus` avant application, puisque devis et factures n'ont pas le même vocabulaire de statut et Prisma type strictement l'enum du `where`). Filtrage 100% côté base, aucun post-filtrage JS. Formulaire de filtre en GET (`billing-filters`), select statut dépendant de l'onglet actif, propagé à la pagination existante pour ne pas perdre les filtres en changeant de page. Vérifié : `tsc --noEmit`, `eslint --max-warnings=0`, suite de tests complète ; pas de vérification navigateur live.
+
 **Contexte :** Aucun filtre sur les listes (`billing/page.tsx`), seulement la pagination et les onglets par statut implicite.
 
 **Objectif :** Filtrer par client, statut, période.
@@ -130,6 +134,8 @@ Deux audits ont été menés et déjà partiellement implémentés (voir histori
 
 ### F7 — Total live à la saisie
 
+**✅ Traité 2026-07-30.** `computeLiveTotal()` dans `billing-forms.tsx` — délégation d'événement (`onChange` sur le `<form>` entier plutôt qu'un handler par champ), lit `new FormData(form)` à chaque frappe pour recalculer sous-total/remise/taxe/total avec la même formule que le domaine (dupliquée volontairement, purement indicative). Affiché dans une `<dl aria-live="polite">` avant le bouton de soumission. Vérifié : `tsc --noEmit`, `eslint --max-warnings=0`, suite de tests complète ; pas de vérification navigateur live.
+
 **Contexte :** Le total d'un devis n'est visible qu'après soumission du formulaire.
 
 **Objectif :** Afficher un total calculé (sous-total, remise, taxe, total) recalculé en direct pendant la saisie des lignes.
@@ -140,6 +146,8 @@ Deux audits ont été menés et déjà partiellement implémentés (voir histori
 **Résultat attendu :** Confiance immédiate dans le montant avant d'envoyer le devis.
 
 ### F8 — Duplication de devis
+
+**✅ Traité 2026-07-30.** Lien « Dupliquer » sur chaque carte devis → `?duplicateFrom=<id>#new-quote-form`. `BillingSummaryDto`/`PrismaBillingSummaryReader` étendus pour exposer `clientId`/`discountCents`/`taxRateBps`/`notes`/`lines[]` par devis (déjà chargés via `include: {lines:true}`, juste pas encore renvoyés dans le DTO — même requête, pas de requête supplémentaire). `CreateQuoteForm` accepte un `duplicateSource` optionnel utilisé comme `defaultValue` de chaque champ. **Piège évité** : les champs sont non-contrôlés (`defaultValue`), qui ne se réappliquent pas à un changement de props sans démontage — `key={duplicateFrom ?? "new"}` ajouté sur `<CreateQuoteForm>` (`billing/page.tsx`) pour forcer un remount à chaque nouvelle duplication ou retour à vide. Vérifié : `tsc --noEmit`, `eslint --max-warnings=0`, suite de tests complète ; pas de vérification navigateur live.
 
 **Contexte :** Chaque devis se crée depuis un formulaire vide, y compris pour un client récurrent aux prestations connues.
 
@@ -209,6 +217,8 @@ Deux audits ont été menés et déjà partiellement implémentés (voir histori
 
 ### T5 — Exposer le champ budget projet
 
+**✅ Traité 2026-07-30.** `budgetCents` était en fait déjà écrit à la création (`CreateProjectForm`/`createProjectAction` l'acceptaient déjà) — le vrai manque était : jamais affiché sur la carte projet, et jamais modifiable après création (`UpdateProjectForm`/`updateProjectAction` ne le touchaient pas du tout). Ajouté : affichage dans `<dl className="project-card__meta">` (`projects/page.tsx`, `formatCurrency`, "Non défini" si vide), champ dans `UpdateProjectForm` + persistance dans `updateProjectAction`. Aucun nouveau champ, aucune migration — conforme à la contrainte du prompt. Vérifié : `tsc --noEmit`, `eslint --max-warnings=0`, suite de tests complète ; pas de vérification navigateur live.
+
 **Contexte :** `Project.budgetCents` existe en base mais n'est affiché ni saisi nulle part dans l'UI, alors que le sous-titre de la page Projets promet un suivi budgétaire.
 
 **Objectif :** Afficher et permettre de saisir ce champ.
@@ -221,6 +231,8 @@ Deux audits ont été menés et déjà partiellement implémentés (voir histori
 **Résultat attendu :** Cohérence entre la promesse de l'interface et ce qu'elle permet réellement.
 
 ### T6 — Vue mois du calendrier éditorial
+
+**✅ Traité 2026-07-30.** Nouvel onglet « Mois » (`?view=month&month=YYYY-MM`). `_lib/week.ts` étendu (pas renommé — un renommage aurait touché tous les imports existants de ce fichier pour aucun changement de comportement, signalé comme tel dans le fichier) : `firstOfMonth`, `addMonths`, `parseMonthParam`, `formatMonthParam`, `monthGridDays` (grille pleine semaine, alignée lundi, cases vides en padding avant/après le mois réel). Requête bornée exactement comme la vue Semaine (`scheduledFor` entre le 1er du mois et le 1er du mois suivant) — même discipline que le correctif déjà fait, pas de requête non bornée réintroduite. Grille compacte : jusqu'à 3 titres par jour, lien "+N" et liens de titre renvoyant vers la vue Semaine du jour cliqué (pas de formulaire d'édition complet dans la grille mois — 31 formulaires simultanés auraient été impraticables). Vérifié : `tsc --noEmit`, `eslint --max-warnings=0`, suite de tests complète ; pas de test dédié pour la nouvelle logique de grille (convention existante : `_lib/week.ts` n'a jamais eu de test), pas de vérification navigateur live.
 
 **Contexte :** Seules les vues Semaine et Pipeline existent pour le calendrier éditorial.
 

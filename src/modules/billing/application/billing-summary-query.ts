@@ -18,14 +18,23 @@ export type BillingSummaryDto = Readonly<{
   quotes: readonly Readonly<{
     id: string;
     number: string;
+    clientId: string;
     clientName: string;
     status: string;
     version: number;
     lineCount: number;
     totalCents: number;
+    discountCents: number;
+    taxRateBps: number;
+    notes: string | null;
     validUntil: Date | null;
     canConvert: boolean;
     attachments: readonly BillingAttachmentDto[];
+    lines: readonly Readonly<{
+      label: string;
+      quantity: number;
+      unitPriceCents: number;
+    }>[];
   }>[];
   totalQuotes: number;
   invoices: readonly Readonly<{
@@ -57,18 +66,28 @@ export type BillingSummaryDto = Readonly<{
   }>[];
 }>;
 
+export type BillingSummaryFilters = Readonly<{
+  clientId?: string | null;
+  status?: string | null;
+  from?: Date | null;
+  to?: Date | null;
+}>;
+
 export interface BillingSummaryReader {
-  list(input: {
-    worldKey: string;
-    skip: number;
-    take: number;
-  }): Promise<BillingSummaryDto>;
+  list(
+    input: BillingSummaryFilters & {
+      worldKey: string;
+      skip: number;
+      take: number;
+    },
+  ): Promise<BillingSummaryDto>;
 }
 
 export async function listBillingSummary(
   dependencies: Readonly<{ billingSummaryReader: BillingSummaryReader }>,
   context: RequestContext,
-  input: Readonly<{ worldKey: string; skip: number; take: number }>,
+  input: BillingSummaryFilters &
+    Readonly<{ worldKey: string; skip: number; take: number }>,
 ) {
   const actor = requireActiveActor(context);
   if (

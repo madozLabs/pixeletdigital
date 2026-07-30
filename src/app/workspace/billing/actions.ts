@@ -153,6 +153,23 @@ function quoteLinesFromForm(formData: FormData) {
   );
 }
 
+function discountCentsFromForm(
+  formData: FormData,
+  lines: readonly { quantity: number; unitPriceCents: number }[],
+): number {
+  const discountType = String(formData.get("discountType") ?? "AMOUNT");
+  if (discountType === "PERCENT") {
+    const percent = Number(formData.get("discount"));
+    if (!Number.isFinite(percent) || percent <= 0) return 0;
+    const subtotalCents = lines.reduce(
+      (sum, line) => sum + line.quantity * line.unitPriceCents,
+      0,
+    );
+    return Math.round((subtotalCents * Math.min(100, percent)) / 100);
+  }
+  return xofToCents(formData.get("discount"));
+}
+
 export async function createQuoteAction(
   _state: ActionState,
   formData: FormData,
@@ -162,6 +179,7 @@ export async function createQuoteAction(
 
   const validUntil = String(formData.get("validUntil") ?? "").trim();
   const taxRate = Number(formData.get("taxRate"));
+  const lines = quoteLinesFromForm(formData);
   const result = await createDraftQuote(
     { quotes: new PrismaQuoteRepository(prisma), ...worldDependencies() },
     context,
@@ -169,8 +187,8 @@ export async function createQuoteAction(
       id: randomUUID(),
       worldKey: String(formData.get("worldKey")),
       clientId: String(formData.get("clientId")),
-      lines: quoteLinesFromForm(formData),
-      discountCents: xofToCents(formData.get("discount")),
+      lines,
+      discountCents: discountCentsFromForm(formData, lines),
       taxRateBps: Number.isFinite(taxRate)
         ? Math.max(0, Math.round(taxRate * 100))
         : 0,

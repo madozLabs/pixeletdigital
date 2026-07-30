@@ -27,10 +27,36 @@ const TABS = [
   { id: "balances", label: "Soldes clients" },
   { id: "catalogue", label: "Catalogue" },
 ] as const;
+const QUOTE_STATUS_OPTIONS = [
+  ["DRAFT", "Brouillon"],
+  ["SENT", "Envoyé"],
+  ["ACCEPTED", "Accepté"],
+  ["DECLINED", "Refusé"],
+  ["EXPIRED", "Expiré"],
+  ["CANCELLED", "Annulé"],
+] as const;
+
+const INVOICE_STATUS_OPTIONS = [
+  ["DRAFT", "Brouillon"],
+  ["SENT", "Envoyée"],
+  ["PARTIALLY_PAID", "Partiellement payée"],
+  ["PAID", "Payée"],
+  ["CANCELLED", "Annulée"],
+] as const;
+
 export default async function WorkspaceBillingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ world?: string; tab?: string; page?: string }>;
+  searchParams: Promise<{
+    world?: string;
+    tab?: string;
+    page?: string;
+    client?: string;
+    status?: string;
+    from?: string;
+    to?: string;
+    duplicateFrom?: string;
+  }>;
 }) {
   const context = await getWorkspaceRequestContext();
   if (!context) redirect("/login");
@@ -47,7 +73,16 @@ export default async function WorkspaceBillingPage({
     );
   }
 
-  const { world, tab, page: pageParam } = await searchParams;
+  const {
+    world,
+    tab,
+    page: pageParam,
+    client: clientFilter,
+    status: statusFilter,
+    from: fromFilter,
+    to: toFilter,
+    duplicateFrom,
+  } = await searchParams;
   const worldKey = world ?? "pixel-digital";
   const activeTab = TABS.find((item) => item.id === tab)?.id ?? "quotes";
   const pageParams = parsePage(pageParam);
@@ -55,7 +90,15 @@ export default async function WorkspaceBillingPage({
   const summary = await listBillingSummary(
     { billingSummaryReader: new PrismaBillingSummaryReader(prisma) },
     context,
-    { worldKey, skip, take },
+    {
+      worldKey,
+      skip,
+      take,
+      clientId: clientFilter || null,
+      status: statusFilter || null,
+      from: fromFilter ? new Date(fromFilter) : null,
+      to: toFilter ? new Date(toFilter) : null,
+    },
   );
   if (!summary.ok) return <p role="alert">Accès refusé.</p>;
   const {
@@ -111,6 +154,55 @@ export default async function WorkspaceBillingPage({
         ))}
       </div>
 
+      {activeTab === "quotes" || activeTab === "invoices" ? (
+        <form className="billing-filters" method="get">
+          <input type="hidden" name="world" value={worldKey} />
+          <input type="hidden" name="tab" value={activeTab} />
+          <label>
+            Client
+            <select name="client" defaultValue={clientFilter ?? ""}>
+              <option value="">Tous</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Statut
+            <select name="status" defaultValue={statusFilter ?? ""}>
+              <option value="">Tous</option>
+              {(activeTab === "quotes"
+                ? QUOTE_STATUS_OPTIONS
+                : INVOICE_STATUS_OPTIONS
+              ).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Du
+            <input type="date" name="from" defaultValue={fromFilter ?? ""} />
+          </label>
+          <label>
+            Au
+            <input type="date" name="to" defaultValue={toFilter ?? ""} />
+          </label>
+          <button type="submit" className="admin-table__action">
+            Filtrer
+          </button>
+          <Link
+            className="admin-table__action"
+            href={`/workspace/billing?world=${worldKey}&tab=${activeTab}`}
+          >
+            Réinitialiser
+          </Link>
+        </form>
+      ) : null}
+
       {activeTab === "quotes" ? (
         <>
           <section className="billing-card-grid">
@@ -134,6 +226,14 @@ export default async function WorkspaceBillingPage({
                     Valide jusqu’au{" "}
                     {quote.validUntil ? formatDate(quote.validUntil) : "—"}
                   </p>
+                  <div className="admin-table__actions">
+                    <Link
+                      className="admin-table__action"
+                      href={`/workspace/billing?world=${worldKey}&tab=quotes&duplicateFrom=${quote.id}#new-quote-form`}
+                    >
+                      Dupliquer
+                    </Link>
+                  </div>
                   <details className="billing-card__actions">
                     <summary>Actions</summary>
                     <QuoteActionsForm
@@ -160,19 +260,34 @@ export default async function WorkspaceBillingPage({
           </section>
           <Pagination
             basePath="/workspace/billing"
-            searchParams={{ world: worldKey, tab: "quotes" }}
+            searchParams={{
+              world: worldKey,
+              tab: "quotes",
+              client: clientFilter,
+              status: statusFilter,
+              from: fromFilter,
+              to: toFilter,
+            }}
             page={pageParams.page}
             totalPages={totalQuotePages}
             total={totalQuotes}
           />
-          <h2 className="admin-content__subtitle">Nouveau devis</h2>
+          <h2 className="admin-content__subtitle" id="new-quote-form">
+            Nouveau devis
+          </h2>
           <CreateQuoteForm
+            key={duplicateFrom ?? "new"}
             worldKey={worldKey}
             clients={clients.map((client) => ({
               id: client.id,
               label: client.name,
             }))}
             catalogueDatalistId="billing-catalogue-labels"
+            duplicateSource={
+              duplicateFrom
+                ? (quotes.find((quote) => quote.id === duplicateFrom) ?? null)
+                : null
+            }
           />
           <datalist id="billing-catalogue-labels">
             {catalogue.map((item) => (
@@ -243,7 +358,14 @@ export default async function WorkspaceBillingPage({
         <>
           <Pagination
             basePath="/workspace/billing"
-            searchParams={{ world: worldKey, tab: "invoices" }}
+            searchParams={{
+              world: worldKey,
+              tab: "invoices",
+              client: clientFilter,
+              status: statusFilter,
+              from: fromFilter,
+              to: toFilter,
+            }}
             page={pageParams.page}
             totalPages={totalInvoicePages}
             total={totalInvoices}
