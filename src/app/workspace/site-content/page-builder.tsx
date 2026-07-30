@@ -335,6 +335,19 @@ export function PageBuilder({
       element.dataset.cmsSectionId = sectionId;
       element.style.cursor = "pointer";
       element.style.outlineOffset = "-3px";
+      // The idle outline is transparent (see highlightSelectedSection) so a
+      // selected block stands out -- without a hover state, nothing signals
+      // that a block is clickable until after you've already clicked one.
+      element.onmouseenter = () => {
+        if (sectionId !== selectedId) {
+          element.style.outline = "2px dashed var(--accent)";
+        }
+      };
+      element.onmouseleave = () => {
+        if (sectionId !== selectedId) {
+          element.style.outline = "2px dashed transparent";
+        }
+      };
       if (editable) {
         const toolbar = document.createElement("div");
         toolbar.dataset.cmsEditorToolbar = "true";
