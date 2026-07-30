@@ -5,7 +5,7 @@ import {
   render,
   screen,
 } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   WorldTransitionLink,
@@ -76,5 +76,77 @@ describe("WorldTransitionLink", () => {
     fireEvent.click(screen.getByRole("link"));
     expect(push).toHaveBeenCalledWith("/kwaliti-print");
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+});
+
+describe("WorldTransitionLink with native View Transitions support", () => {
+  const startViewTransition = vi.fn(
+    (callback: () => void | Promise<void>) => {
+      callback();
+      return {
+        ready: Promise.resolve(),
+        finished: Promise.resolve(),
+        updateCallbackDone: Promise.resolve(),
+        skipTransition: () => {},
+      };
+    },
+  );
+
+  beforeEach(() => {
+    Object.defineProperty(document, "startViewTransition", {
+      value: startViewTransition,
+      configurable: true,
+      writable: true,
+    });
+  });
+
+  afterEach(() => {
+    startViewTransition.mockClear();
+    // @ts-expect-error -- test-only cleanup of a browser API jsdom lacks
+    delete document.startViewTransition;
+  });
+
+  it("wraps the cover mount and unmount in a native view transition", async () => {
+    vi.useFakeTimers();
+    render(
+      <WorldTransitionProvider>
+        <WorldTransitionLink href="/kwaliti-print" label="Kwaliti Print">
+          Kwaliti Print
+        </WorldTransitionLink>
+      </WorldTransitionProvider>,
+    );
+    // Feature detection runs in an effect after mount.
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.click(screen.getByRole("link", { name: "Kwaliti Print" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Kwaliti Print");
+    expect(startViewTransition).toHaveBeenCalledTimes(1);
+
+    act(() => vi.advanceTimersByTime(360));
+    expect(push).toHaveBeenCalledWith("/kwaliti-print");
+
+    act(() => vi.advanceTimersByTime(0));
+    expect(startViewTransition).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("still bypasses the native transition entirely when reduced motion is requested", async () => {
+    reducedMotion.value = true;
+    render(
+      <WorldTransitionProvider>
+        <WorldTransitionLink href="/kwaliti-print" label="Kwaliti Print">
+          Kwaliti Print
+        </WorldTransitionLink>
+      </WorldTransitionProvider>,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    fireEvent.click(screen.getByRole("link"));
+    expect(push).toHaveBeenCalledWith("/kwaliti-print");
+    expect(startViewTransition).not.toHaveBeenCalled();
   });
 });

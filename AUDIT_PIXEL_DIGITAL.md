@@ -168,7 +168,7 @@ Recherche exhaustive : aucun type de section "témoignage" ou "étude de cas" n'
 | A4 | Modularisation de `globals.css` | Amélioration | Archi | ✅ traité 2026-07-30 (vérifié, aucun code à changer) |
 | N1 | Command Palette IA à commandes en langage naturel | Innovation | UX Workspace | Ouvert |
 | N2 | Copilote contextuel invisible (triage leads, pré-remplissage devis) | Innovation | Produit/IA | Ouvert |
-| N3 | Transition immersive inter-univers (View Transitions) | Innovation | UX public | Ouvert |
+| N3 | Transition immersive inter-univers (View Transitions) | Innovation | UX public | ✅ traité 2026-07-30 |
 | N4 | Présence collaborative temps réel dans le Workspace | Innovation | UX Workspace | Ouvert |
 | N5 | Module de preuve interactif pour Kwaliti Print (matières, survol vidéo) | Innovation | UX public | Ouvert |
 
@@ -648,7 +648,15 @@ Contraintes :
 Résultat attendu : Une suggestion IA contextuelle et optionnelle sur le tri des enquêtes entrantes, gouvernée et avec repli robuste, jamais bloquante pour l'utilisateur.
 ```
 
-**N3 — Transition immersive inter-univers**
+**N3 — Transition immersive inter-univers** — ✅ traité le 30 juillet 2026, périmètre volontairement resserré par rapport au prompt d'origine :
+- Vérification de compatibilité faite avant tout code (exigée par le prompt) : l'intégration **native** de Next.js App Router pour les View Transitions (`experimental.viewTransition` + composant `<ViewTransition>`) requiert le canal expérimental/canary de React ; ce projet est sur React 19.2.7 stable, et y basculer pour un seul effet cosmétique serait un changement de dépendance disproportionné, non justifié — exactement le genre de décision qu'`AGENTS.md` interdit de prendre sans besoin démontré. **Décision** : utiliser directement l'API navigateur native `document.startViewTransition()` (aucune dépendance, feature-detectée), pas l'intégration Next.js.
+- `src/app/_components/world-transition.tsx` : quand l'API est supportée (`useSyncExternalStore`, pas de `useEffect`+`setState` pour éviter l'anti-pattern et un souci de hiérarchie de rendu client/serveur différente), `WorldTransitionProvider` bascule sur un rendu direct (sans `AnimatePresence`/`motion.div`) et enveloppe le montage et le démontage de la bannière de couverture dans `document.startViewTransition(() => flushSync(...))`. Sur les navigateurs sans support (Firefox notamment), le chemin Framer Motion existant (clip-path + fade) reste **strictement identique**, code inchangé — repli total conforme à la contrainte.
+- CSS (`marketing.css`) : `view-transition-name: world-cover` sur la bannière, durée/easing calés sur la charte existante (`0.32s`, même cubic-bezier que l'A1), et un garde `@media (prefers-reduced-motion: reduce)` qui neutralise l'animation même côté navigateur — deuxième filet en plus du court-circuit déjà fait côté JS (`useReducedMotion`, qui empêche même la bannière d'apparaître).
+- Analyse technique qui a guidé le choix de portée : la bannière de couverture est un calque plein écran opaque ; envelopper son **apparition** dans une transition native n'apporte aucune valeur visuelle réelle tant que Framer Motion anime encore le `clip-path` par-dessus (la capture "after" de l'API serait prise avant que l'animation JS n'ait progressé) — combiner les deux aurait été du cargo-cult, pas un vrai gain. D'où la bascule complète vers un rendu natif (sans Framer du tout) uniquement quand l'API est disponible, plutôt qu'un enrichissement superficiel qui n'aurait rien changé à l'écran.
+- Vérifié : 2 nouveaux tests dans `world-transition.test.tsx` (bascule native avec `document.startViewTransition` mocké ; confirmation que `prefers-reduced-motion` court-circuite toujours l'API même quand elle est supportée) — jsdom n'implémentant pas `startViewTransition`, les 3 tests existants continuent d'exercer le chemin Framer Motion inchangé, zéro régression. `tsc`, `eslint` propres. Suite complète : 589/589 (était 587 avant ce lot). Test manuel navigateur (Chromium, qui supporte l'API) : clic sur le sélecteur d'univers → navigation effective vers Kwaliti Print, aucune erreur console, aucun avertissement d'hydratation, bannière nettoyée correctement après transition.
+- **Non fait dans ce lot** : pas de tentative d'utiliser l'intégration `experimental.viewTransition` de Next.js (décision documentée ci-dessus) ; pas de morph "élément partagé" (ex. logo qui se transforme d'un monde à l'autre) — un vrai effet de ce type demanderait une réécriture bien plus large hors du périmètre "enrichir A1", pas une simple activation d'API.
+
+Prompt d'origine conservé ci-dessous pour mémoire.
 ```text
 Contexte : A1 introduit une transition de base au changement d'univers. Ce prompt va plus loin en utilisant la View Transitions API (supportée par Next.js App Router en configuration expérimentale/stable selon la version) pour un effet de morph réellement immersif entre l'identité Pixel&Digital et Kwaliti Print, conformément à l'exigence "spectaculaire mais réversible" de PUBLIC_JOURNEYS.md Parcours 4.
 

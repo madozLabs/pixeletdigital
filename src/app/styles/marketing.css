@@ -3036,6 +3036,23 @@ a.world-switcher__item:focus-visible {
   justify-content: flex-end;
   padding: clamp(2rem, 7vw, 7rem);
   pointer-events: all;
+  view-transition-name: world-cover;
+}
+
+/* Native View Transitions path (world-transition.tsx): browsers without
+   support simply never produce this pseudo-element, no fallback needed. */
+::view-transition-old(world-cover),
+::view-transition-new(world-cover) {
+  animation-duration: 0.32s;
+  animation-timing-function: cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(world-cover),
+  ::view-transition-old(world-cover),
+  ::view-transition-new(world-cover) {
+    animation: none !important;
+  }
 }
 
 .world-transition span {
