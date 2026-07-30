@@ -13,12 +13,17 @@ import {
   createDraftInvoice,
   markInvoiceSent,
 } from "@/modules/billing/application/invoice-use-cases";
+import {
+  deleteBillingAttachment,
+  uploadBillingAttachment,
+} from "@/modules/billing/application/billing-attachment-use-cases";
 import { recordInvoicePayment } from "@/modules/billing/application/payment-use-cases";
 import {
   convertQuoteToInvoice,
   createDraftQuote,
   updateQuoteStatus,
 } from "@/modules/billing/application/quote-use-cases";
+import { PrismaBillingAttachmentRepository } from "@/modules/billing/infrastructure/prisma-billing-attachment-repository";
 import { PrismaCatalogueItemRepository } from "@/modules/billing/infrastructure/prisma-catalogue-item-repository";
 import { PrismaInvoiceRepository } from "@/modules/billing/infrastructure/prisma-invoice-repository";
 import { PrismaPaymentRepository } from "@/modules/billing/infrastructure/prisma-payment-repository";
@@ -29,10 +34,15 @@ import {
   recordAuditEvent,
   type RecordableAuditAction,
 } from "@/modules/audit/infrastructure/record-audit-event";
+import { validateWorkspaceMediaUpload } from "@/modules/content/application/workspace-site-content-policy";
 import type { RequestContext } from "@/shared/request-context";
 
 import type { ActionState } from "../_components/feedback";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
+import {
+  deleteWorkspaceMediaFile,
+  storeWorkspaceMediaFile,
+} from "../site-content/media-storage";
 
 function worldDependencies() {
   return { worlds: new PrismaWorldRepository(prisma) };
@@ -363,4 +373,107 @@ export async function recordPaymentAction(
   revalidatePath("/workspace/billing");
   revalidatePath("/workspace");
   return toActionState(result, "Paiement enregistré.");
+}
+
+function attachmentDependencies() {
+  return {
+    attachments: new PrismaBillingAttachmentRepository(prisma),
+    quotes: new PrismaQuoteRepository(prisma),
+    invoices: new PrismaInvoiceRepository(prisma),
+  };
+}
+
+export async function uploadAttachmentAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const context = await getWorkspaceRequestContext();
+  if (!context) return { status: "error", message: "Session expirée." };
+
+  const targetType = String(formData.get("targetType"));
+  const targetId = String(formData.get("targetId"));
+  const worldKey = String(formData.get("worldKey"));
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return { status: "error", message: "Un fichier est requis." };
+  }
+  const uploadError = validateWorkspaceMediaUpload({
+    size: file.size,
+    mimeType: file.type,
+  });
+  if (uploadError) {
+    return {
+      status: "error",
+      message:
+        uploadError === "FILE_TOO_LARGE"
+          ? "Le fichier dépasse la taille maximale autorisée (15 Mo)."
+          : "Ce type de fichier n'est pas autorisé.",
+    };
+  }
+
+  const safeName = file.name.toLowerCase().replace(/[^a-z0-9._-]+/g, "-");
+  const objectPath = `${worldKey}/billing-attachments/${randomUUID()}-${safeName}`;
+  const storage = await storeWorkspaceMediaFile(file, objectPath);
+
+  const result = await uploadBillingAttachment(
+    attachmentDependencies(),
+    context,
+    {
+      id: randomUUID(),
+      targetType,
+      targetId,
+      fileName: file.name,
+      bucket: storage.bucket,
+      objectPath,
+      publicUrl: storage.publicUrl,
+      mimeType: file.type,
+      sizeBytes: file.size,
+    },
+  );
+  if (!result.ok) {
+    console.error("uploadBillingAttachment failed", result.error);
+    // The DB record was rejected (unknown target, forbidden, etc.) but the
+    // file is already durably stored -- clean it up so it doesn't leak.
+    await deleteWorkspaceMediaFile(objectPath).catch(() => {});
+  }
+  revalidatePath("/workspace/billing");
+  return toActionState(result, "Pièce jointe ajoutée.");
+}
+
+export async function deleteAttachmentAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const context = await getWorkspaceRequestContext();
+  if (!context) return { status: "error", message: "Session expirée." };
+
+  const id = String(formData.get("id"));
+  const result = await deleteBillingAttachment(
+    attachmentDependencies(),
+    context,
+    { id },
+  );
+  if (!result.ok) {
+    console.error("deleteBillingAttachment failed", result.error);
+  } else if (result.value.bucket === "local-development") {
+    // Storage cleanup is best-effort and runs after the DB row is already
+    // gone: the DB record is the source of truth for "does this attachment
+    // exist", an orphaned file left behind here is a harmless, recoverable
+    // leak rather than a correctness problem.
+    await deleteWorkspaceMediaFile(result.value.objectPath).catch(() => {});
+  } else {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (supabaseUrl && serviceKey) {
+      await fetch(
+        `${supabaseUrl}/storage/v1/object/${result.value.bucket}/${result.value.objectPath}`,
+        {
+          method: "DELETE",
+          headers: { authorization: `Bearer ${serviceKey}`, apikey: serviceKey },
+        },
+      ).catch(() => {});
+    }
+  }
+  revalidatePath("/workspace/billing");
+  return toActionState(result, "Pièce jointe supprimée.");
 }

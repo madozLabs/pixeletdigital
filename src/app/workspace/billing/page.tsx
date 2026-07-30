@@ -12,6 +12,7 @@ import { getWorkspaceRequestContext } from "../get-workspace-context";
 import { formatXof } from "./_lib/money";
 import {
   ArchiveCatalogueItemForm,
+  AttachmentsPanel,
   CreateCatalogueItemForm,
   CreateInvoiceForm,
   CreateQuoteForm,
@@ -142,6 +143,17 @@ export default async function WorkspaceBillingPage({
                       canConvert={quote.canConvert}
                     />
                   </details>
+                  <details className="billing-card__actions">
+                    <summary>
+                      Pièces jointes ({quote.attachments.length})
+                    </summary>
+                    <AttachmentsPanel
+                      targetType="QUOTE"
+                      targetId={quote.id}
+                      worldKey={worldKey}
+                      attachments={quote.attachments}
+                    />
+                  </details>
                 </article>
               );
             })}
@@ -211,6 +223,17 @@ export default async function WorkspaceBillingPage({
                     />
                   </details>
                 ) : null}
+                <details className="billing-card__actions">
+                  <summary>
+                    Pièces jointes ({invoice.attachments.length})
+                  </summary>
+                  <AttachmentsPanel
+                    targetType="INVOICE"
+                    targetId={invoice.id}
+                    worldKey={worldKey}
+                    attachments={invoice.attachments}
+                  />
+                </details>
               </article>
             );
           })}

@@ -16,12 +16,93 @@ import {
   createCatalogueItemAction,
   createInvoiceAction,
   createQuoteAction,
+  deleteAttachmentAction,
   markInvoiceSentAction,
   recordPaymentAction,
   updateQuoteStatusAction,
+  uploadAttachmentAction,
 } from "./actions";
 
 type Option = Readonly<{ id: string; label: string }>;
+
+type AttachmentOption = Readonly<{
+  id: string;
+  fileName: string;
+  publicUrl: string;
+  sizeBytes: number;
+}>;
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} o`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} Ko`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+}
+
+function AttachmentRow({
+  attachment,
+}: Readonly<{ attachment: AttachmentOption }>) {
+  const [state, action] = useActionState(
+    deleteAttachmentAction,
+    IDLE_ACTION_STATE,
+  );
+  return (
+    <form action={action} className="billing-attachment-row">
+      <input type="hidden" name="id" value={attachment.id} />
+      <a href={attachment.publicUrl} target="_blank" rel="noreferrer">
+        {attachment.fileName}
+      </a>
+      <span>{formatFileSize(attachment.sizeBytes)}</span>
+      <ConfirmAction
+        consequence="La pièce jointe sera définitivement supprimée."
+        className="admin-table__action"
+      >
+        Supprimer
+      </ConfirmAction>
+      <Feedback state={state} />
+    </form>
+  );
+}
+
+export function AttachmentsPanel({
+  targetType,
+  targetId,
+  worldKey,
+  attachments,
+}: Readonly<{
+  targetType: "QUOTE" | "INVOICE";
+  targetId: string;
+  worldKey: string;
+  attachments: readonly AttachmentOption[];
+}>) {
+  const [uploadState, uploadAction] = useActionState(
+    uploadAttachmentAction,
+    IDLE_ACTION_STATE,
+  );
+  return (
+    <div className="billing-attachments">
+      {attachments.length === 0 ? (
+        <p className="admin-empty">Aucune pièce jointe.</p>
+      ) : (
+        attachments.map((attachment) => (
+          <AttachmentRow key={attachment.id} attachment={attachment} />
+        ))
+      )}
+      <form action={uploadAction} className="billing-attachment-upload">
+        <input type="hidden" name="targetType" value={targetType} />
+        <input type="hidden" name="targetId" value={targetId} />
+        <input type="hidden" name="worldKey" value={worldKey} />
+        <input
+          type="file"
+          name="file"
+          accept="image/jpeg,image/png,image/webp,application/pdf"
+          required
+        />
+        <SubmitButton>Ajouter</SubmitButton>
+        <Feedback state={uploadState} />
+      </form>
+    </div>
+  );
+}
 
 // Keep in sync with QUOTE_LINE_SLOTS in ./actions.ts (quoteLinesFromForm) --
 // this is the number of line-item slots rendered, not a hard cap on a

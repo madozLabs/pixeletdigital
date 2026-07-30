@@ -5,6 +5,14 @@ import {
   requireActiveActor,
 } from "./billing-authorization";
 
+export type BillingAttachmentDto = Readonly<{
+  id: string;
+  fileName: string;
+  publicUrl: string;
+  sizeBytes: number;
+  createdAt: Date;
+}>;
+
 export type BillingSummaryDto = Readonly<{
   clients: readonly Readonly<{ id: string; name: string }>[];
   quotes: readonly Readonly<{
@@ -17,6 +25,7 @@ export type BillingSummaryDto = Readonly<{
     totalCents: number;
     validUntil: Date | null;
     canConvert: boolean;
+    attachments: readonly BillingAttachmentDto[];
   }>[];
   totalQuotes: number;
   invoices: readonly Readonly<{
@@ -29,6 +38,7 @@ export type BillingSummaryDto = Readonly<{
     paidCents: number;
     balanceCents: number;
     dueAt: Date | null;
+    attachments: readonly BillingAttachmentDto[];
   }>[];
   totalInvoices: number;
   balances: readonly Readonly<{

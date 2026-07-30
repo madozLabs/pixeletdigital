@@ -274,6 +274,7 @@ model World {
   mediaAssets     MediaAsset[]
   siteSettings    SiteSettings?
   leads           Lead[]
+  billingAttachments BillingAttachment[]
 
   @@map("worlds")
 }
@@ -300,6 +301,7 @@ model User {
   ownedNextActions  NextAction[]     @relation("NextActionOwner")
   leadActivities    LeadActivity[]   @relation("LeadActivityActor")
   editPresences     EditPresence[]
+  uploadedBillingAttachments BillingAttachment[]
 
   @@map("users")
 }
@@ -575,6 +577,31 @@ model MediaAsset {
   @@map("media_assets")
 }
 
+enum BillingAttachmentTargetType {
+  QUOTE
+  INVOICE
+}
+
+model BillingAttachment {
+  id           String                      @id @default(cuid())
+  worldKey     String
+  world        World                       @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  targetType   BillingAttachmentTargetType
+  targetId     String
+  fileName     String
+  bucket       String
+  objectPath   String
+  publicUrl    String
+  mimeType     String
+  sizeBytes    Int
+  uploadedById String?
+  uploadedBy   User?                       @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime                    @default(now())
+
+  @@index([targetType, targetId])
+  @@map("billing_attachments")
+}
+
 model SiteSettings {
   id                  String                 @id
   worldKey            String                 @unique
@@ -812,6 +839,7 @@ model EditorialItem {
   clientApprovedAt   DateTime?
   proofUrl           String?
   notes              String?
+  statusChangeReason String?
   realizedAt         DateTime?
   version            Int
   createdAt          DateTime

@@ -1,3 +1,4 @@
+import type { BillingAttachmentDomainErrorCode } from "../domain/billing-attachment";
 import type { CatalogueItemDomainErrorCode } from "../domain/catalogue-item";
 import type { ClientContactDomainErrorCode } from "../domain/client-contact";
 import type { ClientDomainErrorCode } from "../domain/client";
@@ -16,7 +17,8 @@ export type BillingApplicationError =
         | CatalogueItemDomainErrorCode
         | InvoiceDomainErrorCode
         | QuoteDomainErrorCode
-        | PaymentDomainErrorCode;
+        | PaymentDomainErrorCode
+        | BillingAttachmentDomainErrorCode;
       message: string;
     }>
   | Readonly<{ code: "NOT_FOUND"; message: string }>

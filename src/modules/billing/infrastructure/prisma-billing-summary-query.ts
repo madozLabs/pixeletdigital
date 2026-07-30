@@ -1,5 +1,26 @@
-import type { PrismaClient } from "@/generated/prisma/client";
-import type { BillingSummaryReader } from "../application/billing-summary-query";
+import type { BillingAttachment, PrismaClient } from "@/generated/prisma/client";
+import type {
+  BillingAttachmentDto,
+  BillingSummaryReader,
+} from "../application/billing-summary-query";
+
+function groupAttachments(
+  attachments: readonly BillingAttachment[],
+): Map<string, BillingAttachmentDto[]> {
+  const byTarget = new Map<string, BillingAttachmentDto[]>();
+  for (const attachment of attachments) {
+    const list = byTarget.get(attachment.targetId) ?? [];
+    list.push({
+      id: attachment.id,
+      fileName: attachment.fileName,
+      publicUrl: attachment.publicUrl,
+      sizeBytes: attachment.sizeBytes,
+      createdAt: attachment.createdAt,
+    });
+    byTarget.set(attachment.targetId, list);
+  }
+  return byTarget;
+}
 
 function total(document: {
   lines: readonly { quantity: number; unitPriceCents: number }[];
@@ -68,6 +89,25 @@ export class PrismaBillingSummaryReader implements BillingSummaryReader {
       }),
     ]);
 
+    const quoteIds = quotes.map((quote) => quote.id);
+    const invoiceIds = invoices.map((invoice) => invoice.id);
+    const [quoteAttachments, invoiceAttachments] = await Promise.all([
+      quoteIds.length
+        ? this.database.billingAttachment.findMany({
+            where: { targetType: "QUOTE", targetId: { in: quoteIds } },
+            orderBy: { createdAt: "desc" },
+          })
+        : Promise.resolve([]),
+      invoiceIds.length
+        ? this.database.billingAttachment.findMany({
+            where: { targetType: "INVOICE", targetId: { in: invoiceIds } },
+            orderBy: { createdAt: "desc" },
+          })
+        : Promise.resolve([]),
+    ]);
+    const attachmentsByQuote = groupAttachments(quoteAttachments);
+    const attachmentsByInvoice = groupAttachments(invoiceAttachments);
+
     const balances = clients.map((client) => {
       const owned = allInvoices.filter(
         (invoice) =>
@@ -107,6 +147,7 @@ export class PrismaBillingSummaryReader implements BillingSummaryReader {
         totalCents: total(quote),
         validUntil: quote.validUntil,
         canConvert: quote.status === "ACCEPTED" && !quote.invoice,
+        attachments: attachmentsByQuote.get(quote.id) ?? [],
       })),
       totalQuotes,
       invoices: invoices.map((invoice) => {
@@ -125,6 +166,7 @@ export class PrismaBillingSummaryReader implements BillingSummaryReader {
           paidCents,
           balanceCents: Math.max(0, totalCents - paidCents),
           dueAt: invoice.dueAt,
+          attachments: attachmentsByInvoice.get(invoice.id) ?? [],
         };
       }),
       totalInvoices,
