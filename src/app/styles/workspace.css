@@ -3296,6 +3296,8 @@
   justify-content: space-between;
   height: 3.65rem;
   padding: 0 1rem;
+  color: #171717;
+  color-scheme: light;
   background: #fff;
   border-bottom: 1px solid #d9dce3;
 }
@@ -3336,6 +3338,8 @@
 .cms-visual-builder__sidebar {
   min-height: 0;
   overflow-y: auto;
+  color: #171717;
+  color-scheme: light;
   background: #fff;
   border-right: 1px solid #cfd3dc;
 }
@@ -3526,6 +3530,8 @@
   gap: 0.25rem;
   width: 13rem;
   padding: 0.45rem;
+  color: #171717;
+  color-scheme: light;
   background: #fff;
   border: 1px solid var(--wk-border);
   border-radius: 0.55rem;
@@ -3582,7 +3588,8 @@
   gap: 1rem;
   min-height: 0;
   padding: 1rem;
-  color: var(--ink);
+  color: #171717;
+  color-scheme: light;
   background: #fff;
   border: 1px solid var(--wk-border);
   border-radius: 0.8rem;
