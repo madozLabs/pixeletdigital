@@ -210,6 +210,11 @@ export default async function WorkspaceEditorialPage({
                         {item.brief ? (
                           <p className="editorial-card__brief">{item.brief}</p>
                         ) : null}
+                        {item.statusChangeReason ? (
+                          <p className="editorial-card__reason">
+                            Motif : {item.statusChangeReason}
+                          </p>
+                        ) : null}
                         {canMutate &&
                         item.status !== "PUBLISHED" &&
                         item.status !== "CANCELLED" ? (

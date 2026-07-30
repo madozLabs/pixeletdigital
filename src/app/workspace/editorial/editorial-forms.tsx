@@ -15,6 +15,28 @@ import {
 
 type Option = Readonly<{ id: string; label: string }>;
 
+// Mirrors professional-actions.ts's EDITORIAL_STATUS_ORDER -- used only to
+// decide whether to show the reason field, not to validate the transition.
+const EDITORIAL_STATUS_ORDER = [
+  "DRAFT",
+  "INTERNAL_REVIEW",
+  "CLIENT_REVIEW",
+  "APPROVED",
+  "SCHEDULED",
+  "PUBLISHED",
+] as const;
+
+function isBackwardTransition(from: string, to: string): boolean {
+  if (to === "CANCELLED") return true;
+  const fromIndex = EDITORIAL_STATUS_ORDER.indexOf(
+    from as (typeof EDITORIAL_STATUS_ORDER)[number],
+  );
+  const toIndex = EDITORIAL_STATUS_ORDER.indexOf(
+    to as (typeof EDITORIAL_STATUS_ORDER)[number],
+  );
+  return fromIndex >= 0 && toIndex >= 0 && toIndex < fromIndex;
+}
+
 const CONTENT_TYPE_LABEL: Readonly<Record<string, string>> = {
   POST: "Post",
   STORY: "Story",
@@ -54,6 +76,16 @@ export function EditorialWorkflowForm({
         <option value="CANCELLED">Annulé</option>
       </select>
       <input name="proofUrl" type="url" placeholder="Lien de publication" />
+      {isBackwardTransition(status, nextStatus) ? (
+        <label>
+          Motif
+          <textarea
+            name="reason"
+            maxLength={500}
+            placeholder="Pourquoi ce retour en arrière ou cette annulation ?"
+          />
+        </label>
+      ) : null}
       {nextStatus === "CANCELLED" && status !== "CANCELLED" ? (
         <ConfirmAction consequence="Ce contenu quittera définitivement le pipeline éditorial actif.">
           Annuler le contenu

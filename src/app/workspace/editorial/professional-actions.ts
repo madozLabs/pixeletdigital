@@ -26,6 +26,29 @@ function canMutate(role: string | null | undefined): boolean {
   );
 }
 
+// Same column order as EditorialWorkflowForm's <select> and pipeline-board.tsx's
+// COLUMNS -- used only to detect a backward move (going to CANCELLED is
+// always treated as backward too), not to validate the transition itself.
+const EDITORIAL_STATUS_ORDER = [
+  "DRAFT",
+  "INTERNAL_REVIEW",
+  "CLIENT_REVIEW",
+  "APPROVED",
+  "SCHEDULED",
+  "PUBLISHED",
+] as const;
+
+function isBackwardTransition(from: string, to: string): boolean {
+  if (to === "CANCELLED") return true;
+  const fromIndex = EDITORIAL_STATUS_ORDER.indexOf(
+    from as (typeof EDITORIAL_STATUS_ORDER)[number],
+  );
+  const toIndex = EDITORIAL_STATUS_ORDER.indexOf(
+    to as (typeof EDITORIAL_STATUS_ORDER)[number],
+  );
+  return fromIndex >= 0 && toIndex >= 0 && toIndex < fromIndex;
+}
+
 export async function createProfessionalEditorialItemAction(
   _state: ActionState,
   formData: FormData,
@@ -156,6 +179,10 @@ export async function moveEditorialItemAction(
     if (status === "APPROVED") data.internalApprovedAt = now;
     if (status === "SCHEDULED") data.clientApprovedAt = now;
     if (status === "PUBLISHED") data.realizedAt = now;
+    // Drag-and-drop has no text field to capture a reason -- clear any
+    // stale one from a previous form-based transition rather than leave it
+    // displayed against a status it no longer applies to.
+    data.statusChangeReason = null;
 
     await prisma.editorialItem.update({
       where: { id: itemId, version: item.version },
@@ -189,7 +216,7 @@ export async function advanceEditorialWorkflowAction(
   try {
     const item = await prisma.editorialItem.findUnique({
       where: { id: itemId },
-      select: { worldKey: true, version: true },
+      select: { worldKey: true, version: true, status: true },
     });
     if (!item) {
       return { status: "error", message: "Ce contenu n'existe plus." };
@@ -223,6 +250,9 @@ export async function advanceEditorialWorkflowAction(
       data.realizedAt = now;
       data.proofUrl = optionalText(formData, "proofUrl");
     }
+    data.statusChangeReason = isBackwardTransition(item.status, nextStatus)
+      ? optionalText(formData, "reason")
+      : null;
 
     await prisma.editorialItem.update({
       where: { id: itemId, version: expectedVersion },
