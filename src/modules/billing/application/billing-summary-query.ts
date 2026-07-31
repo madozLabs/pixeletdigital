@@ -43,11 +43,20 @@ export type BillingSummaryDto = Readonly<{
     clientName: string;
     status: string;
     version: number;
+    taxRateBps: number;
     totalCents: number;
     paidCents: number;
+    creditedCents: number;
     balanceCents: number;
     dueAt: Date | null;
     attachments: readonly BillingAttachmentDto[];
+    creditNotes: readonly Readonly<{
+      id: string;
+      number: string;
+      reason: string;
+      totalCents: number;
+      issuedAt: Date;
+    }>[];
   }>[];
   totalInvoices: number;
   balances: readonly Readonly<{
@@ -55,6 +64,7 @@ export type BillingSummaryDto = Readonly<{
     clientName: string;
     billedCents: number;
     paidCents: number;
+    creditedCents: number;
     balanceCents: number;
   }>[];
   catalogue: readonly Readonly<{

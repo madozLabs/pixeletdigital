@@ -1,7 +1,11 @@
 export type Result<T, E> =
   Readonly<{ ok: true; value: T }> | Readonly<{ ok: false; error: E }>;
 
-export const BILLING_ATTACHMENT_TARGET_TYPES = ["QUOTE", "INVOICE"] as const;
+export const BILLING_ATTACHMENT_TARGET_TYPES = [
+  "QUOTE",
+  "INVOICE",
+  "CREDIT_NOTE",
+] as const;
 export type BillingAttachmentTargetType =
   (typeof BILLING_ATTACHMENT_TARGET_TYPES)[number];
 

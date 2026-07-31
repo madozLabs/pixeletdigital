@@ -18,6 +18,7 @@ import {
   createInvoiceAction,
   createQuoteAction,
   deleteAttachmentAction,
+  issueCreditNoteAction,
   markInvoiceSentAction,
   recordPaymentAction,
   updateQuoteStatusAction,
@@ -70,7 +71,7 @@ export function AttachmentsPanel({
   worldKey,
   attachments,
 }: Readonly<{
-  targetType: "QUOTE" | "INVOICE";
+  targetType: "QUOTE" | "INVOICE" | "CREDIT_NOTE";
   targetId: string;
   worldKey: string;
   attachments: readonly AttachmentOption[];
@@ -464,7 +465,15 @@ export function InvoiceActionsForm({
   invoiceId,
   version,
   status,
-}: Readonly<{ invoiceId: string; version: number; status: string }>) {
+  taxRateBps,
+  remainingCents,
+}: Readonly<{
+  invoiceId: string;
+  version: number;
+  status: string;
+  taxRateBps: number;
+  remainingCents: number;
+}>) {
   const [paymentState, paymentAction] = useActionState(
     recordPaymentAction,
     IDLE_ACTION_STATE,
@@ -479,36 +488,38 @@ export function InvoiceActionsForm({
   );
   return (
     <>
-      <form action={paymentAction} className="billing-inline-form">
-        <input type="hidden" name="invoiceId" value={invoiceId} />
-        <input type="hidden" name="expectedVersion" value={version} />
-        <input
-          name="amount"
-          type="number"
-          min={1}
-          step={1}
-          placeholder="Montant XOF"
-          required
-        />
-        <input
-          name="paidAt"
-          type="date"
-          defaultValue={new Date().toISOString().slice(0, 10)}
-          max={new Date().toISOString().slice(0, 10)}
-          aria-label="Date du paiement"
-        />
-        <select name="method" defaultValue="MOBILE_MONEY">
-          <option value="MOBILE_MONEY">Mobile Money</option>
-          <option value="BANK_TRANSFER">Virement</option>
-          <option value="CASH">Espèces</option>
-          <option value="CARD">Carte</option>
-          <option value="CHEQUE">Chèque</option>
-          <option value="OTHER">Autre</option>
-        </select>
-        <input name="reference" placeholder="Référence" />
-        <SubmitButton>Enregistrer paiement</SubmitButton>
-        <Feedback state={paymentState} />
-      </form>
+      {status !== "PAID" ? (
+        <form action={paymentAction} className="billing-inline-form">
+          <input type="hidden" name="invoiceId" value={invoiceId} />
+          <input type="hidden" name="expectedVersion" value={version} />
+          <input
+            name="amount"
+            type="number"
+            min={1}
+            step={1}
+            placeholder="Montant XOF"
+            required
+          />
+          <input
+            name="paidAt"
+            type="date"
+            defaultValue={new Date().toISOString().slice(0, 10)}
+            max={new Date().toISOString().slice(0, 10)}
+            aria-label="Date du paiement"
+          />
+          <select name="method" defaultValue="MOBILE_MONEY">
+            <option value="MOBILE_MONEY">Mobile Money</option>
+            <option value="BANK_TRANSFER">Virement</option>
+            <option value="CASH">Espèces</option>
+            <option value="CARD">Carte</option>
+            <option value="CHEQUE">Chèque</option>
+            <option value="OTHER">Autre</option>
+          </select>
+          <input name="reference" placeholder="Référence" />
+          <SubmitButton>Enregistrer paiement</SubmitButton>
+          <Feedback state={paymentState} />
+        </form>
+      ) : null}
       <div className="admin-table__actions">
         {status === "DRAFT" ? (
           <form action={sentAction}>
@@ -518,16 +529,152 @@ export function InvoiceActionsForm({
             <Feedback state={sentState} />
           </form>
         ) : null}
-        <form action={cancelAction}>
-          <input type="hidden" name="id" value={invoiceId} />
-          <input type="hidden" name="expectedVersion" value={version} />
-          <ConfirmAction consequence="La facture sera annulée et ne pourra plus recevoir de paiement.">
-            Annuler
-          </ConfirmAction>
-          <Feedback state={cancelState} />
-        </form>
+        {status === "DRAFT" ? (
+          <form action={cancelAction}>
+            <input type="hidden" name="id" value={invoiceId} />
+            <input type="hidden" name="expectedVersion" value={version} />
+            <ConfirmAction consequence="La facture sera annulée et ne pourra plus recevoir de paiement.">
+              Annuler
+            </ConfirmAction>
+            <Feedback state={cancelState} />
+          </form>
+        ) : null}
       </div>
+      {status !== "DRAFT" ? (
+        <IssueCreditNoteForm
+          invoiceId={invoiceId}
+          version={version}
+          taxRateBps={taxRateBps}
+          remainingCents={remainingCents}
+        />
+      ) : null}
     </>
+  );
+}
+
+// A credit note is the only way left to reduce or close an invoice once it
+// has been sent -- see applyCreditNote in the invoice domain. Line count is
+// deliberately smaller than a fresh invoice/quote (a correction is rarely
+// more than a couple of lines); reason is required so every credit note
+// carries a legible justification for whoever reads it later.
+const CREDIT_NOTE_LINE_SLOTS = 6;
+const CREDIT_NOTE_LINE_INDEXES = Array.from(
+  { length: CREDIT_NOTE_LINE_SLOTS },
+  (_, index) => index + 1,
+);
+
+function computeCreditNoteLiveTotal(
+  form: HTMLFormElement,
+  taxRateBps: number,
+): number {
+  const data = new FormData(form);
+  let subtotalCents = 0;
+  for (let index = 1; index <= CREDIT_NOTE_LINE_SLOTS; index += 1) {
+    const label = String(data.get(`lineLabel${index}`) ?? "").trim();
+    if (!label) continue;
+    const quantity = Math.max(
+      1,
+      Number(data.get(`lineQuantity${index}`)) || 1,
+    );
+    const unitPriceCents = Math.round(
+      (Number(data.get(`lineUnitPrice${index}`)) || 0) * 100,
+    );
+    subtotalCents += quantity * unitPriceCents;
+  }
+  return subtotalCents + Math.round((subtotalCents * taxRateBps) / 10_000);
+}
+
+function IssueCreditNoteForm({
+  invoiceId,
+  version,
+  taxRateBps,
+  remainingCents,
+}: Readonly<{
+  invoiceId: string;
+  version: number;
+  taxRateBps: number;
+  remainingCents: number;
+}>) {
+  const [state, action] = useActionState(
+    issueCreditNoteAction,
+    IDLE_ACTION_STATE,
+  );
+  const formRef = useRef<HTMLFormElement>(null);
+  const [liveTotal, setLiveTotal] = useState(0);
+  function recompute() {
+    if (formRef.current) {
+      setLiveTotal(computeCreditNoteLiveTotal(formRef.current, taxRateBps));
+    }
+  }
+  const exceedsBalance = liveTotal > remainingCents;
+  return (
+    <details className="billing-card__actions">
+      <summary>Émettre un avoir</summary>
+      <form
+        ref={formRef}
+        action={action}
+        className="editorial-form"
+        onChange={recompute}
+      >
+        <input type="hidden" name="invoiceId" value={invoiceId} />
+        <input type="hidden" name="expectedVersion" value={version} />
+        <p className="admin-table__note">
+          Solde restant créditable : {formatXof(remainingCents)}
+        </p>
+        {CREDIT_NOTE_LINE_INDEXES.map((index) => (
+          <div className="billing-line-row" key={index}>
+            <span className="billing-line-row__eyebrow">Ligne {index}</span>
+            <label>
+              Libellé
+              <input
+                name={`lineLabel${index}`}
+                placeholder="Ex. Erreur de facturation ligne 2"
+              />
+            </label>
+            <label>
+              Quantité
+              <input
+                name={`lineQuantity${index}`}
+                type="number"
+                min={1}
+                defaultValue={1}
+              />
+            </label>
+            <label>
+              Prix unitaire (XOF)
+              <input name={`lineUnitPrice${index}`} type="number" min={0} step={1} />
+            </label>
+          </div>
+        ))}
+        <label>
+          Motif <span aria-hidden="true">*</span>
+          <textarea
+            name="reason"
+            required
+            minLength={3}
+            maxLength={500}
+            placeholder="Ex. Remboursement partiel accordé au client suite à un retard de livraison."
+          />
+        </label>
+        <label>
+          Notes internes
+          <textarea name="notes" maxLength={1200} />
+        </label>
+        <dl className="billing-live-total" aria-live="polite">
+          <div>
+            <dt>Total de l&apos;avoir</dt>
+            <dd>{formatXof(liveTotal)}</dd>
+          </div>
+        </dl>
+        {exceedsBalance ? (
+          <p role="alert">Ce montant dépasse le solde restant créditable.</p>
+        ) : null}
+        <ConfirmAction consequence="Un avoir est définitif : il ne pourra ni être modifié ni supprimé une fois émis.">
+          Émettre l&apos;avoir
+        </ConfirmAction>
+        <Feedback state={state} />
+      </form>
+    </details>
   );
 }
 

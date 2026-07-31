@@ -38,6 +38,31 @@ function total(document: {
   return taxable + Math.round((taxable * document.taxRateBps) / 10_000);
 }
 
+function creditNoteTotal(creditNote: {
+  lines: readonly { quantity: number; unitPriceCents: number }[];
+  taxRateBps: number;
+}) {
+  const subtotal = creditNote.lines.reduce(
+    (sum, line) => sum + line.quantity * line.unitPriceCents,
+    0,
+  );
+  return subtotal + Math.round((subtotal * creditNote.taxRateBps) / 10_000);
+}
+
+function creditedTotal(
+  invoice: Readonly<{
+    creditNotes: readonly Readonly<{
+      taxRateBps: number;
+      lines: readonly Readonly<{ quantity: number; unitPriceCents: number }>[];
+    }>[];
+  }>,
+): number {
+  return invoice.creditNotes.reduce(
+    (sum, creditNote) => sum + creditNoteTotal(creditNote),
+    0,
+  );
+}
+
 export class PrismaBillingSummaryReader implements BillingSummaryReader {
   constructor(private readonly database: PrismaClient) {}
 
@@ -96,7 +121,12 @@ export class PrismaBillingSummaryReader implements BillingSummaryReader {
       this.database.quote.count({ where: quoteWhere }),
       this.database.invoice.findMany({
         where: invoiceWhere,
-        include: { client: true, lines: true, payments: true },
+        include: {
+          client: true,
+          lines: true,
+          payments: true,
+          creditNotes: { include: { lines: true } },
+        },
         orderBy: { issuedAt: "desc" },
         skip: input.skip,
         take: input.take,
@@ -104,7 +134,7 @@ export class PrismaBillingSummaryReader implements BillingSummaryReader {
       this.database.invoice.count({ where: invoiceWhere }),
       this.database.invoice.findMany({
         where,
-        include: { lines: true, payments: true },
+        include: { lines: true, payments: true, creditNotes: { include: { lines: true } } },
       }),
       this.database.catalogueItem.findMany({
         where: { ...where, status: "ACTIVE" },
@@ -156,12 +186,17 @@ export class PrismaBillingSummaryReader implements BillingSummaryReader {
           ),
         0,
       );
+      const creditedCents = owned.reduce(
+        (sum, invoice) => sum + creditedTotal(invoice),
+        0,
+      );
       return {
         clientId: client.id,
         clientName: client.name,
         billedCents,
         paidCents,
-        balanceCents: Math.max(0, billedCents - paidCents),
+        creditedCents,
+        balanceCents: Math.max(0, billedCents - paidCents - creditedCents),
       };
     });
 
@@ -195,17 +230,29 @@ export class PrismaBillingSummaryReader implements BillingSummaryReader {
           (sum, payment) => sum + payment.amountCents,
           0,
         );
+        const creditedCents = creditedTotal(invoice);
         return {
           id: invoice.id,
           number: invoice.number,
           clientName: invoice.client.name,
           status: invoice.status,
           version: invoice.version,
+          taxRateBps: invoice.taxRateBps,
           totalCents,
           paidCents,
-          balanceCents: Math.max(0, totalCents - paidCents),
+          creditedCents,
+          balanceCents: Math.max(0, totalCents - paidCents - creditedCents),
           dueAt: invoice.dueAt,
           attachments: attachmentsByInvoice.get(invoice.id) ?? [],
+          creditNotes: invoice.creditNotes
+            .map((creditNote) => ({
+              id: creditNote.id,
+              number: creditNote.number,
+              reason: creditNote.reason,
+              totalCents: creditNoteTotal(creditNote),
+              issuedAt: creditNote.issuedAt,
+            }))
+            .sort((a, b) => a.issuedAt.getTime() - b.issuedAt.getTime()),
         };
       }),
       totalInvoices,

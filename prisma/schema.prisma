@@ -47,6 +47,7 @@ enum AuditAction {
   BILLING_INVOICE_ISSUED
   BILLING_INVOICE_CANCELLED
   BILLING_PAYMENT_RECORDED
+  BILLING_CREDIT_NOTE_ISSUED
 }
 
 enum AuditTargetType {
@@ -56,6 +57,7 @@ enum AuditTargetType {
   SITE_SETTINGS
   SERVICE
   INVOICE
+  CREDIT_NOTE
 }
 
 enum AuditResult {
@@ -275,6 +277,7 @@ model World {
   siteSettings    SiteSettings?
   leads           Lead[]
   billingAttachments BillingAttachment[]
+  creditNotes     CreditNote[]
 
   @@map("worlds")
 }
@@ -580,6 +583,7 @@ model MediaAsset {
 enum BillingAttachmentTargetType {
   QUOTE
   INVOICE
+  CREDIT_NOTE
 }
 
 model BillingAttachment {
@@ -1067,6 +1071,7 @@ model Invoice {
   quote         Quote?        @relation(fields: [quoteId], references: [id], onDelete: Restrict)
   lines         InvoiceLine[]
   payments      Payment[]
+  creditNotes   CreditNote[]
 
   @@unique([worldKey, number])
   @@index([worldKey, status])
@@ -1101,4 +1106,41 @@ model Payment {
 
   @@index([invoiceId, paidAt])
   @@map("payments")
+}
+
+// Append-only ledger, mirroring Payment: a credit note is never edited or
+// deleted once issued, only ever created. The invoice's credited total is
+// derived by summing this table (same pattern as Payment/totalPaidCents),
+// not stored redundantly on Invoice.
+model CreditNote {
+  id         String           @id
+  worldKey   String
+  invoiceId  String
+  number     String
+  reason     String
+  notes      String?
+  taxRateBps Int              @default(0)
+  issuedAt   DateTime
+  createdAt  DateTime
+  world      World            @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  invoice    Invoice          @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  lines      CreditNoteLine[]
+
+  @@unique([worldKey, number])
+  @@index([invoiceId])
+  @@index([worldKey, issuedAt])
+  @@map("credit_notes")
+}
+
+model CreditNoteLine {
+  id             String     @id
+  creditNoteId   String
+  creditNote     CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+  label          String
+  quantity       Int
+  unitPriceCents Int
+  order          Int
+
+  @@index([creditNoteId, order])
+  @@map("credit_note_lines")
 }

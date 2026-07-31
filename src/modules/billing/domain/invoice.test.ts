@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applyCreditNote,
   applyInvoicePayment,
   cancelInvoice,
   createDraftInvoice,
@@ -62,7 +63,7 @@ describe("invoice lifecycle", () => {
     expect(sent.value.status).toBe("SENT");
   });
 
-  it("cancels a DRAFT, SENT, PARTIALLY_PAID, or OVERDUE invoice", () => {
+  it("cancels a DRAFT invoice directly", () => {
     const draft = validInvoice();
     const cancelled = cancelInvoice(draft, now);
 
@@ -71,12 +72,96 @@ describe("invoice lifecycle", () => {
     expect(cancelled.value.status).toBe("CANCELLED");
   });
 
-  it("rejects cancelling a PAID invoice", () => {
+  it("rejects cancelling a SENT invoice directly (a credit note is required)", () => {
+    const draft = validInvoice();
+    const sent = markInvoiceSent(draft, now);
+    if (!sent.ok) throw new Error("expected send to succeed");
+
+    const result = cancelInvoice(sent.value, now);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe("INVALID_TRANSITION");
+  });
+
+  it("rejects cancelling a PAID invoice directly", () => {
     const draft = validInvoice();
     const paid = applyInvoicePayment(draft, draft.totalCents, now);
     if (!paid.ok) throw new Error("expected payment to succeed");
 
     const result = cancelInvoice(paid.value, now);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe("INVALID_TRANSITION");
+  });
+});
+
+describe("applyCreditNote", () => {
+  it("rejects a credit note against a DRAFT invoice (use cancelInvoice instead)", () => {
+    const draft = validInvoice();
+    const result = applyCreditNote(draft, 1000, now);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe("INVALID_TRANSITION");
+  });
+
+  it("keeps the invoice status unchanged on a partial credit", () => {
+    const draft = validInvoice();
+    const sent = markInvoiceSent(draft, now);
+    if (!sent.ok) throw new Error("expected send to succeed");
+
+    const result = applyCreditNote(sent.value, sent.value.totalCents - 1000, now);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.status).toBe("SENT");
+    expect(result.value.version).toBe(sent.value.version + 1);
+  });
+
+  it("cancels the invoice once the cumulative credit reaches its total", () => {
+    const draft = validInvoice();
+    const sent = markInvoiceSent(draft, now);
+    if (!sent.ok) throw new Error("expected send to succeed");
+
+    const result = applyCreditNote(sent.value, sent.value.totalCents, now);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.status).toBe("CANCELLED");
+  });
+
+  it("allows crediting a fully PAID invoice (refund scenario)", () => {
+    const draft = validInvoice();
+    const paid = applyInvoicePayment(draft, draft.totalCents, now);
+    if (!paid.ok) throw new Error("expected payment to succeed");
+
+    const result = applyCreditNote(paid.value, paid.value.totalCents, now);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.status).toBe("CANCELLED");
+  });
+
+  it("rejects a cumulative credit exceeding the invoice total", () => {
+    const draft = validInvoice();
+    const sent = markInvoiceSent(draft, now);
+    if (!sent.ok) throw new Error("expected send to succeed");
+
+    const result = applyCreditNote(sent.value, sent.value.totalCents + 1, now);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe("INVALID_CREDIT_AMOUNT");
+  });
+
+  it("rejects crediting an already-cancelled invoice", () => {
+    const draft = validInvoice();
+    const cancelled = cancelInvoice(draft, now);
+    if (!cancelled.ok) throw new Error("expected cancel to succeed");
+
+    const result = applyCreditNote(cancelled.value, 1000, now);
 
     expect(result.ok).toBe(false);
     if (result.ok) return;

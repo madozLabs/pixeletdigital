@@ -13,6 +13,8 @@ import {
   createDraftInvoice,
   markInvoiceSent,
 } from "@/modules/billing/application/invoice-use-cases";
+import { issueCreditNote } from "@/modules/billing/application/credit-note-use-cases";
+import { PrismaCreditNoteRepository } from "@/modules/billing/infrastructure/prisma-credit-note-repository";
 import {
   deleteBillingAttachment,
   uploadBillingAttachment,
@@ -77,6 +79,22 @@ function auditInvoiceEvent(
     correlationId: context.correlationId,
     originChannel: context.origin.channel,
     worldKey: invoice.worldKey,
+    occurredAt: context.clock.now(),
+  });
+}
+
+function auditCreditNoteEvent(
+  context: RequestContext,
+  creditNote: Readonly<{ id: string; worldKey: string }>,
+): Promise<void> {
+  return recordAuditEvent(prisma, {
+    action: "BILLING_CREDIT_NOTE_ISSUED",
+    targetType: "CREDIT_NOTE",
+    targetId: creditNote.id,
+    actorId: context.actor?.id ?? "unknown",
+    correlationId: context.correlationId,
+    originChannel: context.origin.channel,
+    worldKey: creditNote.worldKey,
     occurredAt: context.clock.now(),
   });
 }
@@ -348,6 +366,61 @@ export async function cancelInvoiceAction(
   }
   revalidatePath("/workspace/billing");
   return toActionState(result, "Facture annulée.");
+}
+
+// Keep in sync with CREDIT_NOTE_LINE_SLOTS in ./billing-forms.tsx.
+const CREDIT_NOTE_LINE_SLOTS = 6;
+
+function creditNoteLinesFromForm(formData: FormData) {
+  return Array.from(
+    { length: CREDIT_NOTE_LINE_SLOTS },
+    (_, i) => i + 1,
+  ).flatMap((index) => {
+    const label = String(formData.get(`lineLabel${index}`) ?? "").trim();
+    if (!label) return [];
+    return [
+      {
+        id: randomUUID(),
+        label,
+        quantity: Math.max(
+          1,
+          Number(formData.get(`lineQuantity${index}`)) || 1,
+        ),
+        unitPriceCents: xofToCents(formData.get(`lineUnitPrice${index}`)),
+      },
+    ];
+  });
+}
+
+export async function issueCreditNoteAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const context = await getWorkspaceRequestContext();
+  if (!context) return { status: "error", message: "Session expirée." };
+
+  const result = await issueCreditNote(
+    {
+      invoices: new PrismaInvoiceRepository(prisma),
+      creditNotes: new PrismaCreditNoteRepository(prisma),
+    },
+    context,
+    {
+      invoiceId: String(formData.get("invoiceId")),
+      expectedVersion: Number(formData.get("expectedVersion")),
+      lines: creditNoteLinesFromForm(formData),
+      reason: String(formData.get("reason") ?? "").trim(),
+      notes: String(formData.get("notes") ?? "").trim() || null,
+    },
+  );
+  if (!result.ok) {
+    console.error("issueCreditNote failed", result.error);
+  } else {
+    await auditCreditNoteEvent(context, result.value);
+  }
+  revalidatePath("/workspace/billing");
+  revalidatePath("/workspace");
+  return toActionState(result, "Avoir émis.");
 }
 
 export async function recordPaymentAction(

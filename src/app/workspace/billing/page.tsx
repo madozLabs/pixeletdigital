@@ -314,8 +314,11 @@ export default async function WorkspaceBillingPage({
                 </header>
                 <p>
                   Total {formatXof(invoice.totalCents)} · Payé{" "}
-                  {formatXof(invoice.paidCents)} · Solde{" "}
-                  {formatXof(invoice.balanceCents)}
+                  {formatXof(invoice.paidCents)}
+                  {invoice.creditedCents > 0
+                    ? ` · Avoir ${formatXof(invoice.creditedCents)}`
+                    : ""}{" "}
+                  · Solde {formatXof(invoice.balanceCents)}
                 </p>
                 <p className="admin-table__note">
                   Échéance : {invoice.dueAt ? formatDate(invoice.dueAt) : "—"}
@@ -328,14 +331,35 @@ export default async function WorkspaceBillingPage({
                     Imprimer
                   </Link>
                 </div>
-                {invoice.status !== "PAID" && invoice.status !== "CANCELLED" ? (
+                {invoice.status !== "CANCELLED" ? (
                   <details className="billing-card__actions">
                     <summary>Actions</summary>
                     <InvoiceActionsForm
                       invoiceId={invoice.id}
                       version={invoice.version}
                       status={invoice.status}
+                      taxRateBps={invoice.taxRateBps}
+                      remainingCents={invoice.totalCents - invoice.creditedCents}
                     />
+                  </details>
+                ) : null}
+                {invoice.creditNotes.length > 0 ? (
+                  <details className="billing-card__actions">
+                    <summary>Avoirs ({invoice.creditNotes.length})</summary>
+                    <ul className="admin-table-wrap">
+                      {invoice.creditNotes.map((creditNote) => (
+                        <li key={creditNote.id}>
+                          <Link
+                            href={`/workspace/billing/credit-notes/${creditNote.id}/print`}
+                          >
+                            {creditNote.number}
+                          </Link>{" "}
+                          · {formatXof(creditNote.totalCents)} ·{" "}
+                          {formatDate(creditNote.issuedAt)} ·{" "}
+                          {creditNote.reason}
+                        </li>
+                      ))}
+                    </ul>
                   </details>
                 ) : null}
                 <details className="billing-card__actions">

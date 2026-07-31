@@ -2,6 +2,7 @@ import type { BillingAttachmentDomainErrorCode } from "../domain/billing-attachm
 import type { CatalogueItemDomainErrorCode } from "../domain/catalogue-item";
 import type { ClientContactDomainErrorCode } from "../domain/client-contact";
 import type { ClientDomainErrorCode } from "../domain/client";
+import type { CreditNoteDomainErrorCode } from "../domain/credit-note";
 import type { InvoiceDomainErrorCode } from "../domain/invoice";
 import type { PaymentDomainErrorCode } from "../domain/payment";
 import type { QuoteDomainErrorCode } from "../domain/quote";
@@ -18,7 +19,9 @@ export type BillingApplicationError =
         | InvoiceDomainErrorCode
         | QuoteDomainErrorCode
         | PaymentDomainErrorCode
-        | BillingAttachmentDomainErrorCode;
+        | BillingAttachmentDomainErrorCode
+        | CreditNoteDomainErrorCode
+        | "EXCEEDS_INVOICE_BALANCE";
       message: string;
     }>
   | Readonly<{ code: "NOT_FOUND"; message: string }>

@@ -11,10 +11,21 @@ export const INVOICE_STATUSES = [
 ] as const;
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
 
-const CANCELLABLE_STATUSES: readonly InvoiceStatus[] = [
+// A draft was never sent to the client and carries no financial commitment,
+// so it can still be cancelled outright. Once sent (or paid), cancelling in
+// place would erase the trail of a document the client may already hold --
+// applyCreditNote is the only way to reduce or close it from there on.
+const DIRECTLY_CANCELLABLE_STATUSES: readonly InvoiceStatus[] = ["DRAFT"];
+const PAYABLE_STATUSES: readonly InvoiceStatus[] = [
   "DRAFT",
   "SENT",
   "PARTIALLY_PAID",
+  "OVERDUE",
+];
+const CREDITABLE_STATUSES: readonly InvoiceStatus[] = [
+  "SENT",
+  "PARTIALLY_PAID",
+  "PAID",
   "OVERDUE",
 ];
 
@@ -33,7 +44,8 @@ export type InvoiceDomainErrorCode =
   | "INVALID_STATUS"
   | "INVALID_VERSION"
   | "INVALID_TRANSITION"
-  | "INVALID_PAYMENT_AMOUNT";
+  | "INVALID_PAYMENT_AMOUNT"
+  | "INVALID_CREDIT_AMOUNT";
 
 export type InvoiceDomainError = Readonly<{
   code: InvoiceDomainErrorCode;
@@ -276,10 +288,12 @@ export function cancelInvoice(
   invoice: Invoice,
   updatedAt: Date,
 ): Result<Invoice, InvoiceDomainError> {
-  if (!CANCELLABLE_STATUSES.includes(invoice.status)) {
+  if (!DIRECTLY_CANCELLABLE_STATUSES.includes(invoice.status)) {
     return failure(
       "INVALID_TRANSITION",
-      `An invoice with status ${invoice.status} cannot be cancelled.`,
+      invoice.status === "CANCELLED"
+        ? "Cette facture est déjà annulée."
+        : "Une facture envoyée, payée ou en retard ne peut plus être annulée directement : émettez un avoir pour la corriger.",
     );
   }
   return transition(invoice, { status: "CANCELLED" }, updatedAt);
@@ -290,7 +304,7 @@ export function applyInvoicePayment(
   totalPaidCents: number,
   paidAt: Date,
 ): Result<Invoice, InvoiceDomainError> {
-  if (!CANCELLABLE_STATUSES.includes(invoice.status)) {
+  if (!PAYABLE_STATUSES.includes(invoice.status)) {
     return failure(
       "INVALID_TRANSITION",
       `Cannot record a payment against an invoice with status ${invoice.status}.`,
@@ -311,6 +325,46 @@ export function applyInvoicePayment(
       paidAt: isFullyPaid ? paidAt : invoice.paidAt,
     },
     paidAt,
+  );
+}
+
+// totalCreditedCents is the cumulative total of every credit note already
+// issued against this invoice, including the one about to be saved -- the
+// caller (issueCreditNote use case) computes it fresh from the ledger under
+// the same version guard used everywhere else, so two concurrent partial
+// credit notes can never together exceed the invoice total even though
+// neither one alone would trip this check.
+export function applyCreditNote(
+  invoice: Invoice,
+  totalCreditedCents: number,
+  now: Date,
+): Result<Invoice, InvoiceDomainError> {
+  if (!CREDITABLE_STATUSES.includes(invoice.status)) {
+    return failure(
+      "INVALID_TRANSITION",
+      invoice.status === "DRAFT"
+        ? "Une facture brouillon n'a pas encore été envoyée : annulez-la directement plutôt que d'émettre un avoir."
+        : "Cette facture est déjà annulée, aucun avoir ne peut plus lui être associé.",
+    );
+  }
+  if (!Number.isInteger(totalCreditedCents) || totalCreditedCents <= 0) {
+    return failure(
+      "INVALID_CREDIT_AMOUNT",
+      "Le montant cumulé des avoirs doit être un entier positif.",
+    );
+  }
+  if (totalCreditedCents > invoice.totalCents) {
+    return failure(
+      "INVALID_CREDIT_AMOUNT",
+      "Le montant cumulé des avoirs ne peut pas dépasser le total de la facture.",
+    );
+  }
+
+  const isFullyCredited = totalCreditedCents >= invoice.totalCents;
+  return transition(
+    invoice,
+    { status: isFullyCredited ? "CANCELLED" : invoice.status },
+    now,
   );
 }
 
