@@ -111,7 +111,16 @@ export default async function TasksPage({
           }))}
         />
       ) : null}
-      <TaskBoard tasks={boardTasks} canMutate />
+      <TaskBoard
+        tasks={boardTasks}
+        canMutate
+        currentUserId={actorId}
+        users={users.map((user) => ({
+          id: user.id,
+          name: user.displayName ?? user.normalizedEmail ?? "Collaborateur",
+        }))}
+        revalidatePathHint={`/workspace/tasks?world=${worldKey}${activeProjectId ? `&project=${activeProjectId}` : ""}`}
+      />
     </>
   );
 }

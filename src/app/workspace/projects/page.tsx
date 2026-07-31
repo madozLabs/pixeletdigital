@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import { parsePage, toSkipTake } from "@/shared/pagination";
 import { formatCurrency } from "@/shared/format";
+import { CommentThread } from "../_components/comment-thread";
 import { Pagination } from "../_components/pagination";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import { CreateProjectForm, UpdateProjectForm } from "./project-forms";
@@ -153,6 +154,19 @@ export default async function ProjectsPage({
               version={project.version}
               budgetCents={project.budgetCents}
             />
+            {context.actor ? (
+              <CommentThread
+                entityType="PROJECT"
+                entityId={project.id}
+                currentUserId={context.actor.id}
+                users={users.map((user) => ({
+                  id: user.id,
+                  name:
+                    user.displayName ?? user.normalizedEmail ?? "Collaborateur",
+                }))}
+                revalidatePathHint={`/workspace/projects?world=${worldKey}`}
+              />
+            ) : null}
           </article>
         ))}
       </section>

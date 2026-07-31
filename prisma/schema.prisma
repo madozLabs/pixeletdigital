@@ -286,6 +286,7 @@ model World {
   creditNotes     CreditNote[]
   expenses        Expense[]
   revenueEntries  RevenueEntry[]
+  comments        Comment[]
 
   @@map("worlds")
 }
@@ -315,6 +316,9 @@ model User {
   uploadedBillingAttachments BillingAttachment[]
   recordedExpenses  Expense[]
   recordedRevenueEntries RevenueEntry[]
+  postedComments    Comment[]
+  commentMentions   CommentMention[]
+  notifications     Notification[]
 
   @@map("users")
 }
@@ -1217,4 +1221,65 @@ model RevenueEntry {
 
   @@index([worldKey, revenueDate])
   @@map("revenue_entries")
+}
+
+enum NotificationType {
+  MENTIONED
+}
+
+// entityType/entityId is a loose polymorphic reference (no FK), matching
+// the same pattern already used by EditPresence/AuditEvent/BillingAttachment
+// in this codebase rather than a Prisma union type (which doesn't exist) or
+// one nullable FK column per attachable model (which doesn't scale as new
+// entity types are added). Valid values are enforced in the domain layer,
+// not the database.
+model Comment {
+  id            String           @id
+  entityType    String
+  entityId      String
+  worldKey      String
+  authorId      String
+  body          String
+  createdAt     DateTime
+  world         World            @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  author        User             @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  mentions      CommentMention[]
+  notifications Notification[]
+
+  @@index([entityType, entityId, createdAt])
+  @@index([worldKey])
+  @@map("comments")
+}
+
+model CommentMention {
+  id              String   @id
+  commentId       String
+  mentionedUserId String
+  createdAt       DateTime
+  comment         Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  mentionedUser   User     @relation(fields: [mentionedUserId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, mentionedUserId])
+  @@index([mentionedUserId])
+  @@map("comment_mentions")
+}
+
+// One row per mentioned recipient, not per comment -- @mentioning three
+// people in one comment must notify all three independently (each with
+// their own read state), not collapse into a single shared notification.
+model Notification {
+  id         String           @id
+  userId     String
+  type       NotificationType
+  commentId  String?
+  entityType String
+  entityId   String
+  worldKey   String
+  readAt     DateTime?
+  createdAt  DateTime
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment    Comment?         @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@map("notifications")
 }

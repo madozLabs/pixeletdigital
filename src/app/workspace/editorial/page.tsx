@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import type { ApprovedRole } from "@/shared/request-context";
 import { formatShortDate } from "@/shared/format";
+import { CommentThread } from "../_components/comment-thread";
 import { StatusBadge } from "../_components/status-badge";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import {
@@ -187,6 +188,12 @@ export default async function WorkspaceEditorialPage({
                 item.owner?.displayName ?? item.owner?.normalizedEmail ?? null,
             }))}
           canMutate={canMutate}
+          currentUserId={context.actor?.id}
+          users={users.map((user) => ({
+            id: user.id,
+            name: user.displayName ?? user.normalizedEmail ?? "Collaborateur",
+          }))}
+          revalidatePathHint={`/workspace/editorial?world=${worldKey}`}
         />
       ) : null}
 
@@ -257,6 +264,21 @@ export default async function WorkspaceEditorialPage({
                             itemId={item.id}
                             version={item.version}
                             status={item.status}
+                          />
+                        ) : null}
+                        {context.actor ? (
+                          <CommentThread
+                            entityType="EDITORIAL_ITEM"
+                            entityId={item.id}
+                            currentUserId={context.actor.id}
+                            users={users.map((user) => ({
+                              id: user.id,
+                              name:
+                                user.displayName ??
+                                user.normalizedEmail ??
+                                "Collaborateur",
+                            }))}
+                            revalidatePathHint={`/workspace/editorial?world=${worldKey}`}
                           />
                         ) : null}
                       </article>

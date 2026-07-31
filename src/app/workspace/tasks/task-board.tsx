@@ -15,6 +15,7 @@ import {
 } from "@hello-pangea/dnd";
 
 import { Avatar } from "../_components/avatar";
+import { CommentThread } from "../_components/comment-thread";
 import {
   Feedback,
   IDLE_ACTION_STATE,
@@ -52,10 +53,21 @@ const PRIORITY_LABEL: Readonly<Record<string, string>> = {
   URGENT: "Urgente",
 };
 
+type UserOption = Readonly<{ id: string; name: string }>;
+
 export function TaskBoard({
   tasks,
   canMutate,
-}: Readonly<{ tasks: readonly BoardTask[]; canMutate: boolean }>) {
+  currentUserId,
+  users,
+  revalidatePathHint,
+}: Readonly<{
+  tasks: readonly BoardTask[];
+  canMutate: boolean;
+  currentUserId?: string;
+  users?: readonly UserOption[];
+  revalidatePathHint?: string;
+}>) {
   const router = useRouter();
   const [dragError, setDragError] = useState<string | null>(null);
   const [optimisticTasks, setOptimisticStatus] = useOptimistic(
@@ -178,6 +190,15 @@ export function TaskBoard({
                             </div>
                             {canMutate ? (
                               <TaskCardControls task={task} />
+                            ) : null}
+                            {currentUserId && users && revalidatePathHint ? (
+                              <CommentThread
+                                entityType="TASK"
+                                entityId={task.id}
+                                currentUserId={currentUserId}
+                                users={users}
+                                revalidatePathHint={revalidatePathHint}
+                              />
                             ) : null}
                           </article>
                         )}

@@ -10,6 +10,7 @@ import {
 } from "@hello-pangea/dnd";
 
 import { Avatar } from "../_components/avatar";
+import { CommentThread } from "../_components/comment-thread";
 import { moveEditorialItemAction } from "./professional-actions";
 
 export type PipelineItem = Readonly<{
@@ -23,6 +24,8 @@ export type PipelineItem = Readonly<{
   ownerName: string | null;
 }>;
 
+type UserOption = Readonly<{ id: string; name: string }>;
+
 const COLUMNS = [
   ["DRAFT", "Brouillon"],
   ["INTERNAL_REVIEW", "Validation interne"],
@@ -35,7 +38,16 @@ const COLUMNS = [
 export function EditorialPipeline({
   items,
   canMutate,
-}: Readonly<{ items: readonly PipelineItem[]; canMutate: boolean }>) {
+  currentUserId,
+  users,
+  revalidatePathHint,
+}: Readonly<{
+  items: readonly PipelineItem[];
+  canMutate: boolean;
+  currentUserId?: string;
+  users?: readonly UserOption[];
+  revalidatePathHint?: string;
+}>) {
   const router = useRouter();
   const [dragError, setDragError] = useState<string | null>(null);
   const [optimisticItems, setOptimisticStatus] = useOptimistic(
@@ -114,9 +126,11 @@ export function EditorialPipeline({
                             }
                             ref={dragProvided.innerRef}
                             {...dragProvided.draggableProps}
-                            {...dragProvided.dragHandleProps}
                           >
-                            <div className="task-card__handle">
+                            <div
+                              className="task-card__handle"
+                              {...dragProvided.dragHandleProps}
+                            >
                               <div className="task-card__topline">
                                 <span className="priority-pill priority-pill--normal">
                                   {item.contentType}
@@ -132,6 +146,15 @@ export function EditorialPipeline({
                                 <span>{item.ownerName ?? "Non affecté"}</span>
                               </div>
                             </div>
+                            {currentUserId && users && revalidatePathHint ? (
+                              <CommentThread
+                                entityType="EDITORIAL_ITEM"
+                                entityId={item.id}
+                                currentUserId={currentUserId}
+                                users={users}
+                                revalidatePathHint={revalidatePathHint}
+                              />
+                            ) : null}
                           </article>
                         )}
                       </Draggable>

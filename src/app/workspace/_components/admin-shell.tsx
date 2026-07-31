@@ -28,6 +28,7 @@ import {
   type CommandPaletteHandle,
   type CommandPaletteItem,
 } from "./command-palette";
+import { NotificationBell } from "./notification-bell";
 import { ThemeToggle } from "./theme-toggle";
 
 type NavItem = Readonly<{ href: string; label: string; icon: ReactNode }>;
@@ -347,6 +348,7 @@ export function AdminShell({
               <span className="admin-sidebar__user-label">{roleLabel}</span>
             </span>
           ) : null}
+          <NotificationBell />
           <ThemeToggle />
         </div>
       </aside>
