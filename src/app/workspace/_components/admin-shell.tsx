@@ -13,6 +13,7 @@ import {
   Network,
   PanelLeftClose,
   PanelLeftOpen,
+  PieChart,
   PlusCircle,
   ReceiptText,
   Search,
@@ -88,6 +89,11 @@ function buildNavGroups(role: string | null): readonly NavGroup[] {
                 href: "/workspace/billing",
                 label: "Facturation",
                 icon: <ReceiptText size={ICON_SIZE} />,
+              },
+              {
+                href: "/workspace/finances",
+                label: "Finances",
+                icon: <PieChart size={ICON_SIZE} />,
               },
             ]
           : []),

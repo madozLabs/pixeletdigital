@@ -48,6 +48,10 @@ enum AuditAction {
   BILLING_INVOICE_CANCELLED
   BILLING_PAYMENT_RECORDED
   BILLING_CREDIT_NOTE_ISSUED
+  FINANCE_EXPENSE_RECORDED
+  FINANCE_EXPENSE_DELETED
+  FINANCE_REVENUE_RECORDED
+  FINANCE_REVENUE_DELETED
 }
 
 enum AuditTargetType {
@@ -58,6 +62,8 @@ enum AuditTargetType {
   SERVICE
   INVOICE
   CREDIT_NOTE
+  EXPENSE
+  REVENUE_ENTRY
 }
 
 enum AuditResult {
@@ -278,6 +284,8 @@ model World {
   leads           Lead[]
   billingAttachments BillingAttachment[]
   creditNotes     CreditNote[]
+  expenses        Expense[]
+  revenueEntries  RevenueEntry[]
 
   @@map("worlds")
 }
@@ -305,6 +313,8 @@ model User {
   leadActivities    LeadActivity[]   @relation("LeadActivityActor")
   editPresences     EditPresence[]
   uploadedBillingAttachments BillingAttachment[]
+  recordedExpenses  Expense[]
+  recordedRevenueEntries RevenueEntry[]
 
   @@map("users")
 }
@@ -1143,4 +1153,68 @@ model CreditNoteLine {
 
   @@index([creditNoteId, order])
   @@map("credit_note_lines")
+}
+
+enum ExpenseCategoryStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+// A shared chart-of-accounts-style taxonomy, not scoped per world: "Loyer"
+// means the same thing whether the cost belongs to Pixel&Digital or Kwaliti
+// Print -- the Expense row itself carries worldKey for per-instance
+// reporting, so duplicating the category list per world would only add
+// upkeep without separating anything real.
+model ExpenseCategory {
+  id        String                @id
+  label     String
+  status    ExpenseCategoryStatus
+  version   Int
+  createdAt DateTime
+  updatedAt DateTime
+  expenses  Expense[]
+
+  @@unique([label])
+  @@map("expense_categories")
+}
+
+// Manual ledger entry, not a legal document like Invoice/CreditNote -- no
+// version/lifecycle, only create and delete (a mistake is deleted and
+// re-entered rather than amended in place).
+model Expense {
+  id            String          @id
+  worldKey      String
+  categoryId    String
+  label         String
+  amountCents   Int
+  expenseDate   DateTime
+  notes         String?
+  createdById   String?
+  createdAt     DateTime
+  world         World           @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  category      ExpenseCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  createdBy     User?           @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([worldKey, expenseDate])
+  @@index([categoryId])
+  @@map("expenses")
+}
+
+// Revenue received outside the Quote/Invoice pipeline (e.g. a cash sale) --
+// same append-only, create/delete-only shape as Expense; no category, the
+// report groups these under a single "Recettes hors facture" bucket.
+model RevenueEntry {
+  id            String   @id
+  worldKey      String
+  label         String
+  amountCents   Int
+  revenueDate   DateTime
+  notes         String?
+  createdById   String?
+  createdAt     DateTime
+  world         World    @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  createdBy     User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([worldKey, revenueDate])
+  @@map("revenue_entries")
 }

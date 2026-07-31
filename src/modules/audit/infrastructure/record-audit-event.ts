@@ -11,10 +11,20 @@ export type RecordableAuditAction =
   | "BILLING_INVOICE_ISSUED"
   | "BILLING_INVOICE_CANCELLED"
   | "BILLING_PAYMENT_RECORDED"
-  | "BILLING_CREDIT_NOTE_ISSUED";
+  | "BILLING_CREDIT_NOTE_ISSUED"
+  | "FINANCE_EXPENSE_RECORDED"
+  | "FINANCE_EXPENSE_DELETED"
+  | "FINANCE_REVENUE_RECORDED"
+  | "FINANCE_REVENUE_DELETED";
 
 export type RecordableAuditTargetType =
-  "PAGE" | "SITE_SETTINGS" | "SERVICE" | "INVOICE" | "CREDIT_NOTE";
+  | "PAGE"
+  | "SITE_SETTINGS"
+  | "SERVICE"
+  | "INVOICE"
+  | "CREDIT_NOTE"
+  | "EXPENSE"
+  | "REVENUE_ENTRY";
 
 export type RecordAuditEventInput = Readonly<{
   action: RecordableAuditAction;
