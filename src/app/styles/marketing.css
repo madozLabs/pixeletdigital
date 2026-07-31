@@ -763,6 +763,7 @@ a.world-switcher__item:focus-visible {
   position: relative;
   min-height: calc(100vh - 5rem);
   padding: clamp(2rem, 5vw, 5rem) clamp(1.25rem, 4vw, 4rem) 0;
+  overflow-x: hidden;
   background: #f4f0e8;
 }
 
