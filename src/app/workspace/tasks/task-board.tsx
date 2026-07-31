@@ -20,7 +20,6 @@ import {
   IDLE_ACTION_STATE,
   SubmitButton,
 } from "../_components/feedback";
-import { useToast } from "../_components/toast";
 import { moveTaskAction, updateTaskAction } from "./actions";
 
 export type BoardTask = Readonly<{
@@ -58,7 +57,6 @@ export function TaskBoard({
   canMutate,
 }: Readonly<{ tasks: readonly BoardTask[]; canMutate: boolean }>) {
   const router = useRouter();
-  const notify = useToast();
   const [dragError, setDragError] = useState<string | null>(null);
   const [optimisticTasks, setOptimisticStatus] = useOptimistic(
     tasks,
@@ -83,7 +81,6 @@ export function TaskBoard({
       void moveTaskAction(taskId, destinationStatus, draggedTask.version).then(
         (moveResult) => {
           if (!moveResult.ok) setDragError(moveResult.message);
-          else if (moveResult.warning) notify?.(moveResult.warning);
           router.refresh();
         },
       );

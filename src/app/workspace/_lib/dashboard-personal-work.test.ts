@@ -17,10 +17,26 @@ describe("buildPersonalWorkFilters", () => {
       reviewerId: "user_current",
       worldKey: "kwaliti-print",
     });
+    expect(filters.editorialOwned).toMatchObject({
+      ownerId: "user_current",
+      worldKey: "kwaliti-print",
+    });
     expect(filters.leads).toMatchObject({
       ownerUserId: "user_current",
       worldKey: "kwaliti-print",
     });
+  });
+
+  it("excludes published/cancelled content from the owner's in-flight queue", () => {
+    const filters = buildPersonalWorkFilters({
+      actorId: "user_current",
+      worldKey: "pixel-digital",
+    });
+
+    const statusFilter = filters.editorialOwned.status as { in: string[] };
+    expect(statusFilter.in).not.toContain("PUBLISHED");
+    expect(statusFilter.in).not.toContain("CANCELLED");
+    expect(statusFilter.in).toContain("DRAFT");
   });
 
   it("does not fall back to a world-wide queue for another user", () => {

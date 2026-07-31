@@ -20,13 +20,11 @@ function mayManageTasks(role: string | null | undefined): boolean {
   return role !== null && role !== undefined && role !== "READER";
 }
 
-// T1 (audit éditorial/tâches) : la dépendance n'est pas un blocage strict --
-// décision produit non tranchée par le propriétaire au moment de ce
-// correctif, donc on choisit l'option la moins intrusive et réversible
-// (avertissement, pas de blocage) plutôt que d'imposer un comportement non
-// validé. À revoir si le propriétaire tranche explicitement pour un
-// blocage strict.
-async function incompleteDependencyWarning(
+// E3 (audit éditorial/tâches) : décision produit tranchée -- blocage
+// strict. Une tâche ne peut passer DONE tant que sa dépendance ne l'est
+// pas elle-même ; sinon la dépendance n'était qu'une information
+// décorative jamais réellement appliquée.
+async function dependencyBlockingDone(
   dependencyTaskId: string | null,
 ): Promise<string | null> {
   if (!dependencyTaskId) return null;
@@ -35,7 +33,7 @@ async function incompleteDependencyWarning(
     select: { title: true, status: true },
   });
   if (!dependency || dependency.status === "DONE") return null;
-  return `Terminée, mais sa dépendance « ${dependency.title} » ne l'est pas encore.`;
+  return `Impossible de terminer : sa dépendance « ${dependency.title} » n'est pas encore terminée.`;
 }
 
 export async function createTaskAction(
@@ -113,7 +111,7 @@ function isTaskStatus(value: string): value is TaskStatus {
 }
 
 export type MoveTaskResult = Readonly<
-  { ok: true; warning?: string } | { ok: false; message: string }
+  { ok: true } | { ok: false; message: string }
 >;
 
 // Drag-and-drop column move: only touches status + position, never
@@ -149,13 +147,18 @@ export async function moveTaskAction(
     if (!task) return { ok: false, message: "Cette tâche n'existe plus." };
     requireWorldAccess(context.actor, task.project.worldKey);
 
+    if (status === "DONE") {
+      const blocked = await dependencyBlockingDone(task.dependencyTaskId);
+      if (blocked) return { ok: false, message: blocked };
+    }
+
     const last = await prisma.task.findFirst({
       where: { projectId: task.projectId, status },
       orderBy: { position: "desc" },
       select: { position: true },
     });
 
-    await prisma.task.update({
+    const moved = await prisma.task.updateMany({
       where: { id: taskId, version: expectedVersion },
       data: {
         status,
@@ -163,12 +166,15 @@ export async function moveTaskAction(
         version: { increment: 1 },
       },
     });
+    if (moved.count === 0) {
+      return {
+        ok: false,
+        message:
+          "Le déplacement n'a pas pu être enregistré : la tâche a changé entre-temps.",
+      };
+    }
     revalidatePath("/workspace/tasks");
-    const warning =
-      status === "DONE"
-        ? await incompleteDependencyWarning(task.dependencyTaskId)
-        : null;
-    return warning ? { ok: true, warning } : { ok: true };
+    return { ok: true };
   } catch (error) {
     console.error("moveTask failed", error);
     return {
@@ -216,6 +222,12 @@ export async function updateTaskAction(
       | "REVIEW"
       | "DONE"
       | "CANCELLED";
+
+    if (status === "DONE") {
+      const blocked = await dependencyBlockingDone(task.dependencyTaskId);
+      if (blocked) return { status: "error", message: blocked };
+    }
+
     const updated = await prisma.task.updateMany({
       where: { id: taskId, version: expectedVersion },
       data: {
@@ -237,14 +249,7 @@ export async function updateTaskAction(
       };
     }
     revalidatePath("/workspace/tasks");
-    const warning =
-      status === "DONE"
-        ? await incompleteDependencyWarning(task.dependencyTaskId)
-        : null;
-    return {
-      status: "success",
-      message: warning ? `Tâche mise à jour. ${warning}` : "Tâche mise à jour.",
-    };
+    return { status: "success", message: "Tâche mise à jour." };
   } catch (error) {
     console.error("updateTask failed", error);
     return {

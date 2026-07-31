@@ -100,10 +100,13 @@ export default async function WorkspaceDashboardPage({
     myTasksPreview,
     myReviewsCount,
     myReviewsPreview,
+    myEditorialOwnedCount,
+    myEditorialOwnedPreview,
     myLeadsCount,
     myLeadsPreview,
     myTasksCountOther,
     myReviewsCountOther,
+    myEditorialOwnedCountOther,
     myLeadsCountOther,
   ] = await Promise.all([
     prisma.client.count({ where: { worldKey, status: "ACTIVE" } }),
@@ -182,6 +185,17 @@ export default async function WorkspaceDashboardPage({
         })
       : Promise.resolve([]),
     personalFilters
+      ? prisma.editorialItem.count({ where: personalFilters.editorialOwned })
+      : Promise.resolve(0),
+    personalFilters
+      ? prisma.editorialItem.findMany({
+          where: personalFilters.editorialOwned,
+          include: { client: true },
+          orderBy: { scheduledFor: "asc" },
+          take: 6,
+        })
+      : Promise.resolve([]),
+    personalFilters
       ? prisma.lead.count({ where: personalFilters.leads })
       : Promise.resolve(0),
     personalFilters
@@ -196,6 +210,11 @@ export default async function WorkspaceDashboardPage({
       : Promise.resolve(0),
     personalFiltersOther
       ? prisma.editorialItem.count({ where: personalFiltersOther.reviews })
+      : Promise.resolve(0),
+    personalFiltersOther
+      ? prisma.editorialItem.count({
+          where: personalFiltersOther.editorialOwned,
+        })
       : Promise.resolve(0),
     personalFiltersOther
       ? prisma.lead.count({ where: personalFiltersOther.leads })
@@ -253,6 +272,16 @@ export default async function WorkspaceDashboardPage({
               meta: `${item.client?.name ?? item.clientLabel} · ${formatDate(item.scheduledFor)}`,
             })),
             count: myReviewsCount,
+            href: `/workspace/editorial?world=${worldKey}`,
+          },
+          {
+            title: "Vos contenus en production",
+            empty: "Aucun contenu dont vous êtes responsable en ce moment.",
+            items: myEditorialOwnedPreview.map((item) => ({
+              title: item.title,
+              meta: `${item.client?.name ?? item.clientLabel} · ${formatDate(item.scheduledFor)}`,
+            })),
+            count: myEditorialOwnedCount,
             href: `/workspace/editorial?world=${worldKey}`,
           },
           {
@@ -377,14 +406,21 @@ export default async function WorkspaceDashboardPage({
                 </strong>
                 <span>Calendrier éditorial</span>
               </li>
-              {myTasksCountOther + myReviewsCountOther + myLeadsCountOther >
+              {myTasksCountOther +
+                myReviewsCountOther +
+                myEditorialOwnedCountOther +
+                myLeadsCountOther >
               0 ? (
                 <li>
                   <strong>
                     {myTasksCountOther} tâche
-                    {myTasksCountOther > 1 ? "s" : ""}, {myReviewsCountOther}{" "}
-                    validation{myReviewsCountOther > 1 ? "s" : ""},{" "}
-                    {myLeadsCountOther} lead{myLeadsCountOther > 1 ? "s" : ""}
+                    {myTasksCountOther > 1 ? "s" : ""},{" "}
+                    {myReviewsCountOther + myEditorialOwnedCountOther} contenu
+                    {myReviewsCountOther + myEditorialOwnedCountOther > 1
+                      ? "s"
+                      : ""}
+                    , {myLeadsCountOther} lead
+                    {myLeadsCountOther > 1 ? "s" : ""}
                   </strong>
                   <span>Assignés à vous dans cet univers</span>
                 </li>

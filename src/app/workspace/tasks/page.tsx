@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
@@ -7,7 +8,9 @@ import { TaskBoard, type BoardTask } from "./task-board";
 
 export default async function TasksPage({
   searchParams,
-}: Readonly<{ searchParams: Promise<{ world?: string; project?: string }> }>) {
+}: Readonly<{
+  searchParams: Promise<{ world?: string; project?: string; mine?: string }>;
+}>) {
   const context = await getWorkspaceRequestContext();
   if (!context) redirect("/login");
   if (!context.actor || context.actor.role === "READER") {
@@ -16,21 +19,29 @@ export default async function TasksPage({
     );
   }
 
-  const { world, project } = await searchParams;
+  const { world, project, mine } = await searchParams;
   const worldKey = world ?? "pixel-digital";
+  const mineOnly = mine === "1";
+  const actorId = context.actor.id;
   const projects = await prisma.project.findMany({
     where: { worldKey, status: { not: "CANCELLED" } },
     include: { client: true },
     orderBy: { name: "asc" },
   });
   const activeProjectId = project ?? projects[0]?.id ?? null;
-  const [tasks, users] = await Promise.all([
+  const [allProjectTasks, users] = await Promise.all([
     activeProjectId ? loadTasks(activeProjectId) : Promise.resolve([]),
     prisma.user.findMany({
       where: { status: "ACTIVE" },
       orderBy: { displayName: "asc" },
     }),
   ]);
+  const myTaskCount = allProjectTasks.filter(
+    (task) => task.assigneeId === actorId,
+  ).length;
+  const tasks = mineOnly
+    ? allProjectTasks.filter((task) => task.assigneeId === actorId)
+    : allProjectTasks;
   const boardTasks = tasks.map(toBoardTask);
   return (
     <>
@@ -48,6 +59,7 @@ export default async function TasksPage({
 
       <form className="admin-form-card" method="get">
         <input type="hidden" name="world" value={worldKey} />
+        {mineOnly ? <input type="hidden" name="mine" value="1" /> : null}
         <label>
           Projet actif
           <select name="project" defaultValue={activeProjectId ?? ""}>
@@ -62,6 +74,30 @@ export default async function TasksPage({
           Afficher
         </button>
       </form>
+
+      <div className="admin-tabs" role="tablist">
+        <Link
+          href={`/workspace/tasks?world=${worldKey}${activeProjectId ? `&project=${activeProjectId}` : ""}`}
+          role="tab"
+          aria-selected={!mineOnly}
+          className={
+            mineOnly ? "admin-tabs__item" : "admin-tabs__item admin-tabs__item--active"
+          }
+        >
+          Toutes les tâches ({allProjectTasks.length})
+        </Link>
+        <Link
+          href={`/workspace/tasks?world=${worldKey}${activeProjectId ? `&project=${activeProjectId}` : ""}&mine=1`}
+          role="tab"
+          aria-selected={mineOnly}
+          className={
+            mineOnly ? "admin-tabs__item admin-tabs__item--active" : "admin-tabs__item"
+          }
+        >
+          Mes tâches ({myTaskCount})
+        </Link>
+      </div>
+
       {activeProjectId ? (
         <CreateTaskForm
           activeProjectId={activeProjectId}
@@ -69,7 +105,10 @@ export default async function TasksPage({
             id: user.id,
             label: user.displayName ?? user.normalizedEmail ?? "Collaborateur",
           }))}
-          tasks={tasks.map((task) => ({ id: task.id, label: task.title }))}
+          tasks={allProjectTasks.map((task) => ({
+            id: task.id,
+            label: task.title,
+          }))}
         />
       ) : null}
       <TaskBoard tasks={boardTasks} canMutate />
