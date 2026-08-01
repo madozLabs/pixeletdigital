@@ -1,5 +1,18 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import {
+  CalendarClock,
+  FileText,
+  Film,
+  FolderKanban,
+  Image as ImageIcon,
+  Mail,
+  Megaphone,
+  Newspaper,
+  User,
+  Video,
+  type LucideIcon,
+} from "lucide-react";
 
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import type { ApprovedRole } from "@/shared/request-context";
@@ -39,6 +52,17 @@ const CONTENT_LABEL: Readonly<Record<string, string>> = {
   EMAIL: "E-mail",
   AD: "Publicité",
   OTHER: "Autre",
+};
+
+const CONTENT_TYPE_ICON: Readonly<Record<string, LucideIcon>> = {
+  POST: FileText,
+  STORY: ImageIcon,
+  REEL: Film,
+  VIDEO: Video,
+  ARTICLE: Newspaper,
+  EMAIL: Mail,
+  AD: Megaphone,
+  OTHER: FileText,
 };
 
 export default async function WorkspaceEditorialPage({
@@ -182,6 +206,7 @@ export default async function WorkspaceEditorialPage({
               status: item.status,
               clientName: item.client?.name ?? item.clientLabel,
               contentType: CONTENT_LABEL[item.contentType] ?? item.contentType,
+              contentTypeRaw: item.contentType,
               channel: item.channel,
               scheduledFor: formatDayLabel(item.scheduledFor),
               ownerName:
@@ -226,34 +251,48 @@ export default async function WorkspaceEditorialPage({
                   {dayItems.length === 0 ? (
                     <p className="editorial-board__empty">Rien de prévu</p>
                   ) : (
-                    dayItems.map((item) => (
+                    dayItems.map((item) => {
+                      const ContentIcon =
+                        CONTENT_TYPE_ICON[item.contentType] ?? FileText;
+                      return (
                       <article
                         key={item.id}
                         className="editorial-card editorial-card--professional"
                       >
-                        <StatusBadge kind="editorial" status={item.status} />
+                        <div className="editorial-card__topline">
+                          <StatusBadge kind="editorial" status={item.status} />
+                          <span className="content-type-pill">
+                            <ContentIcon size={12} strokeWidth={2} />
+                            {CONTENT_LABEL[item.contentType]}
+                          </span>
+                        </div>
                         <p className="editorial-card__title">{item.title}</p>
                         <p className="editorial-card__meta">
-                          {item.client?.name ?? item.clientLabel} ·{" "}
-                          {CONTENT_LABEL[item.contentType]} · {item.channel}
+                          {item.client?.name ?? item.clientLabel} · {item.channel}
                         </p>
-                        {item.project ? (
-                          <p className="editorial-card__meta">
-                            Projet : {item.project.name}
-                          </p>
-                        ) : null}
-                        {item.owner ? (
-                          <p className="editorial-card__meta">
-                            Responsable :{" "}
-                            {item.owner.displayName ??
-                              item.owner.normalizedEmail}
-                          </p>
+                        {item.project || item.owner ? (
+                          <div className="editorial-card__facts">
+                            {item.project ? (
+                              <span>
+                                <FolderKanban size={12} strokeWidth={2} />
+                                {item.project.name}
+                              </span>
+                            ) : null}
+                            {item.owner ? (
+                              <span>
+                                <User size={12} strokeWidth={2} />
+                                {item.owner.displayName ??
+                                  item.owner.normalizedEmail}
+                              </span>
+                            ) : null}
+                          </div>
                         ) : null}
                         {item.brief ? (
                           <p className="editorial-card__brief">{item.brief}</p>
                         ) : null}
                         {item.statusChangeReason ? (
                           <p className="editorial-card__reason">
+                            <CalendarClock size={12} strokeWidth={2} />
                             Motif : {item.statusChangeReason}
                           </p>
                         ) : null}
@@ -282,7 +321,8 @@ export default async function WorkspaceEditorialPage({
                           />
                         ) : null}
                       </article>
-                    ))
+                      );
+                    })
                   )}
                 </section>
               );

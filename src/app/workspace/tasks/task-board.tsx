@@ -13,6 +13,7 @@ import {
   Droppable,
   type DropResult,
 } from "@hello-pangea/dnd";
+import { CalendarDays, CornerDownRight, Flag, Link2 } from "lucide-react";
 
 import { Avatar } from "../_components/avatar";
 import { CommentThread } from "../_components/comment-thread";
@@ -149,6 +150,7 @@ export function TaskBoard({
                                 ? "task-card task-card--dragging"
                                 : "task-card"
                             }
+                            data-priority={task.priority}
                             ref={dragProvided.innerRef}
                             {...dragProvided.draggableProps}
                           >
@@ -160,11 +162,15 @@ export function TaskBoard({
                                 <span
                                   className={`priority-pill priority-pill--${task.priority.toLowerCase()}`}
                                 >
+                                  <Flag size={11} strokeWidth={2.5} />
                                   {PRIORITY_LABEL[task.priority] ??
                                     task.priority}
                                 </span>
                                 {task.dueDate ? (
-                                  <time>{task.dueDate}</time>
+                                  <time className="task-card__due">
+                                    <CalendarDays size={12} strokeWidth={2} />
+                                    {task.dueDate}
+                                  </time>
                                 ) : null}
                               </div>
                               <h3>{task.title}</h3>
@@ -174,15 +180,21 @@ export function TaskBoard({
                                   {task.assigneeName ?? "Non affecté"}
                                 </span>
                               </div>
-                              {task.parentTaskTitle ? (
-                                <small>
-                                  Sous-tâche de {task.parentTaskTitle}
-                                </small>
-                              ) : null}
-                              {task.dependencyTaskTitle ? (
-                                <small>
-                                  Dépend de {task.dependencyTaskTitle}
-                                </small>
+                              {task.parentTaskTitle || task.dependencyTaskTitle ? (
+                                <div className="task-card__links">
+                                  {task.parentTaskTitle ? (
+                                    <span className="task-card__link">
+                                      <CornerDownRight size={12} strokeWidth={2} />
+                                      Sous-tâche de {task.parentTaskTitle}
+                                    </span>
+                                  ) : null}
+                                  {task.dependencyTaskTitle ? (
+                                    <span className="task-card__link">
+                                      <Link2 size={12} strokeWidth={2} />
+                                      Dépend de {task.dependencyTaskTitle}
+                                    </span>
+                                  ) : null}
+                                </div>
                               ) : null}
                               <div className="project-progress">
                                 <span style={{ width: `${task.progress}%` }} />
@@ -223,22 +235,26 @@ function TaskCardControls({ task }: Readonly<{ task: BoardTask }>) {
       <input type="hidden" name="taskId" value={task.id} />
       <input type="hidden" name="status" value={task.status} />
       <input type="hidden" name="expectedVersion" value={task.version} />
-      <input
-        name="progress"
-        type="number"
-        min={0}
-        max={100}
-        defaultValue={task.progress}
-        aria-label="Progression"
-      />
-      <input
-        name="actualHours"
-        type="number"
-        min={0}
-        step="0.25"
-        defaultValue={task.actualHours}
-        aria-label="Temps réalisé en heures"
-      />
+      <label className="task-card__controls-field">
+        <span>Progression %</span>
+        <input
+          name="progress"
+          type="number"
+          min={0}
+          max={100}
+          defaultValue={task.progress}
+        />
+      </label>
+      <label className="task-card__controls-field">
+        <span>Heures réalisées</span>
+        <input
+          name="actualHours"
+          type="number"
+          min={0}
+          step="0.25"
+          defaultValue={task.actualHours}
+        />
+      </label>
       <SubmitButton>Enregistrer</SubmitButton>
       <Feedback state={state} />
     </form>

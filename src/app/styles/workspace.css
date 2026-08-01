@@ -4235,3 +4235,116 @@
   background: var(--accent-soft);
   font-weight: 600;
 }
+
+/* --- Kanban card polish (Tasks + Editorial pipeline/week) ------------- */
+/* Priority reads as a colored accent strip first, a label second -- the
+   same palette already used by .priority-pill--*, just carried onto the
+   card edge so a column full of cards scans by color before anyone reads
+   a word. */
+
+.task-card {
+  border-left: 3px solid transparent;
+  gap: 0.65rem;
+}
+
+.task-card[data-priority="LOW"] {
+  border-left-color: var(--ink-faint);
+}
+.task-card[data-priority="NORMAL"] {
+  border-left-color: #298dff;
+}
+.task-card[data-priority="HIGH"] {
+  border-left-color: #ff9100;
+}
+.task-card[data-priority="URGENT"] {
+  border-left-color: var(--pd-red);
+}
+
+.task-card__handle h3,
+.editorial-card__title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.priority-pill,
+.content-type-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+}
+
+.content-type-pill {
+  font-size: 0.78em;
+  font-weight: 600;
+  padding: 0.2em 0.6em;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--ink) 8%, var(--wk-card));
+  color: var(--ink-soft);
+}
+
+.task-card__due {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: 0.78em;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.task-card__links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.task-card__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font-size: 0.78em;
+  color: var(--ink-faint);
+}
+
+.editorial-card__topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.editorial-card__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  font-size: 0.8em;
+  color: var(--ink-soft);
+}
+
+.editorial-card__facts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+}
+
+.editorial-card__reason {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+}
+
+.task-card__controls-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.task-card__controls-field span {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}

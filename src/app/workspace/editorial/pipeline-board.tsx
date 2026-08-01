@@ -8,6 +8,17 @@ import {
   Droppable,
   type DropResult,
 } from "@hello-pangea/dnd";
+import {
+  CalendarDays,
+  FileText,
+  Film,
+  Image as ImageIcon,
+  Mail,
+  Megaphone,
+  Newspaper,
+  Video,
+  type LucideIcon,
+} from "lucide-react";
 
 import { Avatar } from "../_components/avatar";
 import { CommentThread } from "../_components/comment-thread";
@@ -19,12 +30,28 @@ export type PipelineItem = Readonly<{
   status: string;
   clientName: string;
   contentType: string;
+  contentTypeRaw: string;
   channel: string;
   scheduledFor: string;
   ownerName: string | null;
 }>;
 
 type UserOption = Readonly<{ id: string; name: string }>;
+
+// Every content type gets its own icon instead of every card wearing the
+// same borrowed "normal priority" pill regardless of what it actually is --
+// content type is an identity, not an urgency level, so it needed its own
+// visual language rather than piggybacking on priority-pill's palette.
+const CONTENT_TYPE_ICON: Readonly<Record<string, LucideIcon>> = {
+  POST: FileText,
+  STORY: ImageIcon,
+  REEL: Film,
+  VIDEO: Video,
+  ARTICLE: Newspaper,
+  EMAIL: Mail,
+  AD: Megaphone,
+  OTHER: FileText,
+};
 
 const COLUMNS = [
   ["DRAFT", "Brouillon"],
@@ -110,7 +137,10 @@ export function EditorialPipeline({
                     {columnItems.length === 0 ? (
                       <p className="admin-empty">Aucun contenu.</p>
                     ) : null}
-                    {columnItems.map((item, index) => (
+                    {columnItems.map((item, index) => {
+                      const ContentIcon =
+                        CONTENT_TYPE_ICON[item.contentTypeRaw] ?? FileText;
+                      return (
                       <Draggable
                         draggableId={item.id}
                         index={index}
@@ -132,10 +162,14 @@ export function EditorialPipeline({
                               {...dragProvided.dragHandleProps}
                             >
                               <div className="task-card__topline">
-                                <span className="priority-pill priority-pill--normal">
+                                <span className="content-type-pill">
+                                  <ContentIcon size={12} strokeWidth={2} />
                                   {item.contentType}
                                 </span>
-                                <time>{item.scheduledFor}</time>
+                                <time className="task-card__due">
+                                  <CalendarDays size={12} strokeWidth={2} />
+                                  {item.scheduledFor}
+                                </time>
                               </div>
                               <h3>{item.title}</h3>
                               <p className="editorial-card__meta">
@@ -158,7 +192,8 @@ export function EditorialPipeline({
                           </article>
                         )}
                       </Draggable>
-                    ))}
+                      );
+                    })}
                     {dropProvided.placeholder}
                   </div>
                 </section>
