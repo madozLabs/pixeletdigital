@@ -81,6 +81,7 @@ export class PrismaWorkspaceContentReader implements WorkspaceContentReader {
       publishedServices,
       selectedPage,
       siteIdentity,
+      topViewsRaw,
     ] = await Promise.all([
       this.database.page.findMany({
         where: { worldKey: input.worldKey },
@@ -159,6 +160,18 @@ export class PrismaWorkspaceContentReader implements WorkspaceContentReader {
             include: { draftRevision: true, publishedRevision: true },
           })
         : Promise.resolve(null),
+      input.tab === "overview"
+        ? this.database.pageView.groupBy({
+            by: ["pageId"],
+            where: {
+              page: { worldKey: input.worldKey },
+              createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+            },
+            _count: { id: true },
+            orderBy: { _count: { id: "desc" } },
+            take: 5,
+          })
+        : Promise.resolve([]),
     ]);
 
     const revisionAuthors: Record<string, string> = {};
@@ -181,6 +194,28 @@ export class PrismaWorkspaceContentReader implements WorkspaceContentReader {
       }
     }
 
+    let topViewedPages: Readonly<{
+      id: string;
+      title: string;
+      slug: string;
+      viewCount: number;
+    }>[] = [];
+    if (topViewsRaw.length > 0) {
+      const pages = await this.database.page.findMany({
+        where: { id: { in: topViewsRaw.map((row) => row.pageId) } },
+        select: { id: true, title: true, slug: true },
+      });
+      const pageById = new Map(pages.map((page) => [page.id, page]));
+      topViewedPages = topViewsRaw
+        .map((row) => {
+          const page = pageById.get(row.pageId);
+          return page
+            ? { ...page, viewCount: row._count.id }
+            : null;
+        })
+        .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+    }
+
     return {
       recentPages,
       homePage,
@@ -198,6 +233,7 @@ export class PrismaWorkspaceContentReader implements WorkspaceContentReader {
         : null,
       siteIdentity,
       revisionAuthors,
+      topViewedPages,
     };
   }
 }

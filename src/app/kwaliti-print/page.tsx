@@ -13,6 +13,7 @@ import {
   type CmsHomeSection,
 } from "@/app/_lib/cms-home";
 import { groupServicesByFamily } from "@/app/_lib/group-services-by-family";
+import { recordPageView } from "@/modules/content/application/record-page-view";
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import { listPublishedServiceFamilies } from "@/modules/content/application/public/list-published-service-families";
 import { listPublishedServices } from "@/modules/content/application/public/list-published-services";
@@ -68,6 +69,7 @@ export default async function KwalitiPrintHomePage({
     ),
     getCmsHomeContent("kwaliti-print", preview).catch(emptyHomeContent),
   ]);
+  if (!preview && cms.pageId) recordPageView(prisma, cms.pageId);
   const sections = cms.sections.length ? cms.sections : DEFAULT_SECTIONS;
   const mediaById = new Map(cms.mediaAssets.map((asset) => [asset.id, asset]));
 

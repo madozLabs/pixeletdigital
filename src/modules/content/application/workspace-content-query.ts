@@ -90,6 +90,12 @@ export type WorkspaceContentDto = Readonly<{
   selectedPage: WorkspaceEditablePageDto | null;
   siteIdentity: WorkspaceSiteIdentityDto | null;
   revisionAuthors: Readonly<Record<string, string>>;
+  topViewedPages: readonly Readonly<{
+    id: string;
+    title: string;
+    slug: string;
+    viewCount: number;
+  }>[];
 }>;
 
 export type WorkspaceSiteIdentityRevisionDto = Readonly<{

@@ -21,6 +21,7 @@ export type CmsClosingContent = Readonly<{
 }>;
 
 export type CmsHomeContent = Readonly<{
+  pageId: string | null;
   sections: readonly CmsHomeSection[];
   mediaAssets: readonly CmsHomeMediaAsset[];
   hero: CmsHeroContent | null;
@@ -218,6 +219,7 @@ export async function getCmsHomeContent(
   }
 
   return {
+    pageId: page.id,
     sections: sections.map((section) => ({
       id: section.id,
       sectionType: section.sectionType,
@@ -243,6 +245,7 @@ export async function getCmsHomeContent(
 
 export function emptyHomeContent(): CmsHomeContent {
   return {
+    pageId: null,
     sections: [],
     mediaAssets: [],
     hero: null,

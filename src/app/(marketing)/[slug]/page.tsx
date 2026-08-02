@@ -5,6 +5,7 @@ import { prisma } from "@/infrastructure/shared/prisma-client";
 import { getWorkspaceRequestContext } from "@/app/workspace/get-workspace-context";
 import { actorHasWorldAccess } from "@/app/workspace/_lib/authorization";
 import { publishDueScheduledRevisions } from "@/modules/content/application/publish-scheduled-revisions";
+import { recordPageView } from "@/modules/content/application/record-page-view";
 import { CmsPreviewBridge } from "@/app/_components/cms-preview-bridge";
 import { CmsSection, stringValue } from "../_components/cms-section";
 
@@ -127,6 +128,7 @@ export default async function CmsPublicPage({ params, searchParams }: Props) {
   }
   const page = await loadPage(worldKey, slug, preview);
   if (!page) notFound();
+  if (!preview) recordPageView(prisma, page.id);
 
   const sections = preview
     ? (page.draftRevision?.sections ?? [])

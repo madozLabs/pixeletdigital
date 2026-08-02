@@ -475,12 +475,27 @@ model Page {
   publishedRevision PageRevision?   @relation("PagePublishedRevision", fields: [publishedRevisionId], references: [id], onDelete: SetNull)
   service           Service?        @relation(fields: [serviceId], references: [id], onDelete: Restrict)
   editorialItems    EditorialItem[]
+  views             PageView[]
 
   @@unique([worldKey, pageType, slug])
   @@unique([worldKey, routePath])
   @@index([worldKey, lifecycle])
   @@index([worldKey, slug, lifecycle])
   @@map("pages")
+}
+
+// Minimal internal analytics: one row per real public pageview (preview
+// mode excluded). Deliberately just pageId+timestamp -- no session,
+// referrer, or user-agent tracking, so it stays a lightweight "what's
+// getting looked at" signal rather than a GDPR-relevant profile store.
+model PageView {
+  id        String   @id @default(cuid())
+  pageId    String
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([pageId, createdAt])
+  @@map("page_views")
 }
 
 model PageRevision {

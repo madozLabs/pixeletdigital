@@ -152,6 +152,7 @@ export default async function SiteContentPage({
     selectedPage,
     siteIdentity,
     revisionAuthors,
+    topViewedPages,
   } = contentResult.value;
   const enquiryCount = enquiryResult?.ok ? enquiryResult.value : null;
 
@@ -187,6 +188,7 @@ export default async function SiteContentPage({
           mediaCount={totalMedia}
           publishedServices={publishedServices}
           enquiryCount={enquiryCount}
+          topViewedPages={topViewedPages}
         />
       ) : tab === "media" ? (
         <>
@@ -276,6 +278,7 @@ function OverviewPanel({
   mediaCount,
   publishedServices,
   enquiryCount,
+  topViewedPages,
 }: {
   worldKey: string;
   recentPages: readonly WorkspacePageDto[];
@@ -285,6 +288,12 @@ function OverviewPanel({
   mediaCount: number;
   publishedServices: number;
   enquiryCount: number | null;
+  topViewedPages: readonly Readonly<{
+    id: string;
+    title: string;
+    slug: string;
+    viewCount: number;
+  }>[];
 }) {
   const recent = recentPages;
   return (
@@ -341,6 +350,33 @@ function OverviewPanel({
                   </strong>
                   <span>
                     /{page.slug} · <LifecycleBadge lifecycle={page.lifecycle} />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="dashboard-panel">
+          <h2>Pages les plus vues (30 derniers jours)</h2>
+          {topViewedPages.length === 0 ? (
+            <p className="admin-empty">
+              Aucune vue enregistrée sur cette période.
+            </p>
+          ) : (
+            <ul>
+              {topViewedPages.map((page) => (
+                <li key={page.id}>
+                  <strong>
+                    <Link
+                      href={`/workspace/site-content/pages/${encodeURIComponent(page.id)}/edit?world=${worldKey}`}
+                    >
+                      {page.title}
+                    </Link>
+                  </strong>
+                  <span>
+                    /{page.slug} · {page.viewCount} vue
+                    {page.viewCount > 1 ? "s" : ""}
                   </span>
                 </li>
               ))}
