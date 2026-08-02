@@ -3875,6 +3875,18 @@
   grid-template-columns: 1fr;
 }
 
+.cms-autosave-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.cms-autosave-hint {
+  font-size: 0.75rem;
+  color: #757b87;
+}
+
 .cms-visual-builder__stage {
   position: relative;
   display: grid;

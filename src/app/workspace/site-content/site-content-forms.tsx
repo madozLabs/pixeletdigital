@@ -3,7 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState, type ChangeEvent } from "react";
+import {
+  useActionState,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FocusEvent,
+} from "react";
 
 import type {
   WorkspaceRevisionDto,
@@ -1688,6 +1695,32 @@ export function SectionFieldsForm({
     IDLE_ACTION_STATE,
   );
   useRefreshOnSuccess(state.status);
+  const formRef = useRef<HTMLFormElement>(null);
+  const isDirtyRef = useRef(false);
+  function markDirty() {
+    isDirtyRef.current = true;
+  }
+  function autosaveOnBlur(event: FocusEvent<HTMLFormElement>) {
+    if (!isDirtyRef.current) return;
+    const next = event.relatedTarget;
+    if (next instanceof HTMLElement && next.getAttribute("type") === "submit") {
+      return;
+    }
+    isDirtyRef.current = false;
+    formRef.current?.requestSubmit();
+  }
+  function autosaveOnChange(event: ChangeEvent<HTMLFormElement>) {
+    markDirty();
+    const target = event.target;
+    const isDiscreteControl =
+      target instanceof HTMLSelectElement ||
+      (target instanceof HTMLInputElement &&
+        (target.type === "checkbox" || target.type === "radio"));
+    if (isDiscreteControl) {
+      isDirtyRef.current = false;
+      formRef.current?.requestSubmit();
+    }
+  }
   const definition = getPageBlockDefinition(sectionType);
   const hasPrimaryMedia = definition?.fields.some(
     (field) => field.kind === "MEDIA",
@@ -1712,7 +1745,13 @@ export function SectionFieldsForm({
         .join("\n")
     : "";
   return (
-    <form action={action} data-cms-section-form={sectionId}>
+    <form
+      ref={formRef}
+      action={action}
+      data-cms-section-form={sectionId}
+      onBlur={autosaveOnBlur}
+      onChange={autosaveOnChange}
+    >
       <input type="hidden" name="id" value={sectionId} />
       <input type="hidden" name="expectedVersion" value={version} />
       <input type="hidden" name="pageId" value={pageId} />
@@ -1818,7 +1857,12 @@ export function SectionFieldsForm({
         </div>
       ) : null}
       <Feedback state={state} />
-      <SubmitButton>Mettre à jour</SubmitButton>
+      <div className="cms-autosave-row">
+        <SubmitButton>Enregistrer</SubmitButton>
+        <span className="cms-autosave-hint">
+          Enregistrement automatique en quittant un champ
+        </span>
+      </div>
     </form>
   );
 }

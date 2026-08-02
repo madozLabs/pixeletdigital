@@ -204,6 +204,30 @@ export function PageBuilder({
     sectionIds.map((id, index) => [id, sectionErrors[index] ?? []]),
   );
 
+  // The section list itself (add/remove/reorder) only changes when
+  // sectionIds' content changes -- a field-only autosave leaves it
+  // identical, so this doesn't clobber in-flight local reordering.
+  const sectionIdsKey = sectionIds.join("|");
+  const [syncedSectionIdsKey, setSyncedSectionIdsKey] =
+    useState(sectionIdsKey);
+  if (sectionIdsKey !== syncedSectionIdsKey) {
+    setSyncedSectionIdsKey(sectionIdsKey);
+    setOrderedIds(sectionIds);
+  }
+
+  // Autosave no longer remounts the whole builder (that used to be how the
+  // preview iframe picked up saved changes) -- so reload it explicitly
+  // whenever a section or the revision itself was saved.
+  const savedVersionsKey = `${revisionVersion ?? 0}:${sectionVersions.join(",")}`;
+  const isFirstSavedVersionRender = useRef(true);
+  useEffect(() => {
+    if (isFirstSavedVersionRender.current) {
+      isFirstSavedVersionRender.current = false;
+      return;
+    }
+    iframeRef.current?.contentWindow?.location.reload();
+  }, [savedVersionsKey]);
+
   function toggleSidebar() {
     setIsSidebarCollapsed((current) => {
       const next = !current;
@@ -784,7 +808,7 @@ export function PageBuilder({
             {!editable ? (
               <div className="cms-visual-builder__activate">{settings}</div>
             ) : null}
-            {selectedId ? (
+            {selectedId && childById.has(selectedId) ? (
               <>
                 <div className="cms-visual-builder__inspector-header">
                   <strong>

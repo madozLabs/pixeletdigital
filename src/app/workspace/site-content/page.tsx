@@ -674,7 +674,7 @@ export function PageEditor({
         ) : null}
       </div>
       <PageBuilder
-        key={`${activeRevision?.id ?? "empty"}-${activeRevision?.version ?? 0}`}
+        key={activeRevision?.id ?? "empty"}
         pageId={page.id}
         revisionId={page.draftRevision?.id ?? null}
         revisionVersion={page.draftRevision?.version ?? null}
