@@ -5,7 +5,12 @@ import {
   isEvidencePublishable,
   isEvidenceSectionType,
 } from "@/modules/content/domain/evidence-section";
-import { getPageBlockDefinition } from "@/modules/content/domain/page-block-registry";
+import {
+  clampColumnCount,
+  getPageBlockDefinition,
+  isNestableBlockType,
+  type NestedBlock,
+} from "@/modules/content/domain/page-block-registry";
 
 import { EvidenceSection } from "./evidence-section";
 import {
@@ -251,10 +256,56 @@ export function CmsSection({
     );
   }
 
+  if (type === "COLUMNS") {
+    const columnCount = clampColumnCount(payload.columnCount);
+    const columns = nestedColumns(payload.columns).slice(0, columnCount);
+    return (
+      <section
+        {...cmsSectionDesignProps(
+          payload,
+          "cms-public-section cms-public-columns",
+        )}
+        {...sectionProps}
+      >
+        <CmsSectionBackground payload={payload} mediaById={mediaById} />
+        <EditableCopy
+          as="p"
+          field="eyebrow"
+          value={eyebrow}
+          editing={editing}
+        />
+        <EditableCopy as="h2" field="title" value={title} editing={editing} />
+        <EditableCopy as="p" field="text" value={text} editing={editing} />
+        <div
+          className="cms-public-columns__grid"
+          style={
+            { "--cms-columns-count": columnCount } as React.CSSProperties
+          }
+        >
+          {Array.from({ length: columnCount }, (_, index) => (
+            <div className="cms-public-columns__column" key={index}>
+              {(columns[index] ?? []).map((nested) => (
+                <CmsSection
+                  key={nested.id}
+                  sectionId={nested.id}
+                  type={nested.type}
+                  payload={nested.payload}
+                  mediaById={mediaById}
+                  services={services}
+                  worldKey={worldKey}
+                  editing={false}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   if (
     type === "FEATURE_GRID" ||
     type === "STEPS" ||
-    type === "COLUMNS" ||
     type === "STATS" ||
     type === "TEAM" ||
     type === "PRICING" ||
@@ -435,6 +486,33 @@ function objectItems(value: unknown): Record<string, unknown>[] {
           Boolean(item) && typeof item === "object" && !Array.isArray(item),
       )
     : [];
+}
+
+function nestedColumns(value: unknown): readonly (readonly NestedBlock[])[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((column) => {
+    if (!Array.isArray(column)) return [];
+    return column.flatMap((entry): NestedBlock[] => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        return [];
+      }
+      const block = entry as Record<string, unknown>;
+      if (
+        typeof block.id !== "string" ||
+        typeof block.type !== "string" ||
+        !isNestableBlockType(block.type)
+      ) {
+        return [];
+      }
+      const payload =
+        block.payload &&
+        typeof block.payload === "object" &&
+        !Array.isArray(block.payload)
+          ? (block.payload as Record<string, unknown>)
+          : {};
+      return [{ id: block.id, type: block.type, payload }];
+    });
+  });
 }
 
 function EditableCopy({

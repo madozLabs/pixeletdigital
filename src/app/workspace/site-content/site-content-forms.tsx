@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  startTransition,
   useActionState,
   useEffect,
   useRef,
@@ -18,7 +19,15 @@ import type {
   WorkspaceSiteIdentityDto,
   WorkspacePageDto,
 } from "@/modules/content/application/workspace-content-query";
-import { getPageBlockDefinition } from "@/modules/content/domain/page-block-registry";
+import {
+  clampColumnCount,
+  createDefaultNestedBlock,
+  getPageBlockDefinition,
+  NESTABLE_BLOCK_TYPES,
+  parseColumnsPayload,
+  type NestableBlockType,
+  type NestedBlock,
+} from "@/modules/content/domain/page-block-registry";
 import type { PageRevisionDiff } from "@/modules/content/domain/page-revision-diff";
 import { sectionImageFormValue } from "@/modules/content/domain/section-image-settings";
 import {
@@ -1783,7 +1792,7 @@ export function SectionFieldsForm({
       data.append("itemText", pair.text);
     }
     isDirtyRef.current = false;
-    action(data);
+    startTransition(() => action(data));
   }
   function addItemRow() {
     const pairs = [...currentItemPairs(), { title: "", text: "" }];
@@ -1814,6 +1823,133 @@ export function SectionFieldsForm({
       return next;
     });
     submitItemPairs(pairs);
+  }
+  const nestedKeyRef = useRef(0);
+  const [columnsState, setColumnsState] = useState<{
+    columnCount: number;
+    columns: NestedBlock[][];
+  }>(() => {
+    const parsed = parseColumnsPayload(
+      JSON.stringify({
+        columnCount: evidencePayload.columnCount,
+        columns: evidencePayload.columns,
+      }),
+    );
+    return {
+      columnCount: parsed.columnCount,
+      columns: parsed.columns.map((column) => [...column]),
+    };
+  });
+  // Structural nested-block changes (add/remove/move/column count) submit
+  // immediately with an explicitly-built payload, same reasoning as the
+  // items repeater: requestSubmit() reading the DOM can't be trusted to
+  // race-win against React's own re-render.
+  function submitColumns(next: { columnCount: number; columns: NestedBlock[][] }) {
+    const form = formRef.current;
+    if (!form) return;
+    const data = new FormData(form);
+    data.set("columnsJson", JSON.stringify(next));
+    isDirtyRef.current = false;
+    startTransition(() => action(data));
+  }
+  function setColumnCount(count: number) {
+    setColumnsState((current) => {
+      const columnCount = clampColumnCount(count);
+      const columns = Array.from(
+        { length: columnCount },
+        (_, index) => current.columns[index] ?? [],
+      );
+      const next = { columnCount, columns };
+      submitColumns(next);
+      return next;
+    });
+  }
+  function addNestedBlock(columnIndex: number, type: NestableBlockType) {
+    setColumnsState((current) => {
+      const block = createDefaultNestedBlock(
+        type,
+        `nested_${Date.now()}_${nestedKeyRef.current++}`,
+      );
+      const columns = current.columns.map((column, index) =>
+        index === columnIndex ? [...column, block] : column,
+      );
+      const next = { ...current, columns };
+      submitColumns(next);
+      return next;
+    });
+  }
+  function removeNestedBlock(columnIndex: number, blockId: string) {
+    setColumnsState((current) => {
+      const columns = current.columns.map((column, index) =>
+        index === columnIndex
+          ? column.filter((block) => block.id !== blockId)
+          : column,
+      );
+      const next = { ...current, columns };
+      submitColumns(next);
+      return next;
+    });
+  }
+  function moveNestedBlock(columnIndex: number, blockId: string, offset: number) {
+    setColumnsState((current) => {
+      const column = current.columns[columnIndex] ?? [];
+      const index = column.findIndex((block) => block.id === blockId);
+      const target = index + offset;
+      if (index < 0 || target < 0 || target >= column.length) return current;
+      const nextColumn = [...column];
+      const [block] = nextColumn.splice(index, 1);
+      if (!block) return current;
+      nextColumn.splice(target, 0, block);
+      const columns = current.columns.map((c, i) =>
+        i === columnIndex ? nextColumn : c,
+      );
+      const next = { ...current, columns };
+      submitColumns(next);
+      return next;
+    });
+  }
+  function moveNestedBlockToColumn(
+    fromColumn: number,
+    blockId: string,
+    toColumn: number,
+  ) {
+    setColumnsState((current) => {
+      if (fromColumn === toColumn) return current;
+      const source = current.columns[fromColumn] ?? [];
+      const block = source.find((item) => item.id === blockId);
+      if (!block) return current;
+      const columns = current.columns.map((column, index) => {
+        if (index === fromColumn) {
+          return column.filter((item) => item.id !== blockId);
+        }
+        if (index === toColumn) return [...column, block];
+        return column;
+      });
+      const next = { ...current, columns };
+      submitColumns(next);
+      return next;
+    });
+  }
+  // Field edits inside a nested block just update local state -- the
+  // hidden columnsJson input below is controlled, so it stays in sync and
+  // rides the same blur-triggered autosave as every other field.
+  function updateNestedBlockPayload(
+    columnIndex: number,
+    blockId: string,
+    patch: Record<string, unknown>,
+  ) {
+    setColumnsState((current) => {
+      const columns = current.columns.map((column, index) =>
+        index === columnIndex
+          ? column.map((block) =>
+              block.id === blockId
+                ? { ...block, payload: { ...block.payload, ...patch } }
+                : block,
+            )
+          : column,
+      );
+      return { ...current, columns };
+    });
   }
   return (
     <form
@@ -1949,6 +2085,64 @@ export function SectionFieldsForm({
           </button>
         </fieldset>
       ) : null}
+      {sectionType === "COLUMNS" ? (
+        <fieldset className="cms-columns-editor">
+          <legend>Colonnes</legend>
+          <input
+            type="hidden"
+            name="columnsJson"
+            value={JSON.stringify(columnsState)}
+            onChange={() => {}}
+          />
+          <label className="cms-columns-editor__count">
+            Nombre de colonnes
+            <select
+              value={columnsState.columnCount}
+              onChange={(event) =>
+                setColumnCount(Number(event.target.value))
+              }
+              disabled={!editable}
+            >
+              <option value={2}>2</option>
+              <option value={3}>3</option>
+              <option value={4}>4</option>
+            </select>
+          </label>
+          <div className="cms-columns-editor__grid">
+            {columnsState.columns.map((column, columnIndex) => (
+              <div className="cms-columns-editor__column" key={columnIndex}>
+                <strong>Colonne {columnIndex + 1}</strong>
+                {column.map((block, blockIndex) => (
+                  <NestedBlockCard
+                    key={block.id}
+                    block={block}
+                    columnIndex={columnIndex}
+                    columnCount={columnsState.columnCount}
+                    isFirst={blockIndex === 0}
+                    isLast={blockIndex === column.length - 1}
+                    images={images}
+                    editable={editable}
+                    onChangePayload={(patch) =>
+                      updateNestedBlockPayload(columnIndex, block.id, patch)
+                    }
+                    onMove={(offset) =>
+                      moveNestedBlock(columnIndex, block.id, offset)
+                    }
+                    onMoveToColumn={(target) =>
+                      moveNestedBlockToColumn(columnIndex, block.id, target)
+                    }
+                    onRemove={() => removeNestedBlock(columnIndex, block.id)}
+                  />
+                ))}
+                <NestedBlockAddForm
+                  editable={editable}
+                  onAdd={(type) => addNestedBlock(columnIndex, type)}
+                />
+              </div>
+            ))}
+          </div>
+        </fieldset>
+      ) : null}
       {hasMultipleMedia ? (
         <span className="cms-picker-label">Images du bloc</span>
       ) : null}
@@ -1989,6 +2183,187 @@ export function SectionFieldsForm({
         </span>
       </div>
     </form>
+  );
+}
+
+function NestedBlockCard({
+  block,
+  columnIndex,
+  columnCount,
+  isFirst,
+  isLast,
+  images,
+  editable,
+  onChangePayload,
+  onMove,
+  onMoveToColumn,
+  onRemove,
+}: Readonly<{
+  block: NestedBlock;
+  columnIndex: number;
+  columnCount: number;
+  isFirst: boolean;
+  isLast: boolean;
+  images: readonly ImageOption[];
+  editable: boolean;
+  onChangePayload: (patch: Record<string, unknown>) => void;
+  onMove: (offset: number) => void;
+  onMoveToColumn: (target: number) => void;
+  onRemove: () => void;
+}>) {
+  const definition = getPageBlockDefinition(block.type);
+  const value = (key: string) =>
+    typeof block.payload[key] === "string" ? String(block.payload[key]) : "";
+  const showLinkFields = block.type === "CTA" || block.type === "BANNER";
+  const showMedia = block.type === "MEDIA" || block.type === "VIDEO";
+  return (
+    <div className="cms-nested-block">
+      <header>
+        <strong>{definition?.label ?? block.type}</strong>
+        <button
+          type="button"
+          aria-label="Supprimer ce bloc imbriqué"
+          className="is-danger"
+          onClick={onRemove}
+          disabled={!editable}
+        >
+          <Trash2 size={14} />
+        </button>
+      </header>
+      <label>
+        Sur-titre
+        <input
+          value={value("eyebrow")}
+          onChange={(event) =>
+            onChangePayload({ eyebrow: event.target.value })
+          }
+          disabled={!editable}
+        />
+      </label>
+      <label>
+        Titre
+        <textarea
+          rows={2}
+          value={value("title")}
+          onChange={(event) => onChangePayload({ title: event.target.value })}
+          disabled={!editable}
+        />
+      </label>
+      <label>
+        Texte
+        <textarea
+          rows={2}
+          value={value("text")}
+          onChange={(event) => onChangePayload({ text: event.target.value })}
+          disabled={!editable}
+        />
+      </label>
+      {showLinkFields ? (
+        <div className="admin-form-grid">
+          <label>
+            Libellé du bouton
+            <input
+              value={value("label")}
+              onChange={(event) =>
+                onChangePayload({ label: event.target.value })
+              }
+              disabled={!editable}
+            />
+          </label>
+          <label>
+            Lien du bouton
+            <input
+              value={value("href")}
+              onChange={(event) =>
+                onChangePayload({ href: event.target.value })
+              }
+              disabled={!editable}
+            />
+          </label>
+        </div>
+      ) : null}
+      {showMedia ? (
+        <label>
+          {block.type === "VIDEO" ? "Fichier vidéo" : "Image"}
+          <select
+            value={value("mediaId")}
+            onChange={(event) =>
+              onChangePayload({ mediaId: event.target.value })
+            }
+            disabled={!editable}
+          >
+            <option value="">Aucune</option>
+            {images.map((asset) => (
+              <option key={asset.id} value={asset.id}>
+                {asset.title}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      <div className="cms-nested-block__move">
+        <button
+          type="button"
+          onClick={() => onMove(-1)}
+          disabled={!editable || isFirst}
+        >
+          <ChevronUp size={14} /> Monter
+        </button>
+        <button
+          type="button"
+          onClick={() => onMove(1)}
+          disabled={!editable || isLast}
+        >
+          <ChevronDown size={14} /> Descendre
+        </button>
+        {columnCount > 1 ? (
+          <label className="cms-nested-block__move-to">
+            Déplacer vers
+            <select
+              value={columnIndex}
+              onChange={(event) => onMoveToColumn(Number(event.target.value))}
+              disabled={!editable}
+            >
+              {Array.from({ length: columnCount }, (_, index) => (
+                <option key={index} value={index}>
+                  Colonne {index + 1}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function NestedBlockAddForm({
+  editable,
+  onAdd,
+}: Readonly<{
+  editable: boolean;
+  onAdd: (type: NestableBlockType) => void;
+}>) {
+  const [type, setType] = useState<NestableBlockType>(
+    NESTABLE_BLOCK_TYPES[0],
+  );
+  return (
+    <div className="cms-columns-editor__add">
+      <select
+        value={type}
+        onChange={(event) => setType(event.target.value as NestableBlockType)}
+        disabled={!editable}
+      >
+        {NESTABLE_BLOCK_TYPES.map((blockType) => (
+          <option key={blockType} value={blockType}>
+            {getPageBlockDefinition(blockType)?.label ?? blockType}
+          </option>
+        ))}
+      </select>
+      <button type="button" onClick={() => onAdd(type)} disabled={!editable}>
+        <Plus size={14} /> Ajouter un bloc
+      </button>
+    </div>
   );
 }
 

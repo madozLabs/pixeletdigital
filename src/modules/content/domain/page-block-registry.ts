@@ -209,12 +209,9 @@ export const PAGE_BLOCK_REGISTRY: readonly PageBlockDefinition[] = [
   block(
     "COLUMNS",
     "Colonnes de contenu",
-    "Deux à quatre contenus présentés côte à côte.",
+    "Deux à quatre colonnes libres, chacune avec ses propres blocs.",
     "CONTENT",
-    [
-      ...COMMON_COPY_FIELDS,
-      { key: "items", label: "Colonnes", kind: "ITEMS", required: true },
-    ],
+    COMMON_COPY_FIELDS,
   ),
   block(
     "STATS",
@@ -343,6 +340,97 @@ export function validatePageBlock(
 
 export function isPageBlockType(value: string): value is PageBlockType {
   return PAGE_BLOCK_TYPES.includes(value as PageBlockType);
+}
+
+/**
+ * Block types a COLUMNS block can nest one level deep. Kept to simple,
+ * self-contained content types -- no ITEMS-list blocks (STEPS, FAQ, ...),
+ * no COLUMNS itself, no evidence types (CASE_STUDY, TESTIMONIAL) or
+ * SERVICE_INDEX, since those carry their own repeaters or workflow that
+ * don't make sense re-nested inside a column's compact editor.
+ */
+export const NESTABLE_BLOCK_TYPES = [
+  "RICH_TEXT",
+  "MEDIA",
+  "CTA",
+  "BANNER",
+  "VIDEO",
+] as const;
+
+export type NestableBlockType = (typeof NESTABLE_BLOCK_TYPES)[number];
+
+export function isNestableBlockType(
+  value: string,
+): value is NestableBlockType {
+  return NESTABLE_BLOCK_TYPES.includes(value as NestableBlockType);
+}
+
+export type NestedBlock = Readonly<{
+  id: string;
+  type: NestableBlockType;
+  payload: Readonly<Record<string, unknown>>;
+}>;
+
+export function createDefaultNestedBlock(
+  type: NestableBlockType,
+  id: string,
+): NestedBlock {
+  return { id, type, payload: createDefaultBlockPayload(type) };
+}
+
+const MIN_COLUMN_COUNT = 2;
+const MAX_COLUMN_COUNT = 4;
+
+export function clampColumnCount(value: unknown): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return MIN_COLUMN_COUNT;
+  return Math.min(
+    MAX_COLUMN_COUNT,
+    Math.max(MIN_COLUMN_COUNT, Math.round(parsed)),
+  );
+}
+
+/** Parses and sanitizes untrusted JSON into a valid COLUMNS payload shape. */
+export function parseColumnsPayload(raw: string): {
+  columnCount: number;
+  columns: readonly (readonly NestedBlock[])[];
+} {
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    throw new Error("INVALID_SECTION_PAYLOAD");
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("INVALID_SECTION_PAYLOAD");
+  }
+  const record = value as Record<string, unknown>;
+  const columnCount = clampColumnCount(record.columnCount);
+  const rawColumns = Array.isArray(record.columns) ? record.columns : [];
+  const columns = Array.from({ length: columnCount }, (_, index) => {
+    const rawColumn = rawColumns[index];
+    if (!Array.isArray(rawColumn)) return [];
+    return rawColumn.flatMap((entry): NestedBlock[] => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        return [];
+      }
+      const block = entry as Record<string, unknown>;
+      if (
+        typeof block.id !== "string" ||
+        !block.id ||
+        typeof block.type !== "string" ||
+        !isNestableBlockType(block.type)
+      ) {
+        return [];
+      }
+      const payload =
+        block.payload && typeof block.payload === "object" && !Array.isArray(block.payload)
+          ? (block.payload as Record<string, unknown>)
+          : {};
+      return [{ id: block.id, type: block.type, payload }];
+    });
+  });
+  return { columnCount, columns };
 }
 
 function block(

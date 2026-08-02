@@ -15,6 +15,7 @@ import {
   createDefaultBlockPayload,
   getPageBlockDefinition,
   isPageBlockType,
+  parseColumnsPayload,
   validatePageBlock,
 } from "@/modules/content/domain/page-block-registry";
 import {
@@ -1796,6 +1797,13 @@ export async function saveSectionFieldsAction(
         title: (titles[index] ?? "").trim(),
         text: (texts[index] ?? "").trim(),
       })).filter((item) => item.title || item.text);
+    }
+    if (existing.sectionType === "COLUMNS" && formData.has("columnsJson")) {
+      const { columnCount, columns } = parseColumnsPayload(
+        text(formData, "columnsJson"),
+      );
+      payload.columnCount = columnCount;
+      payload.columns = columns;
     }
     await saveRevisionSection({
       id,
