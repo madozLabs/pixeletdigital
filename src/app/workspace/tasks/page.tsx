@@ -57,6 +57,13 @@ export default async function TasksPage({
         </span>
       </div>
 
+      <Link
+        className="admin-table__action"
+        href={`/workspace/tasks/schedule?world=${worldKey}`}
+      >
+        Planning imprimable
+      </Link>
+
       <form className="admin-form-card" method="get">
         <input type="hidden" name="world" value={worldKey} />
         {mineOnly ? <input type="hidden" name="mine" value="1" /> : null}
@@ -131,14 +138,20 @@ function toBoardTask(
   return {
     id: task.id,
     title: task.title,
+    description: task.description,
     status: task.status,
     priority: task.priority,
     progress: task.progress,
     version: task.version,
     dueDate: task.dueDate ? task.dueDate.toLocaleDateString("fr-FR") : null,
+    dueDateIso: task.dueDate ? task.dueDate.toISOString().slice(0, 10) : null,
+    assigneeId: task.assigneeId,
     assigneeName: task.assignee?.displayName ?? null,
     actualHours: task.actualMinutes ? task.actualMinutes / 60 : 0,
+    estimatedHours: task.estimatedMinutes ? task.estimatedMinutes / 60 : null,
+    parentTaskId: task.parentTaskId,
     parentTaskTitle: task.parentTask?.title ?? null,
+    dependencyTaskId: task.dependencyTaskId,
     dependencyTaskTitle: task.dependencyTask?.title ?? null,
   };
 }

@@ -22,19 +22,25 @@ import {
   IDLE_ACTION_STATE,
   SubmitButton,
 } from "../_components/feedback";
-import { moveTaskAction, updateTaskAction } from "./actions";
+import { editTaskDetailsAction, moveTaskAction, updateTaskAction } from "./actions";
 
 export type BoardTask = Readonly<{
   id: string;
   title: string;
+  description: string | null;
   status: string;
   priority: string;
   progress: number;
   version: number;
   dueDate: string | null;
+  dueDateIso: string | null;
+  assigneeId: string | null;
   assigneeName: string | null;
   actualHours: number;
+  estimatedHours: number | null;
+  parentTaskId: string | null;
   parentTaskTitle: string | null;
+  dependencyTaskId: string | null;
   dependencyTaskTitle: string | null;
 }>;
 
@@ -203,6 +209,18 @@ export function TaskBoard({
                             {canMutate ? (
                               <TaskCardControls task={task} />
                             ) : null}
+                            {canMutate ? (
+                              <EditTaskForm
+                                task={task}
+                                users={users ?? []}
+                                otherTasks={tasks
+                                  .filter((other) => other.id !== task.id)
+                                  .map((other) => ({
+                                    id: other.id,
+                                    label: other.title,
+                                  }))}
+                              />
+                            ) : null}
                             {currentUserId && users && revalidatePathHint ? (
                               <CommentThread
                                 entityType="TASK"
@@ -258,5 +276,123 @@ function TaskCardControls({ task }: Readonly<{ task: BoardTask }>) {
       <SubmitButton>Enregistrer</SubmitButton>
       <Feedback state={state} />
     </form>
+  );
+}
+
+const EDIT_DEPENDENCY_DATALIST_PREFIX = "edit-task-dependency-options-";
+
+function EditTaskForm({
+  task,
+  users,
+  otherTasks,
+}: Readonly<{
+  task: BoardTask;
+  users: readonly UserOption[];
+  otherTasks: readonly Readonly<{ id: string; label: string }>[];
+}>) {
+  const [state, action] = useActionState(
+    editTaskDetailsAction,
+    IDLE_ACTION_STATE,
+  );
+  const [dependencyQuery, setDependencyQuery] = useState(
+    otherTasks.find((other) => other.id === task.dependencyTaskId)?.label ??
+      "",
+  );
+  const matchedDependency = otherTasks.find(
+    (other) => other.label === dependencyQuery,
+  );
+  const datalistId = `${EDIT_DEPENDENCY_DATALIST_PREFIX}${task.id}`;
+
+  return (
+    <details className="billing-card__actions">
+      <summary>Modifier la tâche</summary>
+      <form action={action} className="admin-form-grid">
+        <input type="hidden" name="taskId" value={task.id} />
+        <input type="hidden" name="expectedVersion" value={task.version} />
+        <label>
+          Titre
+          <input name="title" required maxLength={160} defaultValue={task.title} />
+        </label>
+        <label>
+          Responsable
+          <select name="assigneeId" defaultValue={task.assigneeId ?? ""}>
+            <option value="">Non affecté</option>
+            {users.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Priorité
+          <select name="priority" defaultValue={task.priority}>
+            <option value="LOW">Faible</option>
+            <option value="NORMAL">Normale</option>
+            <option value="HIGH">Haute</option>
+            <option value="URGENT">Urgente</option>
+          </select>
+        </label>
+        <label>
+          Échéance
+          <input
+            name="dueDate"
+            type="date"
+            defaultValue={task.dueDateIso ?? ""}
+          />
+        </label>
+        <label>
+          Temps estimé (heures)
+          <input
+            name="estimatedHours"
+            type="number"
+            min={0}
+            step="0.25"
+            defaultValue={task.estimatedHours ?? ""}
+          />
+        </label>
+        <label>
+          Sous-tâche de
+          <select name="parentTaskId" defaultValue={task.parentTaskId ?? ""}>
+            <option value="">Aucune</option>
+            {otherTasks.map((other) => (
+              <option key={other.id} value={other.id}>
+                {other.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Dépend de
+          <input
+            list={datalistId}
+            value={dependencyQuery}
+            onChange={(event) => setDependencyQuery(event.target.value)}
+            placeholder="Rechercher une tâche…"
+            autoComplete="off"
+          />
+          <datalist id={datalistId}>
+            {otherTasks.map((other) => (
+              <option key={other.id} value={other.label} />
+            ))}
+          </datalist>
+          <input
+            type="hidden"
+            name="dependencyTaskId"
+            value={matchedDependency?.id ?? ""}
+          />
+        </label>
+        <label>
+          Description
+          <textarea
+            name="description"
+            maxLength={1000}
+            defaultValue={task.description ?? ""}
+          />
+        </label>
+        <SubmitButton>Enregistrer les modifications</SubmitButton>
+        <Feedback state={state} />
+      </form>
+    </details>
   );
 }

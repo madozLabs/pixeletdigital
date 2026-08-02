@@ -185,6 +185,105 @@ export async function moveTaskAction(
   }
 }
 
+const TASK_PRIORITIES = ["LOW", "NORMAL", "HIGH", "URGENT"] as const;
+type TaskPriority = (typeof TASK_PRIORITIES)[number];
+
+function isTaskPriority(value: string): value is TaskPriority {
+  return (TASK_PRIORITIES as readonly string[]).includes(value);
+}
+
+// Separate from updateTaskAction (status/progress/hours, driven by the
+// board's quick-edit form) -- this covers the fields that were only ever
+// settable at creation time (title, description, priority, assignee, due
+// date, estimate, parent/dependency), which had no edit path at all before.
+export async function editTaskDetailsAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const context = await getWorkspaceRequestContext();
+  if (!context?.actor || !mayManageTasks(context.actor.role)) {
+    return {
+      status: "error",
+      message: "Vous n'êtes pas autorisé à modifier cette tâche.",
+    };
+  }
+
+  const taskId = text(formData, "taskId");
+  const title = text(formData, "title");
+  if (!title) {
+    return { status: "error", message: "Le titre est requis." };
+  }
+  const priority = text(formData, "priority");
+  if (!isTaskPriority(priority)) {
+    return { status: "error", message: "Priorité invalide." };
+  }
+
+  try {
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      select: {
+        projectId: true,
+        parentTaskId: true,
+        project: { select: { worldKey: true } },
+      },
+    });
+    if (!task) {
+      return { status: "error", message: "Cette tâche n'existe plus." };
+    }
+    requireWorldAccess(context.actor, task.project.worldKey);
+
+    const expectedVersion = Number(formData.get("expectedVersion"));
+    const parentTaskId = optionalText(formData, "parentTaskId");
+    if (parentTaskId === taskId) {
+      return {
+        status: "error",
+        message: "Une tâche ne peut pas être sa propre sous-tâche.",
+      };
+    }
+    const dependencyTaskId = optionalText(formData, "dependencyTaskId");
+    if (dependencyTaskId === taskId) {
+      return {
+        status: "error",
+        message: "Une tâche ne peut pas dépendre d'elle-même.",
+      };
+    }
+    const estimatedHours = Number(formData.get("estimatedHours"));
+    const dueDate = optionalText(formData, "dueDate");
+
+    const updated = await prisma.task.updateMany({
+      where: { id: taskId, version: expectedVersion },
+      data: {
+        title,
+        description: optionalText(formData, "description"),
+        priority,
+        assigneeId: optionalText(formData, "assigneeId"),
+        parentTaskId,
+        dependencyTaskId,
+        dueDate: dueDate ? new Date(dueDate) : null,
+        estimatedMinutes:
+          Number.isFinite(estimatedHours) && estimatedHours > 0
+            ? Math.round(estimatedHours * 60)
+            : null,
+        version: { increment: 1 },
+      },
+    });
+    if (updated.count === 0) {
+      return {
+        status: "error",
+        message: "Cette tâche a changé depuis son dernier chargement.",
+      };
+    }
+    revalidatePath("/workspace/tasks");
+    return { status: "success", message: "Tâche modifiée." };
+  } catch (error) {
+    console.error("editTaskDetails failed", error);
+    return {
+      status: "error",
+      message: "La modification n'a pas pu être enregistrée. Merci de réessayer.",
+    };
+  }
+}
+
 export async function updateTaskAction(
   _state: ActionState,
   formData: FormData,
