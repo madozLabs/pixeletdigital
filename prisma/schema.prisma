@@ -538,12 +538,14 @@ model PageRevision {
   reviewedAt         DateTime?
   publishedAt        DateTime?
   scheduledPublishAt DateTime?
+  snapshotCursor     Int                @default(0)
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
   sections          PageRevisionSection[]
-  draftForPages     Page[]                @relation("PageDraftRevision")
-  publishedForPages Page[]                @relation("PagePublishedRevision")
+  snapshots         PageRevisionSnapshot[]
+  draftForPages     Page[]                 @relation("PageDraftRevision")
+  publishedForPages Page[]                 @relation("PagePublishedRevision")
 
   @@unique([pageId, revisionNumber])
   @@index([pageId, status])
@@ -585,6 +587,18 @@ model SectionMediaUsage {
   @@unique([sectionId, slot, order])
   @@index([mediaId])
   @@map("section_media_usages")
+}
+
+model PageRevisionSnapshot {
+  id         String       @id @default(cuid())
+  revisionId String
+  revision   PageRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  sequence   Int
+  sections   Json
+  createdAt  DateTime     @default(now())
+
+  @@unique([revisionId, sequence])
+  @@map("page_revision_snapshots")
 }
 
 model PageBlockDeletion {

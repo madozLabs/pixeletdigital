@@ -106,6 +106,8 @@ const ERROR_MESSAGE: Readonly<Record<string, string>> = {
   EDIT_CONFLICT:
     "Cet élément a été modifié par quelqu’un d’autre. Rechargez la page avant de réessayer.",
   NOTHING_TO_RESTORE: "Aucun bloc supprimé ne peut être restauré.",
+  NOTHING_TO_UNDO: "Rien à annuler.",
+  NOTHING_TO_REDO: "Rien à rétablir.",
   DRAFT_ALREADY_EXISTS:
     "Un brouillon existe déjà. Publiez-le ou abandonnez-le avant de restaurer une ancienne révision.",
   REVISION_NOT_RESTORABLE: "Cette révision ne peut pas être restaurée.",
@@ -968,6 +970,236 @@ async function assertEditableRevision(pageId: string, revisionId: string) {
   }
 }
 
+/**
+ * Undo/redo works as a linear timeline of full-section snapshots per
+ * revision, with a cursor marking "where we are". Every mutation captures
+ * a snapshot of the section list before and after itself; undo/redo just
+ * moves the cursor and restores the section rows to match the snapshot at
+ * the new position. A fresh edit after an undo drops the abandoned "future"
+ * snapshots, same as any standard undo/redo stack.
+ */
+const MAX_SECTION_HISTORY = 40;
+
+type SnapshotSection = {
+  id: string;
+  sectionKey: string;
+  sectionType: string;
+  order: number;
+  payload: Prisma.JsonValue;
+  payloadSchemaVersion: number;
+  mediaUsages: readonly { mediaId: string; slot: string; order: number }[];
+};
+
+async function captureSectionsSnapshot(
+  transaction: Prisma.TransactionClient,
+  revisionId: string,
+): Promise<SnapshotSection[]> {
+  const sections = await transaction.pageRevisionSection.findMany({
+    where: { revisionId },
+    orderBy: { order: "asc" },
+    include: { mediaUsages: true },
+  });
+  return sections.map((section) => ({
+    id: section.id,
+    sectionKey: section.sectionKey,
+    sectionType: section.sectionType,
+    order: section.order,
+    payload: section.payload,
+    payloadSchemaVersion: section.payloadSchemaVersion,
+    mediaUsages: section.mediaUsages.map((usage) => ({
+      mediaId: usage.mediaId,
+      slot: usage.slot,
+      order: usage.order,
+    })),
+  }));
+}
+
+function parseSnapshotSections(value: Prisma.JsonValue): SnapshotSection[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
+    const record = entry as Record<string, unknown>;
+    if (
+      typeof record.id !== "string" ||
+      typeof record.sectionKey !== "string" ||
+      typeof record.sectionType !== "string" ||
+      typeof record.order !== "number" ||
+      typeof record.payloadSchemaVersion !== "number"
+    ) {
+      return [];
+    }
+    const mediaUsages = Array.isArray(record.mediaUsages)
+      ? record.mediaUsages.flatMap((usage) => {
+          if (!usage || typeof usage !== "object" || Array.isArray(usage))
+            return [];
+          const usageRecord = usage as Record<string, unknown>;
+          return typeof usageRecord.mediaId === "string" &&
+            typeof usageRecord.slot === "string" &&
+            typeof usageRecord.order === "number"
+            ? [
+                {
+                  mediaId: usageRecord.mediaId,
+                  slot: usageRecord.slot,
+                  order: usageRecord.order,
+                },
+              ]
+            : [];
+        })
+      : [];
+    return [
+      {
+        id: record.id,
+        sectionKey: record.sectionKey,
+        sectionType: record.sectionType,
+        order: record.order,
+        payload: (record.payload ?? {}) as Prisma.JsonValue,
+        payloadSchemaVersion: record.payloadSchemaVersion,
+        mediaUsages,
+      },
+    ];
+  });
+}
+
+/**
+ * Call at the start of a mutating transaction. Drops any redo tail left
+ * over from a previous undo, and makes sure the state right before this
+ * edit is captured (a no-op after the first call for a given cursor
+ * position, since the previous mutation's "after" snapshot already covers
+ * it).
+ */
+async function beginSectionHistory(
+  transaction: Prisma.TransactionClient,
+  revisionId: string,
+): Promise<number> {
+  const revision = await transaction.pageRevision.findUniqueOrThrow({
+    where: { id: revisionId },
+    select: { snapshotCursor: true },
+  });
+  const cursor = revision.snapshotCursor;
+  await transaction.pageRevisionSnapshot.deleteMany({
+    where: { revisionId, sequence: { gt: cursor } },
+  });
+  const existing = await transaction.pageRevisionSnapshot.findUnique({
+    where: { revisionId_sequence: { revisionId, sequence: cursor } },
+  });
+  if (!existing) {
+    await transaction.pageRevisionSnapshot.create({
+      data: {
+        id: `revision_snapshot_${randomUUID()}`,
+        revisionId,
+        sequence: cursor,
+        sections: (await captureSectionsSnapshot(
+          transaction,
+          revisionId,
+        )) as unknown as Prisma.InputJsonValue,
+      },
+    });
+  }
+  return cursor;
+}
+
+/**
+ * Call at the end of a mutating transaction, once the section rows already
+ * reflect the change. Returns the new snapshotCursor to persist on the
+ * revision (merge it into that transaction's existing
+ * `pageRevision.update` call alongside the version bump).
+ */
+async function endSectionHistory(
+  transaction: Prisma.TransactionClient,
+  revisionId: string,
+  cursor: number,
+): Promise<number> {
+  const nextSequence = cursor + 1;
+  await transaction.pageRevisionSnapshot.create({
+    data: {
+      id: `revision_snapshot_${randomUUID()}`,
+      revisionId,
+      sequence: nextSequence,
+      sections: (await captureSectionsSnapshot(
+        transaction,
+        revisionId,
+      )) as unknown as Prisma.InputJsonValue,
+    },
+  });
+  await transaction.pageRevisionSnapshot.deleteMany({
+    where: {
+      revisionId,
+      sequence: { lt: nextSequence - MAX_SECTION_HISTORY },
+    },
+  });
+  return nextSequence;
+}
+
+async function restoreSectionsSnapshot(
+  transaction: Prisma.TransactionClient,
+  pageId: string,
+  revisionId: string,
+  sectionsJson: Prisma.JsonValue,
+  now: Date,
+): Promise<void> {
+  const snapshotSections = parseSnapshotSections(sectionsJson);
+  const current = await transaction.pageRevisionSection.findMany({
+    where: { revisionId },
+    select: { id: true },
+  });
+  const currentIds = new Set(current.map((section) => section.id));
+  const snapshotIds = new Set(snapshotSections.map((section) => section.id));
+  const toDelete = [...currentIds].filter((id) => !snapshotIds.has(id));
+  if (toDelete.length > 0) {
+    await transaction.sectionMediaUsage.deleteMany({
+      where: { sectionId: { in: toDelete } },
+    });
+    await transaction.pageRevisionSection.deleteMany({
+      where: { id: { in: toDelete } },
+    });
+  }
+  for (const section of snapshotSections) {
+    if (currentIds.has(section.id)) {
+      await transaction.pageRevisionSection.update({
+        where: { id: section.id },
+        data: {
+          sectionType: section.sectionType,
+          order: section.order,
+          payload: section.payload as Prisma.InputJsonValue,
+          payloadSchemaVersion: section.payloadSchemaVersion,
+          version: { increment: 1 },
+          updatedAt: now,
+        },
+      });
+    } else {
+      await transaction.pageRevisionSection.create({
+        data: {
+          id: section.id,
+          revisionId,
+          sectionKey: section.sectionKey,
+          sectionType: section.sectionType,
+          order: section.order,
+          payload: section.payload as Prisma.InputJsonValue,
+          payloadSchemaVersion: section.payloadSchemaVersion,
+          version: 1,
+          createdAt: now,
+          updatedAt: now,
+        },
+      });
+    }
+    await transaction.sectionMediaUsage.deleteMany({
+      where: { sectionId: section.id },
+    });
+    if (section.mediaUsages.length > 0) {
+      await transaction.sectionMediaUsage.createMany({
+        data: section.mediaUsages.map((usage) => ({
+          sectionId: section.id,
+          ...usage,
+        })),
+      });
+    }
+  }
+  await transaction.page.update({
+    where: { id: pageId },
+    data: { updatedAt: now },
+  });
+}
+
 async function saveRevisionSection(input: {
   id: string | null;
   pageId: string;
@@ -987,6 +1219,10 @@ async function saveRevisionSection(input: {
     if (revision?.page.draftRevisionId !== input.revisionId) {
       throw new Error("PAGE_NOT_DRAFT");
     }
+    const historyCursor = await beginSectionHistory(
+      transaction,
+      input.revisionId,
+    );
     const primaryMediaId =
       typeof input.payload.mediaId === "string" && input.payload.mediaId
         ? input.payload.mediaId
@@ -1079,9 +1315,18 @@ async function saveRevisionSection(input: {
         data: mediaUsages.map((usage) => ({ sectionId, ...usage })),
       });
     }
+    const nextSequence = await endSectionHistory(
+      transaction,
+      input.revisionId,
+      historyCursor,
+    );
     await transaction.pageRevision.update({
       where: { id: input.revisionId },
-      data: { version: { increment: 1 }, updatedAt: input.now },
+      data: {
+        version: { increment: 1 },
+        snapshotCursor: nextSequence,
+        updatedAt: input.now,
+      },
     });
     await transaction.page.update({
       where: { id: input.pageId },
@@ -1156,6 +1401,7 @@ export async function duplicatePageBlockAction(
     if (!source) throw new Error("SECTION_PAGE_MISMATCH");
     const now = new Date();
     await prisma.$transaction(async (transaction) => {
+      const historyCursor = await beginSectionHistory(transaction, revisionId);
       await transaction.pageRevisionSection.updateMany({
         where: { revisionId, order: { gt: source.order } },
         data: { order: { increment: 1 } },
@@ -1183,9 +1429,18 @@ export async function duplicatePageBlockAction(
           },
         },
       });
+      const nextSequence = await endSectionHistory(
+        transaction,
+        revisionId,
+        historyCursor,
+      );
       await transaction.pageRevision.update({
         where: { id: revisionId },
-        data: { version: { increment: 1 }, updatedAt: now },
+        data: {
+          version: { increment: 1 },
+          snapshotCursor: nextSequence,
+          updatedAt: now,
+        },
       });
       await transaction.page.update({
         where: { id: pageId },
@@ -1309,6 +1564,7 @@ export async function reorderPageBlocksAction(
         data: { version: { increment: 1 }, updatedAt: now },
       });
       if (revision.count !== 1) throw new Error("EDIT_CONFLICT");
+      const historyCursor = await beginSectionHistory(transaction, revisionId);
       await Promise.all(
         orderedIds.map((id, order) =>
           transaction.pageRevisionSection.update({
@@ -1317,6 +1573,15 @@ export async function reorderPageBlocksAction(
           }),
         ),
       );
+      const nextSequence = await endSectionHistory(
+        transaction,
+        revisionId,
+        historyCursor,
+      );
+      await transaction.pageRevision.update({
+        where: { id: revisionId },
+        data: { snapshotCursor: nextSequence },
+      });
       await transaction.page.update({
         where: { id: pageId },
         data: { updatedAt: now },
@@ -1568,6 +1833,7 @@ export async function deleteSectionAction(
         include: { mediaUsages: { orderBy: { order: "asc" } } },
       });
       if (!section) throw new Error("SECTION_PAGE_MISMATCH");
+      const historyCursor = await beginSectionHistory(transaction, revisionId);
       await transaction.pageBlockDeletion.create({
         data: {
           pageId,
@@ -1592,9 +1858,18 @@ export async function deleteSectionAction(
       });
       if (deleted.count !== 1) throw new Error("SECTION_PAGE_MISMATCH");
       const now = new Date();
+      const nextSequence = await endSectionHistory(
+        transaction,
+        revisionId,
+        historyCursor,
+      );
       await transaction.pageRevision.update({
         where: { id: revisionId },
-        data: { version: { increment: 1 }, updatedAt: now },
+        data: {
+          version: { increment: 1 },
+          snapshotCursor: nextSequence,
+          updatedAt: now,
+        },
       });
       await transaction.page.update({
         where: { id: pageId },
@@ -1623,6 +1898,7 @@ export async function restoreLastDeletedBlockAction(
         orderBy: { createdAt: "desc" },
       });
       if (!deletion) throw new Error("NOTHING_TO_RESTORE");
+      const historyCursor = await beginSectionHistory(transaction, revisionId);
       const mediaUsages = Array.isArray(deletion.mediaUsages)
         ? deletion.mediaUsages.flatMap((usage) => {
             if (!usage || typeof usage !== "object" || Array.isArray(usage))
@@ -1678,9 +1954,18 @@ export async function restoreLastDeletedBlockAction(
         where: { id: deletion.id },
         data: { restoredAt: now },
       });
+      const nextSequence = await endSectionHistory(
+        transaction,
+        revisionId,
+        historyCursor,
+      );
       await transaction.pageRevision.update({
         where: { id: revisionId },
-        data: { version: { increment: 1 }, updatedAt: now },
+        data: {
+          version: { increment: 1 },
+          snapshotCursor: nextSequence,
+          updatedAt: now,
+        },
       });
       await transaction.page.update({
         where: { id: pageId },
@@ -1689,6 +1974,93 @@ export async function restoreLastDeletedBlockAction(
     });
     revalidatePath("/workspace/site-content");
     return { status: "success", message: "Dernier bloc supprimé restauré." };
+  } catch (error) {
+    return toActionState(error);
+  }
+}
+
+export async function undoPageEditAction(
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const pageId = text(formData, "pageId");
+    const revisionId = text(formData, "revisionId");
+    const page = await prisma.page.findUniqueOrThrow({ where: { id: pageId } });
+    await actorFor(page.worldKey);
+    await assertEditableRevision(pageId, revisionId);
+    await prisma.$transaction(async (transaction) => {
+      const revision = await transaction.pageRevision.findUniqueOrThrow({
+        where: { id: revisionId },
+        select: { snapshotCursor: true },
+      });
+      if (revision.snapshotCursor <= 0) throw new Error("NOTHING_TO_UNDO");
+      const targetSequence = revision.snapshotCursor - 1;
+      const target = await transaction.pageRevisionSnapshot.findUnique({
+        where: { revisionId_sequence: { revisionId, sequence: targetSequence } },
+      });
+      if (!target) throw new Error("NOTHING_TO_UNDO");
+      const now = new Date();
+      await restoreSectionsSnapshot(
+        transaction,
+        pageId,
+        revisionId,
+        target.sections,
+        now,
+      );
+      await transaction.pageRevision.update({
+        where: { id: revisionId },
+        data: {
+          snapshotCursor: targetSequence,
+          version: { increment: 1 },
+          updatedAt: now,
+        },
+      });
+    });
+    revalidatePath("/workspace/site-content");
+    return { status: "success", message: "Modification annulée." };
+  } catch (error) {
+    return toActionState(error);
+  }
+}
+
+export async function redoPageEditAction(
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const pageId = text(formData, "pageId");
+    const revisionId = text(formData, "revisionId");
+    const page = await prisma.page.findUniqueOrThrow({ where: { id: pageId } });
+    await actorFor(page.worldKey);
+    await assertEditableRevision(pageId, revisionId);
+    await prisma.$transaction(async (transaction) => {
+      const revision = await transaction.pageRevision.findUniqueOrThrow({
+        where: { id: revisionId },
+        select: { snapshotCursor: true },
+      });
+      const targetSequence = revision.snapshotCursor + 1;
+      const target = await transaction.pageRevisionSnapshot.findUnique({
+        where: { revisionId_sequence: { revisionId, sequence: targetSequence } },
+      });
+      if (!target) throw new Error("NOTHING_TO_REDO");
+      const now = new Date();
+      await restoreSectionsSnapshot(
+        transaction,
+        pageId,
+        revisionId,
+        target.sections,
+        now,
+      );
+      await transaction.pageRevision.update({
+        where: { id: revisionId },
+        data: {
+          snapshotCursor: targetSequence,
+          version: { increment: 1 },
+          updatedAt: now,
+        },
+      });
+    });
+    revalidatePath("/workspace/site-content");
+    return { status: "success", message: "Modification rétablie." };
   } catch (error) {
     return toActionState(error);
   }

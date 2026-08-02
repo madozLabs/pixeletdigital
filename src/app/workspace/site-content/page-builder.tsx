@@ -26,6 +26,7 @@ import {
   Layers,
   Monitor,
   MoreVertical,
+  Redo2,
   Search,
   SlidersHorizontal,
   Smartphone,
@@ -60,9 +61,11 @@ import {
   copyPageBlockToPageAction,
   deleteSectionAction,
   duplicatePageBlockAction,
+  redoPageEditAction,
   reorderPageBlocksAction,
   restoreLastDeletedBlockAction,
   setPageBlockMediaAction,
+  undoPageEditAction,
 } from "./actions";
 
 const SIDEBAR_STORAGE_KEY = "cms-page-builder-sidebar-collapsed";
@@ -163,7 +166,6 @@ export function PageBuilder({
     sectionIds.map((id, index) => [id, sectionGalleryMediaIds[index] ?? []]),
   );
   const [orderedIds, setOrderedIds] = useState(sectionIds);
-  const [undoOrder, setUndoOrder] = useState<readonly string[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(
     sectionIds[0] ?? null,
   );
@@ -228,6 +230,61 @@ export function PageBuilder({
     iframeRef.current?.contentWindow?.location.reload();
   }, [savedVersionsKey]);
 
+  const [undoState, setUndoState] = useState(IDLE_ACTION_STATE);
+  const [redoState, setRedoState] = useState(IDLE_ACTION_STATE);
+  const undoFormRef = useRef<HTMLFormElement>(null);
+  const redoFormRef = useRef<HTMLFormElement>(null);
+  function undoAction(formData: FormData) {
+    startTransition(async () => {
+      const state = await undoPageEditAction(formData);
+      setUndoState(state);
+      if (state.status === "success") router.refresh();
+    });
+  }
+  function redoAction(formData: FormData) {
+    startTransition(async () => {
+      const state = await redoPageEditAction(formData);
+      setRedoState(state);
+      if (state.status === "success") router.refresh();
+    });
+  }
+
+  // Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z (or +Y) drive the same server-backed
+  // history as the toolbar buttons, but only while focus isn't inside a
+  // text field -- otherwise this would hijack the browser's native
+  // single-field undo while typing, in the sidebar or inside the preview.
+  useEffect(() => {
+    if (!editable) return;
+    function isTextEditingTarget(target: Element | null): boolean {
+      if (!target) return false;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      ) {
+        return true;
+      }
+      if (target instanceof HTMLIFrameElement) {
+        return isTextEditingTarget(target.contentDocument?.activeElement ?? null);
+      }
+      return false;
+    }
+    function handleKeydown(event: KeyboardEvent) {
+      const key = event.key.toLowerCase();
+      if (!(event.ctrlKey || event.metaKey) || (key !== "z" && key !== "y")) {
+        return;
+      }
+      if (isTextEditingTarget(document.activeElement)) return;
+      const isRedo = key === "y" || (key === "z" && event.shiftKey);
+      event.preventDefault();
+      if (isRedo) redoFormRef.current?.requestSubmit();
+      else undoFormRef.current?.requestSubmit();
+    }
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, [editable]);
+
   function toggleSidebar() {
     setIsSidebarCollapsed((current) => {
       const next = !current;
@@ -236,9 +293,8 @@ export function PageBuilder({
     });
   }
 
-  function persistOrder(next: string[], remember = true) {
+  function persistOrder(next: string[]) {
     if (!editable || !revisionId || revisionVersion === null) return;
-    if (remember) setUndoOrder(orderedIds);
     setOrderedIds(next);
     const data = new FormData();
     data.set("pageId", pageId);
@@ -911,17 +967,33 @@ export function PageBuilder({
           </span>
           {previewUrl ? (
             <div>
-              {undoOrder ? (
-                <button
-                  type="button"
-                  aria-label="Annuler le dernier déplacement"
-                  onClick={() => {
-                    persistOrder([...undoOrder], false);
-                    setUndoOrder(null);
-                  }}
-                >
-                  <Undo2 size={16} />
-                </button>
+              {editable && revisionId ? (
+                <form ref={undoFormRef} action={undoAction}>
+                  <input type="hidden" name="pageId" value={pageId} />
+                  <input type="hidden" name="revisionId" value={revisionId} />
+                  <button
+                    type="submit"
+                    aria-label="Annuler (Ctrl+Z)"
+                    title="Annuler (Ctrl+Z)"
+                  >
+                    <Undo2 size={16} />
+                  </button>
+                  <Feedback state={undoState} />
+                </form>
+              ) : null}
+              {editable && revisionId ? (
+                <form ref={redoFormRef} action={redoAction}>
+                  <input type="hidden" name="pageId" value={pageId} />
+                  <input type="hidden" name="revisionId" value={revisionId} />
+                  <button
+                    type="submit"
+                    aria-label="Rétablir (Ctrl+Maj+Z)"
+                    title="Rétablir (Ctrl+Maj+Z)"
+                  >
+                    <Redo2 size={16} />
+                  </button>
+                  <Feedback state={redoState} />
+                </form>
               ) : null}
               {editable && revisionId ? (
                 <RestoreDeletedBlockButton

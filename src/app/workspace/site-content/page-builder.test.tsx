@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => ({
   restore: vi.fn(),
   copy: vi.fn(),
   remove: vi.fn(),
+  undo: vi.fn(),
+  redo: vi.fn(),
   refresh: vi.fn(),
   onDragEnd: null as null | ((result: unknown) => void),
 }));
@@ -74,6 +76,8 @@ vi.mock("./actions", () => ({
   restoreLastDeletedBlockAction: mocks.restore,
   copyPageBlockToPageAction: mocks.copy,
   deleteSectionAction: mocks.remove,
+  undoPageEditAction: mocks.undo,
+  redoPageEditAction: mocks.redo,
 }));
 
 import { PageBuilder } from "./page-builder";
@@ -92,6 +96,8 @@ describe("PageBuilder canvas", () => {
       mocks.restore,
       mocks.copy,
       mocks.remove,
+      mocks.undo,
+      mocks.redo,
     ]) {
       mutation.mockResolvedValue({ status: "success", message: "OK" });
     }
@@ -113,7 +119,7 @@ describe("PageBuilder canvas", () => {
     expect(screen.getByText("620px")).toBeInTheDocument();
   });
 
-  it("persists a block move and exposes a one-step undo", async () => {
+  it("persists a block move and exposes undo/redo", async () => {
     renderBuilder();
     mocks.onDragEnd?.({ source: { index: 0 }, destination: { index: 1 } });
     await waitFor(() => expect(mocks.reorder).toHaveBeenCalledOnce());
@@ -122,9 +128,12 @@ describe("PageBuilder canvas", () => {
       "section_2",
       "section_1",
     ]);
-    expect(
-      screen.getByRole("button", { name: "Annuler le dernier déplacement" }),
-    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Annuler (Ctrl+Z)" }));
+    await waitFor(() => expect(mocks.undo).toHaveBeenCalledOnce());
+    fireEvent.click(
+      screen.getByRole("button", { name: "Rétablir (Ctrl+Maj+Z)" }),
+    );
+    await waitFor(() => expect(mocks.redo).toHaveBeenCalledOnce());
   });
 
   it("adds, edits, duplicates and deletes blocks from the canvas controls", async () => {
