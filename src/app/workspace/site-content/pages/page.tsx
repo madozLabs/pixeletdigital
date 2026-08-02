@@ -7,6 +7,8 @@ export default async function CmsPagesRoute({
     world?: string;
     listPage?: string;
     notice?: string;
+    q?: string;
+    status?: string;
   }>;
 }>) {
   const params = await searchParams;

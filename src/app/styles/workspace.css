@@ -1407,6 +1407,48 @@
   gap: var(--space-2);
 }
 
+.cms-list-filters {
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2) !important;
+}
+.cms-list-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 12rem;
+}
+
+.cms-revision-attribution {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.75rem;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  margin: 0.2rem 0 0.6rem;
+}
+.cms-revision-attribution em {
+  font-style: normal;
+}
+
+.cms-char-counter__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.cms-char-counter {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  color: var(--ink-soft, #6b7280);
+  font-weight: 400;
+}
+.cms-char-counter--over {
+  color: var(--danger, #b3261e);
+  font-weight: 600;
+}
+
 .cms-editor {
   display: flex;
   flex-direction: column;

@@ -28,6 +28,7 @@ import {
   createPageAction,
   deleteMediaAction,
   deleteSectionAction,
+  duplicatePageAction,
   saveSectionAction,
   saveSectionFieldsAction,
   saveSiteIdentityDraftAction,
@@ -91,12 +92,30 @@ export function CreatePageForm({ worldKey }: Readonly<{ worldKey: string }>) {
   );
 }
 
+export function DuplicatePageForm({
+  pageId,
+  worldKey,
+}: Readonly<{ pageId: string; worldKey: string }>) {
+  const [state, action] = useActionState(duplicatePageAction, IDLE_ACTION_STATE);
+  return (
+    <form action={action} className="cms-builder__duplicate">
+      <input type="hidden" name="pageId" value={pageId} />
+      <input type="hidden" name="worldKey" value={worldKey} />
+      <button type="submit" className="admin-table__action">
+        Dupliquer
+      </button>
+      <Feedback state={state} />
+    </form>
+  );
+}
+
 export function RevisionEditor({
   pageId,
   draft,
   published,
   history,
   changeSummary,
+  authors,
 }: Readonly<{
   pageId: string;
   draft: WorkspaceRevisionDto | null;
@@ -109,6 +128,7 @@ export function RevisionEditor({
     moved: readonly string[];
     totalChanges: number;
   }> | null;
+  authors: Readonly<Record<string, string>>;
 }>) {
   const [startState, startAction] = useActionState(
     startPageRevisionAction,
@@ -129,15 +149,25 @@ export function RevisionEditor({
           <SubmitButton>Créer un brouillon</SubmitButton>
           <Feedback state={startState} />
         </form>
-        <RevisionHistory pageId={pageId} revisions={history} restorable />
+        <RevisionHistory
+          pageId={pageId}
+          revisions={history}
+          restorable
+          authors={authors}
+        />
       </section>
     );
   }
   return (
     <>
-      <ActiveRevisionEditor pageId={pageId} revision={draft} />
+      <ActiveRevisionEditor pageId={pageId} revision={draft} authors={authors} />
       {changeSummary ? <RevisionChangeSummary summary={changeSummary} /> : null}
-      <RevisionHistory pageId={pageId} revisions={history} restorable={false} />
+      <RevisionHistory
+        pageId={pageId}
+        revisions={history}
+        restorable={false}
+        authors={authors}
+      />
     </>
   );
 }
@@ -190,10 +220,12 @@ function RevisionHistory({
   pageId,
   revisions,
   restorable,
+  authors,
 }: Readonly<{
   pageId: string;
   revisions: readonly WorkspaceRevisionDto[];
   restorable: boolean;
+  authors: Readonly<Record<string, string>>;
 }>) {
   const candidates = revisions.filter((revision) =>
     ["PUBLISHED", "SUPERSEDED", "ARCHIVED"].includes(revision.status),
@@ -207,6 +239,7 @@ function RevisionHistory({
             <span>
               Version {revision.revisionNumber} · {revision.status}
             </span>
+            <RevisionAttribution revision={revision} authors={authors} />
             {restorable ? (
               <RestoreRevisionForm pageId={pageId} revisionId={revision.id} />
             ) : null}
@@ -214,6 +247,27 @@ function RevisionHistory({
         ))}
       </ol>
     </details>
+  );
+}
+
+function RevisionAttribution({
+  revision,
+  authors,
+}: Readonly<{
+  revision: WorkspaceRevisionDto;
+  authors: Readonly<Record<string, string>>;
+}>) {
+  const nameFor = (id: string | null) => (id ? (authors[id] ?? id) : null);
+  const created = nameFor(revision.createdById);
+  const reviewed = nameFor(revision.reviewedById);
+  const published = nameFor(revision.publishedById);
+  if (!created && !reviewed && !published) return null;
+  return (
+    <span className="cms-revision-attribution">
+      {created ? <em>Créée par {created}</em> : null}
+      {reviewed ? <em>Relue par {reviewed}</em> : null}
+      {published ? <em>Publiée par {published}</em> : null}
+    </span>
   );
 }
 
@@ -547,15 +601,13 @@ function ActiveSiteIdentityEditor({
               </div>
               <div className="cms-settings-section">
                 <h3>Référencement</h3>
-                <label>
-                  Description SEO par défaut
-                  <textarea
-                    name="defaultSeoDescription"
-                    rows={3}
-                    defaultValue={config.defaultSeoDescription}
-                    maxLength={180}
-                  />
-                </label>
+                <CharCounterField
+                  label="Description SEO par défaut"
+                  name="defaultSeoDescription"
+                  defaultValue={config.defaultSeoDescription}
+                  maxLength={180}
+                  multiline
+                />
               </div>
               <div className="cms-settings-section">
                 <h3>Appel à l’action principal</h3>
@@ -1237,7 +1289,12 @@ function SiteIdentityTransition({
 function ActiveRevisionEditor({
   pageId,
   revision,
-}: Readonly<{ pageId: string; revision: WorkspaceRevisionDto }>) {
+  authors,
+}: Readonly<{
+  pageId: string;
+  revision: WorkspaceRevisionDto;
+  authors: Readonly<Record<string, string>>;
+}>) {
   const [saveState, saveAction] = useActionState(
     updatePageRevisionMetadataAction,
     IDLE_ACTION_STATE,
@@ -1262,6 +1319,7 @@ function ActiveRevisionEditor({
       <h2>
         Version de travail {revision.revisionNumber} · {revision.status}
       </h2>
+      <RevisionAttribution revision={revision} authors={authors} />
       <form action={saveAction}>
         <input type="hidden" name="pageId" value={pageId} />
         <input type="hidden" name="revisionId" value={revision.id} />
@@ -1276,24 +1334,21 @@ function ActiveRevisionEditor({
           />
         </label>
         <div className="admin-form-grid">
-          <label>
-            Titre SEO
-            <input
-              name="seoTitle"
-              defaultValue={revision.seoTitle ?? ""}
-              maxLength={70}
-              disabled={revision.status !== "DRAFT"}
-            />
-          </label>
-          <label>
-            Description SEO
-            <textarea
-              name="seoDescription"
-              defaultValue={revision.seoDescription ?? ""}
-              maxLength={180}
-              disabled={revision.status !== "DRAFT"}
-            />
-          </label>
+          <CharCounterField
+            label="Titre SEO"
+            name="seoTitle"
+            defaultValue={revision.seoTitle ?? ""}
+            maxLength={70}
+            disabled={revision.status !== "DRAFT"}
+          />
+          <CharCounterField
+            label="Description SEO"
+            name="seoDescription"
+            defaultValue={revision.seoDescription ?? ""}
+            maxLength={180}
+            multiline
+            disabled={revision.status !== "DRAFT"}
+          />
         </div>
         {revision.status === "DRAFT" ? (
           <SubmitButton>Enregistrer la version</SubmitButton>
@@ -1932,6 +1987,58 @@ function BackgroundImageAdjustments({
         />
       </div>
     </details>
+  );
+}
+
+function CharCounterField({
+  label,
+  name,
+  defaultValue,
+  maxLength,
+  multiline = false,
+  disabled = false,
+}: Readonly<{
+  label: string;
+  name: string;
+  defaultValue: string;
+  maxLength: number;
+  multiline?: boolean;
+  disabled?: boolean;
+}>) {
+  const [length, setLength] = useState(defaultValue.length);
+  const remaining = maxLength - length;
+  return (
+    <label>
+      <span className="cms-char-counter__head">
+        {label}
+        <span
+          className={
+            remaining < 0
+              ? "cms-char-counter cms-char-counter--over"
+              : "cms-char-counter"
+          }
+        >
+          {length}/{maxLength}
+        </span>
+      </span>
+      {multiline ? (
+        <textarea
+          name={name}
+          defaultValue={defaultValue}
+          maxLength={maxLength}
+          disabled={disabled}
+          onChange={(event) => setLength(event.target.value.length)}
+        />
+      ) : (
+        <input
+          name={name}
+          defaultValue={defaultValue}
+          maxLength={maxLength}
+          disabled={disabled}
+          onChange={(event) => setLength(event.target.value.length)}
+        />
+      )}
+    </label>
   );
 }
 

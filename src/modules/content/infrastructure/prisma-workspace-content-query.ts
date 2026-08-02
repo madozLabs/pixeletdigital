@@ -10,10 +10,63 @@ export class PrismaWorkspaceContentReader implements WorkspaceContentReader {
     selectedPageId?: string;
     skip: number;
     take: number;
+    pageSearch?: string;
+    pageStatus?: string;
+    mediaSearch?: string;
+    mediaType?: string;
   }) {
     const needsFullMedia =
       (Boolean(input.selectedPageId) || input.tab === "identity") &&
       input.tab !== "media";
+    const pageSearch = input.pageSearch?.trim();
+    const pagesWhere = {
+      worldKey: input.worldKey,
+      ...(pageSearch
+        ? {
+            OR: [
+              { title: { contains: pageSearch, mode: "insensitive" as const } },
+              { slug: { contains: pageSearch, mode: "insensitive" as const } },
+              {
+                routePath: {
+                  contains: pageSearch,
+                  mode: "insensitive" as const,
+                },
+              },
+            ],
+          }
+        : {}),
+      ...(input.pageStatus ? { lifecycle: input.pageStatus as never } : {}),
+    };
+    const mediaSearch = input.mediaSearch?.trim();
+    const mediaWhere = {
+      worldKey: input.worldKey,
+      ...(mediaSearch
+        ? {
+            OR: [
+              { title: { contains: mediaSearch, mode: "insensitive" as const } },
+              {
+                altText: {
+                  contains: mediaSearch,
+                  mode: "insensitive" as const,
+                },
+              },
+              { tags: { has: mediaSearch } },
+            ],
+          }
+        : {}),
+      ...(input.mediaType === "image"
+        ? { mimeType: { startsWith: "image/" } }
+        : input.mediaType === "video"
+          ? { mimeType: { startsWith: "video/" } }
+          : input.mediaType === "other"
+            ? {
+                AND: [
+                  { mimeType: { not: { startsWith: "image/" } } },
+                  { mimeType: { not: { startsWith: "video/" } } },
+                ],
+              }
+            : {}),
+    };
     const [
       recentPages,
       homePage,
@@ -37,17 +90,23 @@ export class PrismaWorkspaceContentReader implements WorkspaceContentReader {
       this.database.page.findFirst({
         where: { worldKey: input.worldKey, slug: "accueil" },
       }),
-      this.database.page.count({ where: { worldKey: input.worldKey } }),
+      input.tab === "pages"
+        ? this.database.page.count({ where: pagesWhere })
+        : this.database.page.count({ where: { worldKey: input.worldKey } }),
       this.database.page.count({
         where: { worldKey: input.worldKey, lifecycle: "PUBLISHED" },
       }),
       this.database.page.count({
         where: { worldKey: input.worldKey, draftRevisionId: { not: null } },
       }),
-      this.database.mediaAsset.count({ where: { worldKey: input.worldKey } }),
+      input.tab === "media"
+        ? this.database.mediaAsset.count({ where: mediaWhere })
+        : this.database.mediaAsset.count({
+            where: { worldKey: input.worldKey },
+          }),
       input.tab === "pages"
         ? this.database.page.findMany({
-            where: { worldKey: input.worldKey },
+            where: pagesWhere,
             orderBy: { updatedAt: "desc" },
             skip: input.skip,
             take: input.take,
@@ -61,7 +120,7 @@ export class PrismaWorkspaceContentReader implements WorkspaceContentReader {
         : Promise.resolve([]),
       input.tab === "media"
         ? this.database.mediaAsset.findMany({
-            where: { worldKey: input.worldKey },
+            where: mediaWhere,
             orderBy: { createdAt: "desc" },
             skip: input.skip,
             take: input.take,
@@ -102,6 +161,26 @@ export class PrismaWorkspaceContentReader implements WorkspaceContentReader {
         : Promise.resolve(null),
     ]);
 
+    const revisionAuthors: Record<string, string> = {};
+    if (input.selectedPageId && selectedPage) {
+      const authorIds = new Set<string>();
+      for (const revision of selectedPage.revisions) {
+        if (revision.createdById) authorIds.add(revision.createdById);
+        if (revision.reviewedById) authorIds.add(revision.reviewedById);
+        if (revision.publishedById) authorIds.add(revision.publishedById);
+      }
+      if (authorIds.size > 0) {
+        const users = await this.database.user.findMany({
+          where: { id: { in: [...authorIds] } },
+          select: { id: true, displayName: true, normalizedEmail: true },
+        });
+        for (const user of users) {
+          revisionAuthors[user.id] =
+            user.displayName ?? user.normalizedEmail ?? user.id;
+        }
+      }
+    }
+
     return {
       recentPages,
       homePage,
@@ -118,6 +197,7 @@ export class PrismaWorkspaceContentReader implements WorkspaceContentReader {
         ? { ...selectedPage, revisionHistory: selectedPage.revisions }
         : null,
       siteIdentity,
+      revisionAuthors,
     };
   }
 }

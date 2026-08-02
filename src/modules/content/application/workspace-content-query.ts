@@ -35,6 +35,9 @@ export type WorkspaceRevisionDto = Readonly<{
   seoTitle: string | null;
   seoDescription: string | null;
   version: number;
+  createdById: string | null;
+  reviewedById: string | null;
+  publishedById: string | null;
   reviewedAt: Date | null;
   publishedAt: Date | null;
   updatedAt: Date;
@@ -79,6 +82,7 @@ export type WorkspaceContentDto = Readonly<{
   publishedServices: number;
   selectedPage: WorkspaceEditablePageDto | null;
   siteIdentity: WorkspaceSiteIdentityDto | null;
+  revisionAuthors: Readonly<Record<string, string>>;
 }>;
 
 export type WorkspaceSiteIdentityRevisionDto = Readonly<{
@@ -104,6 +108,10 @@ export interface WorkspaceContentReader {
     selectedPageId?: string;
     skip: number;
     take: number;
+    pageSearch?: string;
+    pageStatus?: string;
+    mediaSearch?: string;
+    mediaType?: string;
   }): Promise<WorkspaceContentDto>;
 }
 
@@ -116,6 +124,10 @@ export async function getWorkspaceContent(
     selectedPageId?: string;
     skip: number;
     take: number;
+    pageSearch?: string;
+    pageStatus?: string;
+    mediaSearch?: string;
+    mediaType?: string;
   }>,
 ) {
   const actor = requireActiveActor(context);

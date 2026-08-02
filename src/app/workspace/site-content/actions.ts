@@ -111,6 +111,9 @@ const ERROR_MESSAGE: Readonly<Record<string, string>> = {
   REVISION_NOT_RESTORABLE: "Cette révision ne peut pas être restaurée.",
   SUPABASE_STORAGE_NOT_CONFIGURED:
     "Le stockage média n'est pas configuré sur cet environnement.",
+  PAGE_NOT_FOUND: "Cette page n'existe plus.",
+  PAGE_NOT_DUPLICABLE:
+    "Les pages système ou liées à un service ne peuvent pas être dupliquées.",
 };
 
 function toActionState(error: unknown): ActionState {
@@ -658,6 +661,118 @@ export async function createPageAction(
           createdById: actor.id,
           createdAt: now,
           updatedAt: now,
+        },
+      });
+      await transaction.page.update({
+        where: { id: pageId },
+        data: { draftRevisionId: revisionId },
+      });
+    });
+    revalidatePath("/workspace/site-content");
+  } catch (error) {
+    return toActionState(error);
+  }
+  redirect(
+    `/workspace/site-content/pages/${encodeURIComponent(createdPageId ?? "")}/edit?world=${encodeURIComponent(worldKey)}`,
+  );
+}
+
+async function uniquePageSlug(
+  worldKey: string,
+  pageType: string,
+  baseSlug: string,
+): Promise<string> {
+  let candidate = `${baseSlug}-copie`;
+  let suffix = 2;
+  for (;;) {
+    const existing = await prisma.page.findFirst({
+      where: { worldKey, pageType, slug: candidate },
+      select: { id: true },
+    });
+    if (!existing) return candidate;
+    candidate = `${baseSlug}-copie-${suffix}`;
+    suffix += 1;
+  }
+}
+
+export async function duplicatePageAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const worldKey = text(formData, "worldKey");
+  let createdPageId: string | null = null;
+  try {
+    const sourcePageId = text(formData, "pageId");
+    const { actor } = await actorFor(worldKey);
+    const source = await prisma.page.findFirst({
+      where: { id: sourcePageId, worldKey },
+      include: {
+        draftRevision: { include: { sections: { include: { mediaUsages: true } } } },
+        publishedRevision: {
+          include: { sections: { include: { mediaUsages: true } } },
+        },
+      },
+    });
+    if (!source) throw new Error("PAGE_NOT_FOUND");
+    if (source.pageKind === "SYSTEM" || source.serviceId) {
+      throw new Error("PAGE_NOT_DUPLICABLE");
+    }
+    const sourceRevision = source.draftRevision ?? source.publishedRevision;
+    const slug = await uniquePageSlug(worldKey, source.pageType, source.slug);
+    const now = new Date();
+    await prisma.$transaction(async (transaction) => {
+      const pageId = randomUUID();
+      createdPageId = pageId;
+      const revisionId = `revision_${randomUUID()}`;
+      await transaction.page.create({
+        data: {
+          id: pageId,
+          worldKey,
+          pageType: source.pageType,
+          templateKey: source.templateKey,
+          title: `${source.title} (copie)`,
+          slug,
+          routePath:
+            worldKey === "kwaliti-print" ? `/kwaliti-print/${slug}` : `/${slug}`,
+          lifecycle: "DRAFT",
+          version: 1,
+          createdAt: now,
+          updatedAt: now,
+        },
+      });
+      await transaction.pageRevision.create({
+        data: {
+          id: revisionId,
+          pageId,
+          revisionNumber: 1,
+          status: "DRAFT",
+          title: `${source.title} (copie)`,
+          seoTitle: sourceRevision?.seoTitle ?? null,
+          seoDescription: sourceRevision?.seoDescription ?? null,
+          createdById: actor.id,
+          createdAt: now,
+          updatedAt: now,
+          sections: {
+            create: (sourceRevision?.sections ?? []).map((section) => ({
+              id: `revision_section_${randomUUID()}`,
+              sectionKey: section.sectionKey,
+              sectionType: section.sectionType,
+              order: section.order,
+              payload: section.payload as Prisma.InputJsonValue,
+              payloadSchemaVersion: section.payloadSchemaVersion,
+              version: 1,
+              createdAt: now,
+              updatedAt: now,
+              mediaUsages: {
+                create: section.mediaUsages.map((usage) => ({
+                  mediaId: usage.mediaId,
+                  slot: usage.slot,
+                  order: usage.order,
+                  createdAt: now,
+                })),
+              },
+            })),
+          },
         },
       });
       await transaction.page.update({

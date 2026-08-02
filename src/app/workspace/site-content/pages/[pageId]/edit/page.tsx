@@ -45,6 +45,7 @@ export default async function VisualPageEditorRoute({
       page={content.value.selectedPage}
       media={content.value.fullMediaForEditor}
       pages={content.value.allPagesForNavigation}
+      revisionAuthors={content.value.revisionAuthors}
     />
   );
 }

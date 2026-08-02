@@ -28,11 +28,11 @@ import { PrismaWorkspaceEnquiryReader } from "@/modules/enquiries/infrastructure
 import { parsePage, toSkipTake } from "@/shared/pagination";
 import { LifecycleBadge } from "../_components/status-badge";
 import { Pagination } from "../_components/pagination";
-import { actorHasWorldAccess } from "../_lib/authorization";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import {
   DeleteMediaForm,
   DeleteSectionForm,
+  DuplicatePageForm,
   RevisionEditor,
   SiteIdentityEditor,
   SectionFieldsForm,
@@ -67,11 +67,6 @@ const TYPED_SECTION_TYPES = new Set([
   "CONTACT_INFO",
 ]);
 
-const CONTENT_WORLDS = [
-  { key: "pixel-digital", label: "Pixel&Digital" },
-  { key: "kwaliti-print", label: "Kwaliti Print" },
-] as const;
-
 type MediaAsset = WorkspaceMediaDto;
 
 export default async function SiteContentPage({
@@ -84,6 +79,9 @@ export default async function SiteContentPage({
     page?: string;
     tab?: string;
     listPage?: string;
+    q?: string;
+    status?: string;
+    type?: string;
   }>;
   standalone?: boolean;
   identityFocus?: "all" | "appearance" | "navigation" | "settings";
@@ -101,6 +99,9 @@ export default async function SiteContentPage({
   }
   const listPageParams = parsePage(params.listPage);
   const { skip: listSkip, take: listTake } = toSkipTake(listPageParams);
+  const search = params.q?.trim() || undefined;
+  const pageStatus = tab === "pages" ? params.status || undefined : undefined;
+  const mediaType = tab === "media" ? params.type || undefined : undefined;
 
   const [contentResult, enquiryResult] = await Promise.all([
     getWorkspaceContent(
@@ -112,6 +113,10 @@ export default async function SiteContentPage({
         selectedPageId: params.page,
         skip: listSkip,
         take: listTake,
+        pageSearch: tab === "pages" ? search : undefined,
+        pageStatus,
+        mediaSearch: tab === "media" ? search : undefined,
+        mediaType,
       },
     ),
     tab === "overview"
@@ -137,6 +142,7 @@ export default async function SiteContentPage({
     publishedServices,
     selectedPage,
     siteIdentity,
+    revisionAuthors,
   } = contentResult.value;
   const enquiryCount = enquiryResult?.ok ? enquiryResult.value : null;
 
@@ -146,72 +152,20 @@ export default async function SiteContentPage({
       (tab === "media" ? totalMedia : totalPages) / listPageParams.pageSize,
     ),
   );
-  const availableWorlds = CONTENT_WORLDS.filter((world) =>
-    context.actor ? actorHasWorldAccess(context.actor, world.key) : false,
-  );
-
   return (
     <>
       {!standalone ? (
-        <>
-          <div className="admin-page-heading">
-            <div>
-              <h1 className="admin-content__title">Site &amp; contenus</h1>
-              <p className="admin-content__lede">
-                Pilotez le site public : pages, sections, médias et publication.
-              </p>
-            </div>
-            <span className="admin-metric">
-              {publishedCount} page{publishedCount > 1 ? "s" : ""} en ligne
-            </span>
+        <div className="admin-page-heading">
+          <div>
+            <h1 className="admin-content__title">Site &amp; contenus</h1>
+            <p className="admin-content__lede">
+              Pilotez le site public : pages, sections, médias et publication.
+            </p>
           </div>
-
-          <nav className="admin-tabs" aria-label="Univers du contenu">
-            {availableWorlds.map((world) => (
-              <Link
-                key={world.key}
-                className={
-                  world.key === worldKey
-                    ? "admin-tabs__item admin-tabs__item--active"
-                    : "admin-tabs__item"
-                }
-                href={`/workspace/site-content?world=${world.key}&tab=${tab}`}
-                aria-current={world.key === worldKey ? "page" : undefined}
-              >
-                {world.label}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="admin-tabs" role="tablist">
-            {(
-              [
-                ["overview", "Vue d’ensemble"],
-                ["pages", "Pages"],
-                ["media", "Médiathèque"],
-                ["identity", "Identité du site"],
-              ] as const
-            ).map(([id, label]) => (
-              <Link
-                key={id}
-                className={
-                  tab === id
-                    ? "admin-tabs__item admin-tabs__item--active"
-                    : "admin-tabs__item"
-                }
-                href={`/workspace/site-content?world=${worldKey}&tab=${id}`}
-              >
-                {label}
-                {id === "pages" ? (
-                  <span className="admin-tabs__count">{totalPages}</span>
-                ) : null}
-                {id === "media" ? (
-                  <span className="admin-tabs__count">{totalMedia}</span>
-                ) : null}
-              </Link>
-            ))}
-          </div>
-        </>
+          <span className="admin-metric">
+            {publishedCount} page{publishedCount > 1 ? "s" : ""} en ligne
+          </span>
+        </div>
       ) : null}
 
       {tab === "overview" ? (
@@ -227,7 +181,13 @@ export default async function SiteContentPage({
         />
       ) : tab === "media" ? (
         <>
-          <MediaPanel worldKey={worldKey} media={mediaForTab} now={now} />
+          <MediaPanel
+            worldKey={worldKey}
+            media={mediaForTab}
+            now={now}
+            search={params.q ?? ""}
+            mediaType={params.type ?? ""}
+          />
           <Pagination
             basePath={
               standalone
@@ -237,6 +197,8 @@ export default async function SiteContentPage({
             searchParams={{
               world: worldKey,
               ...(standalone ? {} : { tab: "media" }),
+              ...(params.q ? { q: params.q } : {}),
+              ...(params.type ? { type: params.type } : {}),
             }}
             page={listPageParams.page}
             totalPages={totalListPages}
@@ -259,10 +221,16 @@ export default async function SiteContentPage({
           page={selectedPage}
           media={fullMediaForEditor}
           pages={allPagesForNavigation}
+          revisionAuthors={revisionAuthors}
         />
       ) : (
         <>
-          <PagesPanel worldKey={worldKey} pages={pagesForTab} />
+          <PagesPanel
+            worldKey={worldKey}
+            pages={pagesForTab}
+            search={params.q ?? ""}
+            status={params.status ?? ""}
+          />
           <Pagination
             basePath={
               standalone
@@ -272,6 +240,8 @@ export default async function SiteContentPage({
             searchParams={{
               world: worldKey,
               ...(standalone ? {} : { tab: "pages" }),
+              ...(params.q ? { q: params.q } : {}),
+              ...(params.status ? { status: params.status } : {}),
             }}
             page={listPageParams.page}
             totalPages={totalListPages}
@@ -439,10 +409,15 @@ function GlanceCard({
 export function PagesPanel({
   worldKey,
   pages,
+  search = "",
+  status = "",
 }: {
   worldKey: string;
   pages: readonly WorkspacePageDto[];
+  search?: string;
+  status?: string;
 }) {
+  const hasFilters = Boolean(search || status);
   return (
     <div className="cms-pages-screen">
       <div className="cms-screen-heading">
@@ -458,10 +433,48 @@ export function PagesPanel({
           <PlusCircle size={16} /> Nouvelle page
         </Link>
       </div>
+      <form className="admin-form-card cms-list-filters" method="get">
+        <input type="hidden" name="world" value={worldKey} />
+        <label>
+          Recherche
+          <input
+            type="search"
+            name="q"
+            defaultValue={search}
+            placeholder="Titre, slug ou route…"
+          />
+        </label>
+        <label>
+          Statut
+          <select name="status" defaultValue={status}>
+            <option value="">Tous</option>
+            <option value="DRAFT">Brouillon</option>
+            <option value="IN_REVIEW">En revue</option>
+            <option value="SCHEDULED">Programmée</option>
+            <option value="PUBLISHED">Publiée</option>
+            <option value="ARCHIVED">Archivée</option>
+          </select>
+        </label>
+        <button className="admin-table__action" type="submit">
+          Filtrer
+        </button>
+        {hasFilters ? (
+          <Link
+            className="admin-table__action"
+            href={`/workspace/site-content/pages?world=${worldKey}`}
+          >
+            Réinitialiser
+          </Link>
+        ) : null}
+      </form>
       <section className="cms-list-panel">
         <h2>Pages de l’univers</h2>
         {pages.length === 0 ? (
-          <p className="admin-empty">Aucune page.</p>
+          <p className="admin-empty">
+            {hasFilters
+              ? "Aucune page ne correspond à cette recherche."
+              : "Aucune page."}
+          </p>
         ) : (
           <div className="admin-table-wrap">
             <table className="admin-table">
@@ -496,13 +509,19 @@ export function PagesPanel({
                         </span>
                       ) : null}
                     </td>
-                    <td>
+                    <td className="admin-table__actions">
                       <Link
                         className="admin-table__action"
                         href={`/workspace/site-content/pages/${encodeURIComponent(page.id)}/edit?world=${worldKey}`}
                       >
                         Éditer
                       </Link>
+                      {page.pageKind !== "SYSTEM" && !page.serviceId ? (
+                        <DuplicatePageForm
+                          pageId={page.id}
+                          worldKey={worldKey}
+                        />
+                      ) : null}
                     </td>
                   </tr>
                 ))}
@@ -522,11 +541,13 @@ export function PageEditor({
   page,
   media,
   pages,
+  revisionAuthors,
 }: {
   worldKey: string;
   page: EditablePage;
   media: readonly MediaAsset[];
   pages: readonly WorkspacePageDto[];
+  revisionAuthors: Readonly<Record<string, string>>;
 }) {
   const activeRevision = page.draftRevision ?? page.publishedRevision;
   const sections = activeRevision?.sections ?? [];
@@ -612,6 +633,7 @@ export function PageEditor({
             published={page.publishedRevision}
             history={page.revisionHistory}
             changeSummary={changeSummary}
+            authors={revisionAuthors}
           />
         }
       >
@@ -716,20 +738,58 @@ function MediaPanel({
   worldKey,
   media,
   now,
+  search = "",
+  mediaType = "",
 }: {
   worldKey: string;
   media: readonly MediaAsset[];
   now: Date;
+  search?: string;
+  mediaType?: string;
 }) {
+  const hasFilters = Boolean(search || mediaType);
   return (
     <div className="cms-layout">
       <UploadMediaForm worldKey={worldKey} />
+      <form className="admin-form-card cms-list-filters" method="get">
+        <input type="hidden" name="world" value={worldKey} />
+        <label>
+          Recherche
+          <input
+            type="search"
+            name="q"
+            defaultValue={search}
+            placeholder="Titre, alt ou tag…"
+          />
+        </label>
+        <label>
+          Type
+          <select name="type" defaultValue={mediaType}>
+            <option value="">Tous</option>
+            <option value="image">Images</option>
+            <option value="video">Vidéos</option>
+            <option value="other">Autres fichiers</option>
+          </select>
+        </label>
+        <button className="admin-table__action" type="submit">
+          Filtrer
+        </button>
+        {hasFilters ? (
+          <Link
+            className="admin-table__action"
+            href={`/workspace/site-content/media?world=${worldKey}`}
+          >
+            Réinitialiser
+          </Link>
+        ) : null}
+      </form>
       <section className="cms-list-panel">
         <h2>Médiathèque</h2>
         {media.length === 0 ? (
           <p className="admin-empty">
-            Aucun média. Les images ajoutées ici deviennent utilisables dans les
-            sections des pages (hero, blocs médias…).
+            {hasFilters
+              ? "Aucun média ne correspond à cette recherche."
+              : "Aucun média. Les images ajoutées ici deviennent utilisables dans les sections des pages (hero, blocs médias…)."}
           </p>
         ) : (
           <div className="cms-gallery">

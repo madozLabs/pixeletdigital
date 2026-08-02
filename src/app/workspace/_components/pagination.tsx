@@ -20,7 +20,7 @@ export function Pagination({
     for (const [key, value] of Object.entries(searchParams)) {
       if (value) params.set(key, value);
     }
-    params.set("page", String(targetPage));
+    params.set("listPage", String(targetPage));
     return `${basePath}?${params.toString()}`;
   }
 
