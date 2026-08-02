@@ -1738,6 +1738,7 @@ const TYPED_PAYLOAD_KEYS = [
   "limitations",
   "quote",
   "attribution",
+  "html",
 ] as const;
 
 function applyTypedPayloadFields(

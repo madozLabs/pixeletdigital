@@ -1967,35 +1967,58 @@ export function SectionFieldsForm({
       {sectionType === "CASE_STUDY" || sectionType === "TESTIMONIAL" ? (
         <EvidenceFields sectionType={sectionType} payload={evidencePayload} />
       ) : null}
-      <div className="admin-form-grid">
+      {sectionType === "DIVIDER" || sectionType === "CUSTOM_HTML" ? (
+        <div className="admin-form-grid">
+          <label>
+            Ordre
+            <input type="number" name="order" min="0" defaultValue={order} />
+          </label>
+        </div>
+      ) : (
+        <>
+          <div className="admin-form-grid">
+            <label>
+              Ordre
+              <input type="number" name="order" min="0" defaultValue={order} />
+            </label>
+            <label>
+              Sur-titre
+              <input name="eyebrow" defaultValue={eyebrow} />
+            </label>
+          </div>
+          <label>
+            Titre{" "}
+            {sectionType === "HERO" ? "(une ligne par retour à la ligne)" : ""}
+            <textarea name="title" rows={3} defaultValue={title} />
+          </label>
+          <label>
+            Texte
+            <textarea name="text" rows={3} defaultValue={text} />
+          </label>
+          <div className="admin-form-grid">
+            <label>
+              Libellé du bouton
+              <input name="label" defaultValue={label} />
+            </label>
+            <label>
+              Lien du bouton
+              <input name="href" defaultValue={href} />
+            </label>
+          </div>
+        </>
+      )}
+      {sectionType === "CUSTOM_HTML" ? (
         <label>
-          Ordre
-          <input type="number" name="order" min="0" defaultValue={order} />
+          Code HTML
+          <textarea
+            name="html"
+            rows={12}
+            className="cms-html-field"
+            defaultValue={String(evidencePayload.html ?? "")}
+            spellCheck={false}
+          />
         </label>
-        <label>
-          Sur-titre
-          <input name="eyebrow" defaultValue={eyebrow} />
-        </label>
-      </div>
-      <label>
-        Titre{" "}
-        {sectionType === "HERO" ? "(une ligne par retour à la ligne)" : ""}
-        <textarea name="title" rows={3} defaultValue={title} />
-      </label>
-      <label>
-        Texte
-        <textarea name="text" rows={3} defaultValue={text} />
-      </label>
-      <div className="admin-form-grid">
-        <label>
-          Libellé du bouton
-          <input name="label" defaultValue={label} />
-        </label>
-        <label>
-          Lien du bouton
-          <input name="href" defaultValue={href} />
-        </label>
-      </div>
+      ) : null}
       <SectionDesignFields
         payload={evidencePayload}
         images={images}

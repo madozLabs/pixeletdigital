@@ -20,6 +20,12 @@ export const PAGE_BLOCK_TYPES = [
   "PRICING",
   "VIDEO",
   "CONTACT_INFO",
+  "ACCORDION",
+  "TABS",
+  "CAROUSEL",
+  "CARD",
+  "CUSTOM_HTML",
+  "DIVIDER",
 ] as const;
 
 export type PageBlockType = (typeof PAGE_BLOCK_TYPES)[number];
@@ -284,6 +290,62 @@ export const PAGE_BLOCK_REGISTRY: readonly PageBlockDefinition[] = [
       { key: "items", label: "Coordonnées", kind: "ITEMS", required: true },
     ],
   ),
+  block(
+    "ACCORDION",
+    "Accordéon",
+    "Sections repliables pour un contenu long et organisé.",
+    "CONTENT",
+    [
+      ...COMMON_COPY_FIELDS,
+      { key: "items", label: "Sections", kind: "ITEMS", required: true },
+    ],
+  ),
+  block(
+    "TABS",
+    "Onglets",
+    "Contenus alternatifs présentés sous forme d’onglets.",
+    "CONTENT",
+    [
+      ...COMMON_COPY_FIELDS,
+      { key: "items", label: "Onglets", kind: "ITEMS", required: true },
+    ],
+  ),
+  block(
+    "CAROUSEL",
+    "Carrousel",
+    "Images défilantes horizontalement.",
+    "CONTENT",
+    [
+      ...COMMON_COPY_FIELDS,
+      { key: "mediaIds", label: "Images", kind: "ITEMS", required: true },
+    ],
+  ),
+  block(
+    "CARD",
+    "Carte",
+    "Petit bloc de contenu autonome avec visuel et action.",
+    "CONTENT",
+    [
+      ...COMMON_COPY_FIELDS,
+      { key: "label", label: "Texte du bouton", kind: "TEXT" },
+      { key: "href", label: "Lien du bouton", kind: "URL" },
+      { key: "mediaId", label: "Image", kind: "MEDIA" },
+    ],
+  ),
+  block(
+    "CUSTOM_HTML",
+    "HTML personnalisé",
+    "Code HTML libre pour un besoin non couvert par les blocs standards.",
+    "CONTENT",
+    [{ key: "html", label: "Code HTML", kind: "TEXTAREA", required: true }],
+  ),
+  block(
+    "DIVIDER",
+    "Séparateur",
+    "Simple ligne de séparation entre deux blocs.",
+    "ESSENTIAL",
+    [],
+  ),
 ];
 
 export function getPageBlockDefinition(
@@ -355,6 +417,8 @@ export const NESTABLE_BLOCK_TYPES = [
   "CTA",
   "BANNER",
   "VIDEO",
+  "CARD",
+  "DIVIDER",
 ] as const;
 
 export type NestableBlockType = (typeof NESTABLE_BLOCK_TYPES)[number];

@@ -13,6 +13,7 @@ import {
 } from "@/modules/content/domain/page-block-registry";
 
 import { EvidenceSection } from "./evidence-section";
+import { CmsTabs } from "./cms-tabs";
 import {
   CmsPrimaryImageOverlay,
   CmsSectionBackground,
@@ -184,7 +185,12 @@ export function CmsSection({
     );
   }
 
-  if (type === "GALLERY" || type === "LOGO_CLOUD" || type === "PORTFOLIO") {
+  if (
+    type === "GALLERY" ||
+    type === "LOGO_CLOUD" ||
+    type === "PORTFOLIO" ||
+    type === "CAROUSEL"
+  ) {
     const gallery = stringItems(payload.mediaIds)
       .map((id) => mediaById.get(id))
       .filter((item): item is CmsMediaAsset =>
@@ -230,10 +236,13 @@ export function CmsSection({
     );
   }
 
-  if (type === "FAQ") {
+  if (type === "FAQ" || type === "ACCORDION") {
     return (
       <section
-        {...cmsSectionDesignProps(payload, "cms-public-section cms-public-faq")}
+        {...cmsSectionDesignProps(
+          payload,
+          `cms-public-section cms-public-faq${type === "ACCORDION" ? " cms-public-accordion" : ""}`,
+        )}
         {...sectionProps}
       >
         <CmsSectionBackground payload={payload} mediaById={mediaById} />
@@ -244,7 +253,7 @@ export function CmsSection({
             open={editing || undefined}
           >
             <summary data-cms-item-index={index} data-cms-item-field="title">
-              {String(item.title ?? "Question")}
+              {String(item.title ?? (type === "FAQ" ? "Question" : "Section"))}
             </summary>
             <p data-cms-item-index={index} data-cms-item-field="text">
               {String(item.text ?? "")}
@@ -440,6 +449,98 @@ export function CmsSection({
         </div>
       </section>
     );
+  }
+
+  if (type === "TABS") {
+    return (
+      <section
+        {...cmsSectionDesignProps(payload, "cms-public-section cms-public-tabs-section")}
+        {...sectionProps}
+      >
+        <CmsSectionBackground payload={payload} mediaById={mediaById} />
+        <EditableCopy
+          as="p"
+          field="eyebrow"
+          value={eyebrow}
+          editing={editing}
+        />
+        <EditableCopy as="h2" field="title" value={title} editing={editing} />
+        <EditableCopy as="p" field="text" value={text} editing={editing} />
+        {items.length > 0 ? (
+          <CmsTabs
+            items={items.map((item) => ({
+              title: String(item.title ?? ""),
+              text: String(item.text ?? ""),
+            }))}
+          />
+        ) : editing ? (
+          <ItemsPlaceholder />
+        ) : null}
+      </section>
+    );
+  }
+
+  if (type === "CARD") {
+    return (
+      <section
+        {...cmsSectionDesignProps(payload, "cms-public-section cms-public-card")}
+        {...sectionProps}
+      >
+        <CmsSectionBackground payload={payload} mediaById={mediaById} />
+        {asset?.mimeType.startsWith("image/") ? (
+          <div className="cms-public-image" data-cms-media-slot="primary">
+            <Image
+              src={asset.publicUrl}
+              alt={asset.altText}
+              fill
+              sizes="(max-width: 700px) 100vw, 400px"
+            />
+            <CmsPrimaryImageOverlay />
+          </div>
+        ) : editing ? (
+          <MediaPlaceholder />
+        ) : null}
+        <EditableCopy
+          as="p"
+          field="eyebrow"
+          value={eyebrow}
+          editing={editing}
+        />
+        <EditableCopy as="h2" field="title" value={title} editing={editing} />
+        <EditableCopy as="p" field="text" value={text} editing={editing} />
+        {href && label ? (
+          <Link className="button button--primary" href={href}>
+            {label}
+          </Link>
+        ) : null}
+      </section>
+    );
+  }
+
+  if (type === "CUSTOM_HTML") {
+    const html = stringValue(payload, "html");
+    return (
+      <section
+        {...cmsSectionDesignProps(payload, "cms-public-section cms-public-html")}
+        {...sectionProps}
+      >
+        {html ? (
+          // Deliberate raw-HTML embed block, authored only by trusted workspace editors.
+          <div
+            className="cms-public-html__content"
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        ) : editing ? (
+          <div className="cms-editor-placeholder">
+            Ajoutez du code HTML dans le panneau de gauche.
+          </div>
+        ) : null}
+      </section>
+    );
+  }
+
+  if (type === "DIVIDER") {
+    return <hr className="cms-public-divider" {...sectionProps} />;
   }
 
   if (editing && !title && !text && !eyebrow) {

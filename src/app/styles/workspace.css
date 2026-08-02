@@ -2121,6 +2121,13 @@
   cursor: default;
 }
 
+.cms-html-field {
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  tab-size: 2;
+}
+
 .cms-nested-block {
   display: grid;
   gap: 0.5rem;

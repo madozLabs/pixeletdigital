@@ -2913,6 +2913,82 @@ a.world-switcher__item:focus-visible {
   }
 }
 
+.cms-public-gallery--carousel .cms-public-gallery__grid {
+  display: flex;
+  grid-template-columns: unset;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--space-4, 1.5rem);
+  padding-bottom: 0.5rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.cms-public-gallery--carousel .cms-public-gallery__item {
+  flex: 0 0 clamp(14rem, 40vw, 22rem);
+  scroll-snap-align: start;
+}
+
+.cms-public-accordion summary {
+  font-weight: 600;
+}
+
+.cms-public-tabs {
+  margin-top: 2rem;
+}
+
+.cms-public-tabs__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 1.5rem;
+}
+
+.cms-public-tabs__list button {
+  padding: 0.6rem 1.1rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--ink) 60%, transparent);
+  cursor: pointer;
+}
+
+.cms-public-tabs__list button.is-active {
+  border-bottom-color: var(--accent);
+  color: var(--ink);
+}
+
+.cms-public-tabs__panel {
+  white-space: pre-line;
+}
+
+.cms-public-card {
+  padding: clamp(1.5rem, 3vw, 2.25rem);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-control);
+}
+
+.cms-public-card .cms-public-image {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  margin-bottom: 1.25rem;
+  border-radius: calc(var(--radius-control) - 0.4rem);
+  overflow: hidden;
+}
+
+.cms-public-html__content {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.cms-public-divider {
+  margin: clamp(2rem, 5vw, 4rem) 0;
+  border: 0;
+  border-top: 1px solid var(--hairline);
+}
+
 .cms-public-media {
   display: grid;
   grid-template-columns: 1fr 1fr;
