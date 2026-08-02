@@ -11,6 +11,7 @@ import type {
   WorkspacePageDto,
 } from "@/modules/content/application/workspace-content-query";
 import { getPageBlockDefinition } from "@/modules/content/domain/page-block-registry";
+import type { PageRevisionDiff } from "@/modules/content/domain/page-revision-diff";
 import { sectionImageFormValue } from "@/modules/content/domain/section-image-settings";
 import {
   defaultSiteIdentity,
@@ -125,13 +126,7 @@ export function RevisionEditor({
   draft: WorkspaceRevisionDto | null;
   published: WorkspaceRevisionDto | null;
   history: readonly WorkspaceRevisionDto[];
-  changeSummary: Readonly<{
-    added: readonly string[];
-    removed: readonly string[];
-    modified: readonly string[];
-    moved: readonly string[];
-    totalChanges: number;
-  }> | null;
+  changeSummary: PageRevisionDiff | null;
   authors: Readonly<Record<string, string>>;
   images: readonly ImageOption[];
   publicPath: string;
@@ -186,15 +181,7 @@ export function RevisionEditor({
 
 function RevisionChangeSummary({
   summary,
-}: Readonly<{
-  summary: Readonly<{
-    added: readonly string[];
-    removed: readonly string[];
-    modified: readonly string[];
-    moved: readonly string[];
-    totalChanges: number;
-  }>;
-}>) {
+}: Readonly<{ summary: PageRevisionDiff }>) {
   const groups = [
     ["Ajoutés", summary.added],
     ["Supprimés", summary.removed],
@@ -209,20 +196,55 @@ function RevisionChangeSummary({
           Aucune différence avec la version publiée.
         </p>
       ) : (
-        groups.map(([label, values]) =>
-          values.length ? (
-            <div key={label}>
-              <strong>
-                {label} · {values.length}
-              </strong>
-              <ul>
-                {values.map((value, index) => (
-                  <li key={`${label}-${index}`}>{value}</li>
-                ))}
-              </ul>
+        <>
+          {groups.map(([label, values]) =>
+            values.length ? (
+              <div key={label}>
+                <strong>
+                  {label} · {values.length}
+                </strong>
+                <ul>
+                  {values.map((value, index) => (
+                    <li key={`${label}-${index}`}>{value}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null,
+          )}
+          {summary.fieldDiffs.length > 0 ? (
+            <div className="cms-revision-summary__text-diffs">
+              <strong>Détail des modifications de texte</strong>
+              {summary.fieldDiffs.map((section) => (
+                <div key={section.sectionKey} className="cms-text-diff">
+                  <span className="cms-text-diff__section">
+                    {section.label}
+                  </span>
+                  {section.fields.map((field) => (
+                    <p key={field.key} className="cms-text-diff__field">
+                      <span className="cms-text-diff__field-key">
+                        {field.key}
+                      </span>
+                      {field.segments.map((segment, index) => (
+                        <span
+                          key={index}
+                          className={
+                            segment.type === "same"
+                              ? undefined
+                              : segment.type === "added"
+                                ? "cms-text-diff__added"
+                                : "cms-text-diff__removed"
+                          }
+                        >
+                          {segment.text}
+                        </span>
+                      ))}
+                    </p>
+                  ))}
+                </div>
+              ))}
             </div>
-          ) : null,
-        )
+          ) : null}
+        </>
       )}
     </section>
   );
