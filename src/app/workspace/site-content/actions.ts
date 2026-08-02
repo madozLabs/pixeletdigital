@@ -1757,7 +1757,19 @@ function applyTypedPayloadFields(
     if (value) payload[key] = value;
     else delete payload[key];
   }
+  if (formData.has("hasResponsiveVisibility")) {
+    for (const key of RESPONSIVE_VISIBILITY_KEYS) {
+      if (formData.has(key)) payload[key] = true;
+      else delete payload[key];
+    }
+  }
 }
+
+const RESPONSIVE_VISIBILITY_KEYS = [
+  "hideOnDesktop",
+  "hideOnTablet",
+  "hideOnMobile",
+] as const;
 
 /**
  * Saves a section from named form fields instead of raw JSON. Unknown keys

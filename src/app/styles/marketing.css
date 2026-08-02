@@ -2293,6 +2293,26 @@ a.world-switcher__item:focus-visible {
   isolation: isolate;
 }
 
+/* Per-breakpoint visibility, matching the builder's own preview
+   breakpoints (mobile ≤760, tablet 761-1024, desktop ≥1025). */
+@media (max-width: 760px) {
+  .cms-hide-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1024px) {
+  .cms-hide-tablet {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1025px) {
+  .cms-hide-desktop {
+    display: none !important;
+  }
+}
+
 .cms-primary-image-overlay {
   position: absolute;
   z-index: 1;

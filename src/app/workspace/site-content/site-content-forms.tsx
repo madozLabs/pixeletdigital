@@ -2593,6 +2593,37 @@ function SectionDesignFields({
         )}
         <BackgroundImageAdjustments payload={payload} editable={editable} />
       </div>
+      <div className="cms-responsive-visibility">
+        <input type="hidden" name="hasResponsiveVisibility" value="true" />
+        <span className="cms-picker-label">Visibilité responsive</span>
+        <label>
+          <input
+            type="checkbox"
+            name="hideOnDesktop"
+            defaultChecked={payload.hideOnDesktop === true}
+            disabled={!editable}
+          />
+          Masquer sur ordinateur
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            name="hideOnTablet"
+            defaultChecked={payload.hideOnTablet === true}
+            disabled={!editable}
+          />
+          Masquer sur tablette
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            name="hideOnMobile"
+            defaultChecked={payload.hideOnMobile === true}
+            disabled={!editable}
+          />
+          Masquer sur mobile
+        </label>
+      </div>
     </fieldset>
   );
 }

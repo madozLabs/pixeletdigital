@@ -121,6 +121,9 @@ export function cmsSectionDesignProps(
     classNames.push("cms-section--custom-body-style");
     style["--cms-body-style"] = bodyStyle;
   }
+  if (payload.hideOnDesktop === true) classNames.push("cms-hide-desktop");
+  if (payload.hideOnTablet === true) classNames.push("cms-hide-tablet");
+  if (payload.hideOnMobile === true) classNames.push("cms-hide-mobile");
   applyImageDesignVariables(payload, style);
   return { className: classNames.join(" "), style };
 }
