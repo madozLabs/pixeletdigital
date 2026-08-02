@@ -130,8 +130,12 @@ describe("PageBuilder canvas", () => {
   it("adds, edits, duplicates and deletes blocks from the canvas controls", async () => {
     renderBuilder();
     fireEvent.click(screen.getByText("Contact final"));
+    expect(
+      screen.getByRole("button", { name: /Propriétés/ }),
+    ).toHaveClass("is-active");
     expect(screen.getByText("Édition du CTA")).toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole("button", { name: /Calques/ }));
     fireEvent.click(screen.getAllByRole("button", { name: "Ajouter" })[0]!);
     await waitFor(() => expect(mocks.add).toHaveBeenCalled());
 

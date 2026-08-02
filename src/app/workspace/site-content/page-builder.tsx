@@ -18,15 +18,16 @@ import {
   type DropResult,
 } from "@hello-pangea/dnd";
 import {
-  Blocks,
   Copy,
   ChevronDown,
   ChevronUp,
   ExternalLink,
   GripVertical,
+  Layers,
   Monitor,
   MoreVertical,
   Search,
+  SlidersHorizontal,
   Smartphone,
   Tablet,
   Trash2,
@@ -166,7 +167,9 @@ export function PageBuilder({
   const [selectedId, setSelectedId] = useState<string | null>(
     sectionIds[0] ?? null,
   );
-  const [panel, setPanel] = useState<"blocks" | "settings">("blocks");
+  const [panel, setPanel] = useState<"layers" | "properties" | "settings">(
+    "layers",
+  );
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() =>
     readStoredSidebarCollapsed(),
   );
@@ -258,7 +261,7 @@ export function PageBuilder({
 
   function syncInspectorField(sectionId: string, field: string, value: string) {
     setSelectedId(sectionId);
-    setPanel("blocks");
+    setPanel("properties");
     setHasInlineChanges(true);
     requestAnimationFrame(() => {
       const input = sidebarRef.current?.querySelector<
@@ -574,7 +577,7 @@ export function PageBuilder({
 
   function selectSection(id: string) {
     setSelectedId(id);
-    setPanel("blocks");
+    setPanel("properties");
     window.dispatchEvent(
       new CustomEvent("cms:section-selected", {
         detail: { sectionId: id, label: labelById.get(id) },
@@ -652,10 +655,17 @@ export function PageBuilder({
         <div className="cms-visual-builder__tabs">
           <button
             type="button"
-            className={panel === "blocks" ? "is-active" : ""}
-            onClick={() => setPanel("blocks")}
+            className={panel === "layers" ? "is-active" : ""}
+            onClick={() => setPanel("layers")}
           >
-            <Blocks size={16} /> Contenu
+            <Layers size={16} /> Calques
+          </button>
+          <button
+            type="button"
+            className={panel === "properties" ? "is-active" : ""}
+            onClick={() => setPanel("properties")}
+          >
+            <SlidersHorizontal size={16} /> Propriétés
           </button>
           <button
             type="button"
@@ -668,7 +678,7 @@ export function PageBuilder({
 
         {panel === "settings" ? (
           <div className="cms-visual-builder__settings">{settings}</div>
-        ) : (
+        ) : panel === "layers" ? (
           <>
             {!editable ? (
               <div className="cms-visual-builder__activate">{settings}</div>
@@ -768,27 +778,29 @@ export function PageBuilder({
                 )}
               </Droppable>
             </DragDropContext>
-            <div
-              ref={inspectorRef}
-              className="cms-visual-builder__inspector"
-            >
-              {selectedId ? (
-                <>
-                  <div className="cms-visual-builder__inspector-header">
-                    <strong>
-                      Bloc {orderedIds.indexOf(selectedId) + 1} ·{" "}
-                      {labelById.get(selectedId) ?? typeById.get(selectedId)}
-                    </strong>
-                  </div>
-                  {childById.get(selectedId)}
-                </>
-              ) : (
-                <p className="admin-empty">
-                  Cliquez un bloc dans la page ou ajoutez-en un nouveau.
-                </p>
-              )}
-            </div>
           </>
+        ) : (
+          <div ref={inspectorRef} className="cms-visual-builder__inspector">
+            {!editable ? (
+              <div className="cms-visual-builder__activate">{settings}</div>
+            ) : null}
+            {selectedId ? (
+              <>
+                <div className="cms-visual-builder__inspector-header">
+                  <strong>
+                    Bloc {orderedIds.indexOf(selectedId) + 1} ·{" "}
+                    {labelById.get(selectedId) ?? typeById.get(selectedId)}
+                  </strong>
+                </div>
+                {childById.get(selectedId)}
+              </>
+            ) : (
+              <p className="admin-empty">
+                Cliquez un bloc dans la page ou dans les calques pour
+                l’éditer.
+              </p>
+            )}
+          </div>
         )}
       </aside>
 

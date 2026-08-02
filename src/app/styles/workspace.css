@@ -3637,24 +3637,28 @@
   top: 0;
   z-index: 5;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   background: #f5f6f8;
   border-bottom: 1px solid #dfe1e7;
 }
 
 .cms-visual-builder__tabs button {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
+  gap: 0.25rem;
   min-height: 3.1rem;
+  padding: 0.3rem 0.25rem;
   color: #686d78;
   background: transparent;
   border: 0;
   border-bottom: 2px solid transparent;
   font: inherit;
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
   cursor: pointer;
 }
 
