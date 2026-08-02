@@ -24,6 +24,13 @@ export class PrismaEntityWorldResolver implements EntityWorldResolver {
       });
       return item?.worldKey ?? null;
     }
+    if (entityType === "PAGE") {
+      const page = await this.client.page.findUnique({
+        where: { id: entityId },
+        select: { worldKey: true },
+      });
+      return page?.worldKey ?? null;
+    }
     // TASK: worldKey lives on the parent project, not on Task itself.
     const task = await this.client.task.findUnique({
       where: { id: entityId },

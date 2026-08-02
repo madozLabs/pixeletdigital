@@ -1229,6 +1229,7 @@ model RevenueEntry {
 
 enum NotificationType {
   MENTIONED
+  REVIEW_REQUESTED
 }
 
 // entityType/entityId is a loose polymorphic reference (no FK), matching

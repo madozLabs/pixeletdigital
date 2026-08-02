@@ -1,5 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
+import { CommentThread } from "../_components/comment-thread";
 import { EditPresence } from "../_components/edit-presence";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
@@ -104,7 +105,7 @@ export default async function SiteContentPage({
   const pageStatus = tab === "pages" ? params.status || undefined : undefined;
   const mediaType = tab === "media" ? params.type || undefined : undefined;
 
-  const [contentResult, enquiryResult] = await Promise.all([
+  const [contentResult, enquiryResult, commentUsers] = await Promise.all([
     getWorkspaceContent(
       { workspaceContentReader: new PrismaWorkspaceContentReader(prisma) },
       context,
@@ -127,6 +128,13 @@ export default async function SiteContentPage({
           { worldKey },
         )
       : Promise.resolve(null),
+    params.page
+      ? prisma.user.findMany({
+          where: { status: "ACTIVE" },
+          select: { id: true, displayName: true, normalizedEmail: true },
+          orderBy: { displayName: "asc" },
+        })
+      : Promise.resolve([]),
   ]);
   if (!contentResult.ok) return <p role="alert">Accès refusé.</p>;
   const {
@@ -223,6 +231,11 @@ export default async function SiteContentPage({
           media={fullMediaForEditor}
           pages={allPagesForNavigation}
           revisionAuthors={revisionAuthors}
+          currentUserId={context.actor?.id ?? ""}
+          users={commentUsers.map((user) => ({
+            id: user.id,
+            name: user.displayName ?? user.normalizedEmail ?? "Collaborateur",
+          }))}
         />
       ) : (
         <>
@@ -543,12 +556,16 @@ export function PageEditor({
   media,
   pages,
   revisionAuthors,
+  currentUserId,
+  users,
 }: {
   worldKey: string;
   page: EditablePage;
   media: readonly MediaAsset[];
   pages: readonly WorkspacePageDto[];
   revisionAuthors: Readonly<Record<string, string>>;
+  currentUserId: string;
+  users: readonly Readonly<{ id: string; name: string }>[];
 }) {
   const activeRevision = page.draftRevision ?? page.publishedRevision;
   const sections = activeRevision?.sections ?? [];
@@ -579,6 +596,15 @@ export function PageEditor({
           <span className="cms-visual-editor-bar__divider" />
           <strong>{activeRevision?.title ?? page.title}</strong>
           <LifecycleBadge lifecycle={page.lifecycle} />
+          {currentUserId ? (
+            <CommentThread
+              entityType="PAGE"
+              entityId={page.id}
+              currentUserId={currentUserId}
+              users={users}
+              revalidatePathHint={`/workspace/site-content/pages/${page.id}/edit`}
+            />
+          ) : null}
         </div>
         {previewUrl ? (
           <a href={previewUrl} target="_blank" rel="noreferrer">

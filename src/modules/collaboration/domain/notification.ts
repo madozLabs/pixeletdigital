@@ -1,7 +1,7 @@
 export type Result<T, E> =
   Readonly<{ ok: true; value: T }> | Readonly<{ ok: false; error: E }>;
 
-export const NOTIFICATION_TYPES = ["MENTIONED"] as const;
+export const NOTIFICATION_TYPES = ["MENTIONED", "REVIEW_REQUESTED"] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 export function isNotificationType(value: string): value is NotificationType {

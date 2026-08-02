@@ -10,6 +10,7 @@ export const COMMENTABLE_ENTITY_TYPES = [
   "TASK",
   "EDITORIAL_ITEM",
   "PROJECT",
+  "PAGE",
 ] as const;
 export type CommentableEntityType = (typeof COMMENTABLE_ENTITY_TYPES)[number];
 

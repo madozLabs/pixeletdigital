@@ -114,6 +114,8 @@ const ERROR_MESSAGE: Readonly<Record<string, string>> = {
   PAGE_NOT_FOUND: "Cette page n'existe plus.",
   PAGE_NOT_DUPLICABLE:
     "Les pages système ou liées à un service ne peuvent pas être dupliquées.",
+  SELF_APPROVAL_BLOCKED:
+    "Vous ne pouvez pas approuver une révision que vous avez vous-même soumise : demandez à un autre approbateur.",
 };
 
 function toActionState(error: unknown): ActionState {
@@ -510,23 +512,86 @@ export async function transitionPageRevisionAction(
     }
     if (invalidBlock) return toActionState(new Error("BLOCK_NOT_PUBLISHABLE"));
   }
+  const revisionId = text(formData, "revisionId");
+  const page = await prisma.page.findUnique({
+    where: { id: pageId },
+    select: { worldKey: true, slug: true },
+  });
+  if (target === "APPROVED" && page && context.actor) {
+    const revision = await prisma.pageRevision.findUnique({
+      where: { id: revisionId },
+      select: { createdById: true },
+    });
+    if (revision?.createdById === context.actor.id) {
+      const otherApprovers = await eligibleApprovers(
+        page.worldKey,
+        context.actor.id,
+      );
+      if (otherApprovers.length > 0) {
+        return toActionState(new Error("SELF_APPROVAL_BLOCKED"));
+      }
+    }
+  }
   const result = await movePageRevision(revisionDependencies(), context, {
     pageId,
-    revisionId: text(formData, "revisionId"),
+    revisionId,
     expectedVersion: Number(formData.get("expectedVersion")),
     target: target as Parameters<typeof movePageRevision>[2]["target"],
   });
   if (result.ok) {
     revalidatePath("/workspace/site-content");
-    if (result.value.status === "PUBLISHED") {
-      const page = await prisma.page.findUnique({
-        where: { id: pageId },
-        select: { worldKey: true, slug: true },
-      });
-      if (page) revalidatePublicPage(page.worldKey, page.slug);
+    if (result.value.status === "PUBLISHED" && page) {
+      revalidatePublicPage(page.worldKey, page.slug);
+    }
+    if (result.value.status === "IN_REVIEW" && page && context.actor) {
+      await notifyReviewRequested(pageId, page.worldKey, context.actor.id);
     }
   }
   return resultState(result, "Étape de publication mise à jour.");
+}
+
+async function eligibleApprovers(
+  worldKey: string,
+  excludeUserId: string,
+): Promise<readonly string[]> {
+  const now = new Date();
+  const assignments = await prisma.roleAssignment.findMany({
+    where: {
+      role: {
+        in: [...PUBLISH_ROLES] as ("SUPER_ADMIN" | "ADMIN" | "WORLD_MANAGER")[],
+      },
+      validFrom: { lte: now },
+      OR: [{ validUntil: null }, { validUntil: { gt: now } }],
+      AND: [
+        { OR: [{ scopeType: "GLOBAL" }, { world: { key: worldKey } }] },
+      ],
+      userId: { not: excludeUserId },
+    },
+    select: { userId: true },
+    distinct: ["userId"],
+  });
+  return assignments.map((assignment) => assignment.userId);
+}
+
+async function notifyReviewRequested(
+  pageId: string,
+  worldKey: string,
+  submitterId: string,
+): Promise<void> {
+  const approverIds = await eligibleApprovers(worldKey, submitterId);
+  if (approverIds.length === 0) return;
+  const now = new Date();
+  await prisma.notification.createMany({
+    data: approverIds.map((userId) => ({
+      id: `notification_${randomUUID()}`,
+      userId,
+      type: "REVIEW_REQUESTED",
+      entityType: "PAGE",
+      entityId: pageId,
+      worldKey,
+      createdAt: now,
+    })),
+  });
 }
 
 export async function restorePageRevisionAction(

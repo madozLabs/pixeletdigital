@@ -21,17 +21,24 @@ export default async function VisualPageEditorRoute({
     searchParams,
   ]);
   const decodedPageId = decodeURIComponent(pageId);
-  const content = await getWorkspaceContent(
-    { workspaceContentReader: new PrismaWorkspaceContentReader(prisma) },
-    context,
-    {
-      worldKey: world,
-      tab: "pages",
-      selectedPageId: decodedPageId,
-      skip: 0,
-      take: 1,
-    },
-  );
+  const [content, users] = await Promise.all([
+    getWorkspaceContent(
+      { workspaceContentReader: new PrismaWorkspaceContentReader(prisma) },
+      context,
+      {
+        worldKey: world,
+        tab: "pages",
+        selectedPageId: decodedPageId,
+        skip: 0,
+        take: 1,
+      },
+    ),
+    prisma.user.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true, displayName: true, normalizedEmail: true },
+      orderBy: { displayName: "asc" },
+    }),
+  ]);
   if (!content.ok) redirect(`/workspace/site-content/pages?world=${world}`);
   if (!content.value.selectedPage) {
     redirect(
@@ -46,6 +53,11 @@ export default async function VisualPageEditorRoute({
       media={content.value.fullMediaForEditor}
       pages={content.value.allPagesForNavigation}
       revisionAuthors={content.value.revisionAuthors}
+      currentUserId={context.actor?.id ?? ""}
+      users={users.map((user) => ({
+        id: user.id,
+        name: user.displayName ?? user.normalizedEmail ?? "Collaborateur",
+      }))}
     />
   );
 }

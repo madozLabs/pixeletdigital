@@ -15,10 +15,14 @@ function dependencies() {
   return { notifications: new PrismaNotificationRepository(prisma) };
 }
 
-const ENTITY_PATH: Readonly<Record<string, (worldKey: string) => string>> = {
+const ENTITY_PATH: Readonly<
+  Record<string, (worldKey: string, entityId: string) => string>
+> = {
   TASK: (worldKey) => `/workspace/tasks?world=${worldKey}`,
   EDITORIAL_ITEM: (worldKey) => `/workspace/editorial?world=${worldKey}`,
   PROJECT: (worldKey) => `/workspace/projects?world=${worldKey}`,
+  PAGE: (worldKey, entityId) =>
+    `/workspace/site-content/pages/${entityId}/edit?world=${worldKey}`,
 };
 
 export type NotificationDto = Readonly<{
@@ -58,6 +62,17 @@ export async function fetchMyNotifications(): Promise<
     : [];
   const commentById = new Map(comments.map((c) => [c.id, c]));
 
+  const pageIds = result.value
+    .filter((n) => n.type === "REVIEW_REQUESTED" && n.entityType === "PAGE")
+    .map((n) => n.entityId);
+  const pages = pageIds.length
+    ? await prisma.page.findMany({
+        where: { id: { in: pageIds } },
+        select: { id: true, title: true },
+      })
+    : [];
+  const pageTitleById = new Map(pages.map((p) => [p.id, p.title]));
+
   return result.value.map((notification) => {
     const comment = notification.commentId
       ? commentById.get(notification.commentId)
@@ -65,13 +80,17 @@ export async function fetchMyNotifications(): Promise<
     const authorName = comment
       ? comment.author.displayName || comment.author.normalizedEmail || "Un collègue"
       : "Un collègue";
+    const message = comment
+      ? `${authorName} vous a mentionné : « ${comment.body.slice(0, 80)}${comment.body.length > 80 ? "…" : ""} »`
+      : notification.type === "REVIEW_REQUESTED"
+        ? `Une page attend votre relecture : « ${pageTitleById.get(notification.entityId) ?? "page"} »`
+        : "Nouvelle notification";
     return {
       id: notification.id,
-      message: comment
-        ? `${authorName} vous a mentionné : « ${comment.body.slice(0, 80)}${comment.body.length > 80 ? "…" : ""} »`
-        : "Nouvelle notification",
+      message,
       href: (ENTITY_PATH[notification.entityType] ?? (() => "/workspace"))(
         notification.worldKey,
+        notification.entityId,
       ),
       read: notification.readAt !== null,
       createdAt: notification.createdAt.toISOString(),
