@@ -6,6 +6,7 @@ import {
   Film,
   FolderKanban,
   Image as ImageIcon,
+  Link as LinkIcon,
   Mail,
   Megaphone,
   Newspaper,
@@ -18,7 +19,7 @@ import { prisma } from "@/infrastructure/shared/prisma-client";
 import type { ApprovedRole } from "@/shared/request-context";
 import { formatShortDate } from "@/shared/format";
 import { CommentThread } from "../_components/comment-thread";
-import { StatusBadge } from "../_components/status-badge";
+import { LifecycleBadge, StatusBadge } from "../_components/status-badge";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
 import {
   CreateEditorialItemForm,
@@ -109,10 +110,16 @@ export default async function WorkspaceEditorialPage({
         ? { worldKey, scheduledFor: { gte: monthStart, lt: monthEnd } }
         : { worldKey };
 
-  const [items, clients, projects, users] = await Promise.all([
+  const [items, clients, projects, users, pages] = await Promise.all([
     prisma.editorialItem.findMany({
       where: editorialWhere,
-      include: { client: true, project: true, owner: true, reviewer: true },
+      include: {
+        client: true,
+        project: true,
+        owner: true,
+        reviewer: true,
+        linkedPage: true,
+      },
       orderBy: { scheduledFor: "asc" },
     }),
     prisma.client.findMany({
@@ -123,6 +130,11 @@ export default async function WorkspaceEditorialPage({
     prisma.user.findMany({
       where: { status: "ACTIVE" },
       orderBy: { displayName: "asc" },
+    }),
+    prisma.page.findMany({
+      where: { worldKey },
+      orderBy: { title: "asc" },
+      select: { id: true, title: true, slug: true },
     }),
   ]);
   const itemsByDay = new Map<string, typeof items>();
@@ -287,6 +299,16 @@ export default async function WorkspaceEditorialPage({
                             ) : null}
                           </div>
                         ) : null}
+                        {item.linkedPage ? (
+                          <Link
+                            className="editorial-card__linked-page"
+                            href={`/workspace/site-content/pages/${item.linkedPage.id}/edit?world=${worldKey}`}
+                          >
+                            <LinkIcon size={12} strokeWidth={2} />
+                            Page : {item.linkedPage.title}{" "}
+                            <LifecycleBadge lifecycle={item.linkedPage.lifecycle} />
+                          </Link>
+                        ) : null}
                         {item.brief ? (
                           <p className="editorial-card__brief">{item.brief}</p>
                         ) : null}
@@ -403,6 +425,10 @@ export default async function WorkspaceEditorialPage({
           users={users.map((user) => ({
             id: user.id,
             label: user.displayName ?? user.normalizedEmail ?? "Collaborateur",
+          }))}
+          pages={pages.map((page) => ({
+            id: page.id,
+            label: `${page.title} · /${page.slug}`,
           }))}
           defaultScheduledFor={formatISODate(weekStart)}
         />

@@ -103,12 +103,14 @@ export function CreateEditorialItemForm({
   clients,
   projects,
   users,
+  pages,
   defaultScheduledFor,
 }: Readonly<{
   worldKey: string;
   clients: Option[];
   projects: Option[];
   users: Option[];
+  pages: Option[];
   defaultScheduledFor: string;
 }>) {
   const [state, action] = useActionState(
@@ -163,6 +165,17 @@ export function CreateEditorialItemForm({
             {users.map((user) => (
               <option key={user.id} value={user.id}>
                 {user.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Page du site liée
+          <select name="linkedPageId" defaultValue="">
+            <option value="">Sans page liée</option>
+            {pages.map((page) => (
+              <option key={page.id} value={page.id}>
+                {page.label}
               </option>
             ))}
           </select>

@@ -4522,6 +4522,18 @@
   gap: 0.35em;
 }
 
+.editorial-card__linked-page {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  font-size: 0.8em;
+  color: var(--accent);
+  text-decoration: none;
+}
+.editorial-card__linked-page:hover {
+  text-decoration: underline;
+}
+
 .editorial-card__reason {
   display: flex;
   align-items: center;

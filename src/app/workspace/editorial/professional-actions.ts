@@ -90,6 +90,7 @@ export async function createProfessionalEditorialItemAction(
         projectId: optionalText(formData, "projectId"),
         ownerId: optionalText(formData, "ownerId"),
         reviewerId: optionalText(formData, "reviewerId"),
+        linkedPageId: optionalText(formData, "linkedPageId"),
         clientLabel: client?.name ?? text(formData, "clientLabel"),
         channel,
         contentType: text(formData, "contentType") as
