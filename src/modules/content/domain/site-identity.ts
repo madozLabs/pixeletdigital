@@ -22,6 +22,10 @@ export type SiteIdentityConfig = Readonly<{
   tagline: string;
   logoMediaId: string;
   faviconMediaId: string;
+  // Optional, printed documents only (invoices, credit notes) -- a
+  // stamp/signature/seal image on the right of the header, opposite the
+  // logo. Never rendered on the public site.
+  invoiceStampMediaId: string;
   headingFont: SiteFontChoice;
   bodyFont: SiteFontChoice;
   menus: readonly SiteMenu[];
@@ -53,6 +57,7 @@ export function validateSiteIdentityConfig(
   const tagline = stringValue(input.tagline);
   const logoMediaId = stringValue(input.logoMediaId);
   const faviconMediaId = stringValue(input.faviconMediaId);
+  const invoiceStampMediaId = stringValue(input.invoiceStampMediaId);
   const footerText = stringValue(input.footerText);
   const contactLabel = stringValue(input.contactLabel);
   const contactHref = stringValue(input.contactHref);
@@ -123,6 +128,7 @@ export function validateSiteIdentityConfig(
       tagline,
       logoMediaId,
       faviconMediaId,
+      invoiceStampMediaId,
       headingFont,
       bodyFont,
       menus,
@@ -158,6 +164,7 @@ export function defaultSiteIdentity(
       : "Agence créative & digitale",
     logoMediaId: "",
     faviconMediaId: "",
+    invoiceStampMediaId: "",
     headingFont: kwaliti ? "BALOO" : "OUTFIT",
     bodyFont: kwaliti ? "MANROPE" : "OUTFIT",
     menus: [

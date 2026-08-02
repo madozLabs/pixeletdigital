@@ -5,6 +5,8 @@ import { prisma } from "@/infrastructure/shared/prisma-client";
 import { getInvoiceById } from "@/modules/billing/application/invoice-use-cases";
 import { PrismaClientRepository } from "@/modules/billing/infrastructure/prisma-client-repository";
 import { PrismaInvoiceRepository } from "@/modules/billing/infrastructure/prisma-invoice-repository";
+import { PrismaPaymentRepository } from "@/modules/billing/infrastructure/prisma-payment-repository";
+import { PrismaCreditNoteRepository } from "@/modules/billing/infrastructure/prisma-credit-note-repository";
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
 import { parseWorldKey } from "@/modules/worlds/domain/world";
 
@@ -47,6 +49,16 @@ export default async function InvoicePrintPage({
     invoice.worldKey,
     world?.displayName ?? invoice.worldKey,
   );
+  const paidCents = await new PrismaPaymentRepository(
+    prisma,
+  ).totalPaidForInvoice(invoice.id);
+  const creditedCents = await new PrismaCreditNoteRepository(
+    prisma,
+  ).totalCreditedForInvoice(invoice.id);
+  const balanceCents = Math.max(
+    0,
+    invoice.totalCents - paidCents - creditedCents,
+  );
 
   return (
     <div className="invoice-print">
@@ -80,7 +92,16 @@ export default async function InvoicePrintPage({
             </p>
           ) : null}
         </div>
-        <div>
+        <div className="invoice-print__header-right">
+          {identity.invoiceStampUrl ? (
+            <Image
+              className="invoice-print__stamp"
+              src={identity.invoiceStampUrl}
+              alt=""
+              width={110}
+              height={110}
+            />
+          ) : null}
           <p className="invoice-print__label">Client</p>
           <p>{client?.name ?? "—"}</p>
           {client?.email ? <p>{client.email}</p> : null}
@@ -111,6 +132,20 @@ export default async function InvoicePrintPage({
           <tr>
             <td colSpan={3}>Total</td>
             <td>{formatXof(invoice.totalCents)}</td>
+          </tr>
+          {creditedCents > 0 ? (
+            <tr>
+              <td colSpan={3}>Avoir</td>
+              <td>-{formatXof(creditedCents)}</td>
+            </tr>
+          ) : null}
+          <tr>
+            <td colSpan={3}>Payé</td>
+            <td>{formatXof(paidCents)}</td>
+          </tr>
+          <tr className="invoice-print__balance-row">
+            <td colSpan={3}>Solde restant dû</td>
+            <td>{formatXof(balanceCents)}</td>
           </tr>
         </tfoot>
       </table>

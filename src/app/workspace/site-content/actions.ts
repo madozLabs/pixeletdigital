@@ -227,6 +227,7 @@ export async function saveSiteIdentityDraftAction(
       tagline: text(formData, "tagline"),
       logoMediaId: text(formData, "logoMediaId"),
       faviconMediaId: text(formData, "faviconMediaId"),
+      invoiceStampMediaId: text(formData, "invoiceStampMediaId"),
       headingFont: text(formData, "headingFont"),
       bodyFont: text(formData, "bodyFont"),
       navigationItems,
@@ -250,6 +251,7 @@ export async function saveSiteIdentityDraftAction(
     const mediaIds = [
       parsed.value.logoMediaId,
       parsed.value.faviconMediaId,
+      parsed.value.invoiceStampMediaId,
     ].filter(Boolean);
     const now = new Date();
     await prisma.$transaction(async (transaction) => {
@@ -292,6 +294,9 @@ export async function saveSiteIdentityDraftAction(
           : null,
         parsed.value.faviconMediaId
           ? { mediaId: parsed.value.faviconMediaId, slot: "favicon" }
+          : null,
+        parsed.value.invoiceStampMediaId
+          ? { mediaId: parsed.value.invoiceStampMediaId, slot: "invoiceStamp" }
           : null,
       ].filter(
         (usage): usage is { mediaId: string; slot: string } => usage !== null,

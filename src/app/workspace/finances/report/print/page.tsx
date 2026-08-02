@@ -94,7 +94,7 @@ export default async function FinanceReportPrintPage({
           </tr>
         </tbody>
         <tfoot>
-          <tr>
+          <tr className="invoice-print__balance-row">
             <td>Net</td>
             <td>{formatXof(report.netCents)}</td>
           </tr>

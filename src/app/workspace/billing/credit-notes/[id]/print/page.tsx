@@ -86,7 +86,16 @@ export default async function CreditNotePrintPage({
             </p>
           ) : null}
         </div>
-        <div>
+        <div className="invoice-print__header-right">
+          {identity.invoiceStampUrl ? (
+            <Image
+              className="invoice-print__stamp"
+              src={identity.invoiceStampUrl}
+              alt=""
+              width={110}
+              height={110}
+            />
+          ) : null}
           <p className="invoice-print__label">Client</p>
           <p>{client?.name ?? "—"}</p>
           {client?.email ? <p>{client.email}</p> : null}
@@ -116,7 +125,7 @@ export default async function CreditNotePrintPage({
           ))}
         </tbody>
         <tfoot>
-          <tr>
+          <tr className="invoice-print__balance-row">
             <td colSpan={3}>Total à déduire</td>
             <td>{formatXof(creditNote.totalCents)}</td>
           </tr>

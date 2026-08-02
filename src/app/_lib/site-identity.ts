@@ -11,6 +11,7 @@ export type PublishedSiteIdentity = SiteIdentityConfig &
     logoUrl: string | null;
     logoAlt: string;
     faviconUrl: string | null;
+    invoiceStampUrl: string | null;
   }>;
 
 export const getPublishedSiteIdentity = cache(
@@ -30,9 +31,11 @@ export const getPublishedSiteIdentity = cache(
         fallback,
     );
     const config = parsed.ok ? parsed.value : fallback;
-    const mediaIds = [config.logoMediaId, config.faviconMediaId].filter(
-      Boolean,
-    );
+    const mediaIds = [
+      config.logoMediaId,
+      config.faviconMediaId,
+      config.invoiceStampMediaId,
+    ].filter(Boolean);
     const media = mediaIds.length
       ? await prisma.mediaAsset
           .findMany({
@@ -44,11 +47,13 @@ export const getPublishedSiteIdentity = cache(
     const byId = new Map(media.map((asset) => [asset.id, asset]));
     const logo = byId.get(config.logoMediaId);
     const favicon = byId.get(config.faviconMediaId);
+    const invoiceStamp = byId.get(config.invoiceStampMediaId);
     return {
       ...config,
       logoUrl: logo?.publicUrl ?? null,
       logoAlt: logo?.altText || config.siteName,
       faviconUrl: favicon?.publicUrl ?? null,
+      invoiceStampUrl: invoiceStamp?.publicUrl ?? null,
     };
   },
 );

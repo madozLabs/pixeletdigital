@@ -435,6 +435,12 @@ function ActiveSiteIdentityEditor({
                 selectedId={config.faviconMediaId}
                 images={images}
               />
+              <IdentityMediaPicker
+                name="invoiceStampMediaId"
+                label="Cachet / image complémentaire (factures imprimées, facultatif)"
+                selectedId={config.invoiceStampMediaId}
+                images={images}
+              />
             </>
           ) : (
             <>
@@ -455,6 +461,11 @@ function ActiveSiteIdentityEditor({
                 type="hidden"
                 name="faviconMediaId"
                 value={config.faviconMediaId}
+              />
+              <input
+                type="hidden"
+                name="invoiceStampMediaId"
+                value={config.invoiceStampMediaId}
               />
             </>
           )}
