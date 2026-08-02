@@ -116,6 +116,8 @@ const ERROR_MESSAGE: Readonly<Record<string, string>> = {
     "Les pages système ou liées à un service ne peuvent pas être dupliquées.",
   SELF_APPROVAL_BLOCKED:
     "Vous ne pouvez pas approuver une révision que vous avez vous-même soumise : demandez à un autre approbateur.",
+  INVALID_SCHEDULE_DATE:
+    "La date de publication programmée doit être dans le futur.",
 };
 
 function toActionState(error: unknown): ActionState {
@@ -463,6 +465,46 @@ export async function updatePageRevisionMetadataAction(
   );
   if (result.ok) revalidatePath("/workspace/site-content");
   return resultState(result, "Brouillon enregistré.");
+}
+
+export async function schedulePageRevisionAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const pageId = text(formData, "pageId");
+    const revisionId = text(formData, "revisionId");
+    const page = await prisma.page.findUniqueOrThrow({ where: { id: pageId } });
+    await actorFor(page.worldKey, true);
+    const expectedVersion = Number(formData.get("expectedVersion"));
+    const scheduledPublishAtRaw = text(formData, "scheduledPublishAt");
+    if (scheduledPublishAtRaw) {
+      const scheduledDate = new Date(scheduledPublishAtRaw);
+      if (Number.isNaN(scheduledDate.getTime()) || scheduledDate <= new Date()) {
+        throw new Error("INVALID_SCHEDULE_DATE");
+      }
+    }
+    const updated = await prisma.pageRevision.updateMany({
+      where: { id: revisionId, pageId, status: "APPROVED", version: expectedVersion },
+      data: {
+        scheduledPublishAt: scheduledPublishAtRaw
+          ? new Date(scheduledPublishAtRaw)
+          : null,
+        version: { increment: 1 },
+        updatedAt: new Date(),
+      },
+    });
+    if (updated.count === 0) throw new Error("EDIT_CONFLICT");
+    revalidatePath("/workspace/site-content");
+    return {
+      status: "success",
+      message: scheduledPublishAtRaw
+        ? "Publication programmée."
+        : "Programmation annulée.",
+    };
+  } catch (error) {
+    return toActionState(error);
+  }
 }
 
 export async function transitionPageRevisionAction(

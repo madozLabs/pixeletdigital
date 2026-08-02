@@ -35,6 +35,7 @@ export type WorkspaceRevisionDto = Readonly<{
   seoTitle: string | null;
   seoDescription: string | null;
   ogImageMediaId: string | null;
+  scheduledPublishAt: Date | null;
   version: number;
   createdById: string | null;
   reviewedById: string | null;

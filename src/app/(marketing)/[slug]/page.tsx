@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import { getWorkspaceRequestContext } from "@/app/workspace/get-workspace-context";
 import { actorHasWorldAccess } from "@/app/workspace/_lib/authorization";
+import { publishDueScheduledRevisions } from "@/modules/content/application/publish-scheduled-revisions";
 import { CmsPreviewBridge } from "@/app/_components/cms-preview-bridge";
 import { CmsSection, stringValue } from "../_components/cms-section";
 
@@ -53,6 +54,9 @@ async function loadPage(
       })
       .catch(() => null);
   }
+  await publishDueScheduledRevisions(prisma, worldKey, new Date()).catch(
+    () => 0,
+  );
   return prisma.page
     .findFirst({
       where: { worldKey, slug, lifecycle: "PUBLISHED" },

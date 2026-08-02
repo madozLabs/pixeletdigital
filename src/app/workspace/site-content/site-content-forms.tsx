@@ -33,6 +33,7 @@ import {
   saveSectionFieldsAction,
   saveSiteIdentityDraftAction,
   restorePageRevisionAction,
+  schedulePageRevisionAction,
   startPageRevisionAction,
   startSiteIdentityDraftAction,
   transitionSiteIdentityAction,
@@ -1394,6 +1395,9 @@ function ActiveRevisionEditor({
         ) : null}
         <Feedback state={saveState} />
       </form>
+      {revision.status === "APPROVED" ? (
+        <ScheduledPublishForm pageId={pageId} revision={revision} />
+      ) : null}
       <div className="cms-workflow">
         {transitions.map(([target, label]) => (
           <RevisionTransitionForm
@@ -1406,6 +1410,50 @@ function ActiveRevisionEditor({
         ))}
       </div>
     </section>
+  );
+}
+
+function ScheduledPublishForm({
+  pageId,
+  revision,
+}: Readonly<{ pageId: string; revision: WorkspaceRevisionDto }>) {
+  const [state, action] = useActionState(
+    schedulePageRevisionAction,
+    IDLE_ACTION_STATE,
+  );
+  useRefreshOnSuccess(state.status);
+  const defaultValue = revision.scheduledPublishAt
+    ? new Date(
+        revision.scheduledPublishAt.getTime() -
+          revision.scheduledPublishAt.getTimezoneOffset() * 60_000,
+      )
+        .toISOString()
+        .slice(0, 16)
+    : "";
+  return (
+    <form action={action} className="cms-scheduled-publish">
+      <input type="hidden" name="pageId" value={pageId} />
+      <input type="hidden" name="revisionId" value={revision.id} />
+      <input type="hidden" name="expectedVersion" value={revision.version} />
+      <label>
+        Publication programmée
+        <input
+          type="datetime-local"
+          name="scheduledPublishAt"
+          defaultValue={defaultValue}
+        />
+      </label>
+      {revision.scheduledPublishAt ? (
+        <p className="admin-table__note">
+          Publication automatique prévue le{" "}
+          {revision.scheduledPublishAt.toLocaleString("fr-FR")}.
+        </p>
+      ) : null}
+      <SubmitButton>
+        {revision.scheduledPublishAt ? "Modifier la programmation" : "Programmer"}
+      </SubmitButton>
+      <Feedback state={state} />
+    </form>
   );
 }
 

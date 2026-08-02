@@ -1,6 +1,7 @@
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import { actorHasWorldAccess } from "@/app/workspace/_lib/authorization";
 import { getWorkspaceRequestContext } from "@/app/workspace/get-workspace-context";
+import { publishDueScheduledRevisions } from "@/modules/content/application/publish-scheduled-revisions";
 
 export type CmsHeroContent = Readonly<{
   eyebrow: string | null;
@@ -89,6 +90,11 @@ export async function getCmsHomeContent(
     if (!context?.actor || !actorHasWorldAccess(context.actor, worldKey)) {
       return emptyHomeContent();
     }
+  }
+  if (!previewRevisionId) {
+    await publishDueScheduledRevisions(prisma, worldKey, new Date()).catch(
+      () => 0,
+    );
   }
   const page = await prisma.page
     .findFirst({

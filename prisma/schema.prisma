@@ -483,24 +483,25 @@ model Page {
 }
 
 model PageRevision {
-  id             String             @id
-  pageId         String
-  page           Page               @relation("PageRevisions", fields: [pageId], references: [id], onDelete: Restrict)
-  revisionNumber Int
-  status         PageRevisionStatus
-  title          String
-  seoTitle       String?
-  seoDescription String?
-  ogImageMediaId String?
-  ogImage        MediaAsset?        @relation(fields: [ogImageMediaId], references: [id], onDelete: Restrict)
-  version        Int                @default(1)
-  createdById    String?
-  reviewedById   String?
-  publishedById  String?
-  reviewedAt     DateTime?
-  publishedAt    DateTime?
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  id                 String             @id
+  pageId             String
+  page               Page               @relation("PageRevisions", fields: [pageId], references: [id], onDelete: Restrict)
+  revisionNumber     Int
+  status             PageRevisionStatus
+  title              String
+  seoTitle           String?
+  seoDescription     String?
+  ogImageMediaId     String?
+  ogImage            MediaAsset?        @relation(fields: [ogImageMediaId], references: [id], onDelete: Restrict)
+  version            Int                @default(1)
+  createdById        String?
+  reviewedById       String?
+  publishedById      String?
+  reviewedAt         DateTime?
+  publishedAt        DateTime?
+  scheduledPublishAt DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
   sections          PageRevisionSection[]
   draftForPages     Page[]                @relation("PageDraftRevision")
@@ -509,6 +510,7 @@ model PageRevision {
   @@unique([pageId, revisionNumber])
   @@index([pageId, status])
   @@index([ogImageMediaId])
+  @@index([status, scheduledPublishAt])
   @@map("page_revisions")
 }
 
