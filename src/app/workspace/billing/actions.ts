@@ -45,14 +45,10 @@ import {
   deleteWorkspaceMediaFile,
   storeWorkspaceMediaFile,
 } from "../site-content/media-storage";
+import { xofToCents } from "./_lib/money";
 
 function worldDependencies() {
   return { worlds: new PrismaWorldRepository(prisma) };
-}
-
-function xofToCents(value: FormDataEntryValue | null): number {
-  const amount = Number(value);
-  return Number.isFinite(amount) && amount > 0 ? Math.round(amount * 100) : 0;
 }
 
 // Every billing use case returns Result<T, { code, message, ... }>; this

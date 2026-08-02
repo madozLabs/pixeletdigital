@@ -28,11 +28,7 @@ import type { RequestContext } from "@/shared/request-context";
 
 import type { ActionState } from "../_components/feedback";
 import { getWorkspaceRequestContext } from "../get-workspace-context";
-
-function xofToCents(value: FormDataEntryValue | null): number {
-  const amount = Number(value);
-  return Number.isFinite(amount) && amount > 0 ? Math.round(amount * 100) : 0;
-}
+import { xofToCents } from "../billing/_lib/money";
 
 function toActionState(
   result: Readonly<{ ok: true } | { ok: false; error: { message: string } }>,
