@@ -11,6 +11,7 @@ import {
   type ChangeEvent,
   type FocusEvent,
 } from "react";
+import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
 
 import type {
   WorkspaceRevisionDto,
@@ -1734,16 +1735,86 @@ export function SectionFieldsForm({
         (id): id is string => typeof id === "string",
       )
     : [];
-  const itemsText = Array.isArray(evidencePayload.items)
-    ? evidencePayload.items
-        .map((item) => {
-          if (!item || typeof item !== "object") return "";
+  const [itemRows, setItemRows] = useState<
+    readonly { key: string; title: string; text: string }[]
+  >(() =>
+    Array.isArray(evidencePayload.items)
+      ? evidencePayload.items.flatMap((item, index) => {
+          if (!item || typeof item !== "object") return [];
           const record = item as Record<string, unknown>;
-          return `${String(record.title ?? "")} | ${String(record.text ?? "")}`;
+          return [
+            {
+              key: `initial_${index}`,
+              title: String(record.title ?? ""),
+              text: String(record.text ?? ""),
+            },
+          ];
         })
-        .filter(Boolean)
-        .join("\n")
-    : "";
+      : [],
+  );
+  const nextItemKeyRef = useRef(0);
+  // Structural changes (add/remove/reorder) submit immediately, but they
+  // can't just call requestSubmit() and hope the DOM has already picked up
+  // the new row order by the time the browser serializes the form -- that
+  // race loses edits. Instead, read the *current* (possibly still-unsaved)
+  // title/text values straight out of the DOM, apply the structural change
+  // to that array directly, and submit it -- independent of when React
+  // actually re-renders the reordered rows.
+  function currentItemPairs(): { title: string; text: string }[] {
+    const form = formRef.current;
+    if (!form) return [];
+    const data = new FormData(form);
+    const titles = data.getAll("itemTitle").map(String);
+    const texts = data.getAll("itemText").map(String);
+    const length = Math.max(titles.length, texts.length);
+    return Array.from({ length }, (_, i) => ({
+      title: titles[i] ?? "",
+      text: texts[i] ?? "",
+    }));
+  }
+  function submitItemPairs(pairs: readonly { title: string; text: string }[]) {
+    const form = formRef.current;
+    if (!form) return;
+    const data = new FormData(form);
+    data.delete("itemTitle");
+    data.delete("itemText");
+    for (const pair of pairs) {
+      data.append("itemTitle", pair.title);
+      data.append("itemText", pair.text);
+    }
+    isDirtyRef.current = false;
+    action(data);
+  }
+  function addItemRow() {
+    const pairs = [...currentItemPairs(), { title: "", text: "" }];
+    setItemRows((rows) => [
+      ...rows,
+      { key: `new_${nextItemKeyRef.current++}`, title: "", text: "" },
+    ]);
+    submitItemPairs(pairs);
+  }
+  function removeItemRow(key: string) {
+    const index = itemRows.findIndex((row) => row.key === key);
+    const pairs = currentItemPairs();
+    if (index >= 0) pairs.splice(index, 1);
+    setItemRows((rows) => rows.filter((row) => row.key !== key));
+    submitItemPairs(pairs);
+  }
+  function moveItemRow(key: string, offset: number) {
+    const index = itemRows.findIndex((row) => row.key === key);
+    const target = index + offset;
+    const pairs = currentItemPairs();
+    if (index < 0 || target < 0 || target >= pairs.length) return;
+    const [pair] = pairs.splice(index, 1);
+    if (pair) pairs.splice(target, 0, pair);
+    setItemRows((rows) => {
+      const next = [...rows];
+      const [row] = next.splice(index, 1);
+      if (row) next.splice(target, 0, row);
+      return next;
+    });
+    submitItemPairs(pairs);
+  }
   return (
     <form
       ref={formRef}
@@ -1810,19 +1881,73 @@ export function SectionFieldsForm({
         </label>
       ) : null}
       {hasItems ? (
-        <label>
-          {sectionType === "FAQ" ? "Questions et réponses" : "Éléments"}
-          <textarea
-            name="itemsText"
-            rows={6}
-            defaultValue={itemsText}
-            placeholder={
-              sectionType === "FAQ"
-                ? "Question | Réponse (une par ligne)"
-                : "Titre | Description (un par ligne)"
-            }
-          />
-        </label>
+        <fieldset className="cms-items-repeater">
+          <legend>
+            {sectionType === "FAQ" ? "Questions et réponses" : "Éléments"}
+          </legend>
+          <input type="hidden" name="hasItems" value="true" />
+          {itemRows.map((row, index) => (
+            <div className="cms-items-repeater__row" key={row.key}>
+              <div className="cms-items-repeater__fields">
+                <label>
+                  {sectionType === "FAQ" ? "Question" : "Titre"}
+                  <input
+                    name="itemTitle"
+                    defaultValue={row.title}
+                    data-cms-item-index={index}
+                    data-cms-item-field="title"
+                  />
+                </label>
+                <label>
+                  {sectionType === "FAQ" ? "Réponse" : "Description"}
+                  <textarea
+                    name="itemText"
+                    rows={2}
+                    defaultValue={row.text}
+                    data-cms-item-index={index}
+                    data-cms-item-field="text"
+                  />
+                </label>
+              </div>
+              <div className="cms-items-repeater__actions">
+                <button
+                  type="button"
+                  aria-label="Monter cet élément"
+                  onClick={() => moveItemRow(row.key, -1)}
+                  disabled={!editable || index === 0}
+                >
+                  <ChevronUp size={14} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Descendre cet élément"
+                  onClick={() => moveItemRow(row.key, 1)}
+                  disabled={!editable || index === itemRows.length - 1}
+                >
+                  <ChevronDown size={14} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Supprimer cet élément"
+                  className="is-danger"
+                  onClick={() => removeItemRow(row.key)}
+                  disabled={!editable}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="cms-items-repeater__add"
+            onClick={addItemRow}
+            disabled={!editable}
+          >
+            <Plus size={14} />{" "}
+            {sectionType === "FAQ" ? "Ajouter une question" : "Ajouter un élément"}
+          </button>
+        </fieldset>
       ) : null}
       {hasMultipleMedia ? (
         <span className="cms-picker-label">Images du bloc</span>

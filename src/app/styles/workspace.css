@@ -1965,6 +1965,87 @@
   background: var(--wk-bg);
 }
 
+.cms-items-repeater {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0.9rem 0;
+  padding: 0.9rem;
+  border: 1px solid var(--wk-border);
+  border-radius: var(--wk-radius);
+  background: var(--wk-bg);
+}
+
+.cms-items-repeater legend {
+  padding: 0 0.3rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.cms-items-repeater__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.7rem;
+  border: 1px solid var(--wk-border);
+  border-radius: 0.6rem;
+  background: var(--wk-card);
+}
+
+.cms-items-repeater__fields {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.cms-items-repeater__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.cms-items-repeater__actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  border: 1px solid var(--wk-border);
+  border-radius: 0.4rem;
+  background: var(--wk-bg);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.cms-items-repeater__actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.cms-items-repeater__actions button.is-danger {
+  color: #a52a2a;
+}
+
+.cms-items-repeater__add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  border: 1px dashed var(--wk-border);
+  border-radius: 0.6rem;
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cms-items-repeater__add:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .cms-section-design-fields {
   display: grid;
   gap: 0.9rem;

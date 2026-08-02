@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import {
@@ -351,6 +351,23 @@ export function PageBuilder({
     });
   }
 
+  function syncInspectorItemField(
+    sectionId: string,
+    index: number,
+    field: "title" | "text",
+    value: string,
+  ) {
+    setSelectedId(sectionId);
+    setPanel("properties");
+    setHasInlineChanges(true);
+    requestAnimationFrame(() => {
+      const input = sidebarRef.current?.querySelector<
+        HTMLInputElement | HTMLTextAreaElement
+      >(`[data-cms-item-index="${index}"][data-cms-item-field="${field}"]`);
+      if (input) input.value = value;
+    });
+  }
+
   function previewImageSetting(event: React.FormEvent<HTMLElement>) {
     const target = event.target;
     if (
@@ -541,10 +558,16 @@ export function PageBuilder({
             selectSection(sectionId);
           };
           editableItem.oninput = () => {
-            syncInspectorField(
+            const index = Number(editableItem.dataset.cmsItemIndex);
+            const field = editableItem.dataset.cmsItemField;
+            if (!Number.isInteger(index) || (field !== "title" && field !== "text")) {
+              return;
+            }
+            syncInspectorItemField(
               sectionId,
-              "itemsText",
-              serializeEditableItems(element),
+              index,
+              field,
+              editableItem.textContent?.replaceAll("\u00a0", " ").trim() ?? "",
             );
           };
           editableItem.onblur = () => submitInspectorSection(sectionId);
@@ -1258,26 +1281,6 @@ function readEditableText(element: HTMLElement, field: string): string {
       .join("\n");
   }
   return element.textContent?.replaceAll("\u00a0", " ").trim() ?? "";
-}
-
-function serializeEditableItems(section: HTMLElement): string {
-  const rows = new Map<number, { title: string; text: string }>();
-  section
-    .querySelectorAll<HTMLElement>("[data-cms-item-index][data-cms-item-field]")
-    .forEach((item) => {
-      const index = Number(item.dataset.cmsItemIndex);
-      const field = item.dataset.cmsItemField;
-      if (!Number.isInteger(index) || (field !== "title" && field !== "text")) {
-        return;
-      }
-      const row = rows.get(index) ?? { title: "", text: "" };
-      row[field] = item.textContent?.replaceAll("\u00a0", " ").trim() ?? "";
-      rows.set(index, row);
-    });
-  return [...rows.entries()]
-    .sort(([left], [right]) => left - right)
-    .map(([, item]) => `${item.title} | ${item.text}`)
-    .join("\n");
 }
 
 function BlockLibrary({

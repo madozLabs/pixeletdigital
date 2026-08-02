@@ -1788,15 +1788,14 @@ export async function saveSectionFieldsAction(
         .map(String)
         .filter(Boolean);
     }
-    if (formData.has("itemsText")) {
-      payload.items = text(formData, "itemsText")
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((line) => {
-          const [title, ...rest] = line.split("|");
-          return { title: title?.trim() ?? "", text: rest.join("|").trim() };
-        });
+    if (formData.has("hasItems")) {
+      const titles = formData.getAll("itemTitle").map(String);
+      const texts = formData.getAll("itemText").map(String);
+      const rowCount = Math.max(titles.length, texts.length);
+      payload.items = Array.from({ length: rowCount }, (_, index) => ({
+        title: (titles[index] ?? "").trim(),
+        text: (texts[index] ?? "").trim(),
+      })).filter((item) => item.title || item.text);
     }
     await saveRevisionSection({
       id,
