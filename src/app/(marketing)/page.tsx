@@ -39,10 +39,10 @@ export const revalidate = 60;
 export async function generateMetadata({
   searchParams,
 }: Readonly<{
-  searchParams: Promise<{ preview?: string }>;
+  searchParams: Promise<{ preview?: string; share?: string }>;
 }>): Promise<Metadata> {
-  const { preview } = await searchParams;
-  const cms = await getCmsHomeContent("pixel-digital", preview).catch(
+  const { preview, share } = await searchParams;
+  const cms = await getCmsHomeContent("pixel-digital", preview, share).catch(
     emptyHomeContent,
   );
   const title = cms.seo?.title || HOME_TITLE;
@@ -58,7 +58,7 @@ export async function generateMetadata({
       type: "website",
       images: cms.seo?.ogImageUrl ? [{ url: cms.seo.ogImageUrl }] : undefined,
     },
-    robots: preview ? { index: false, follow: false } : undefined,
+    robots: preview || cms.isSharedPreview ? { index: false, follow: false } : undefined,
   };
 }
 
@@ -83,9 +83,13 @@ type Families = Awaited<ReturnType<typeof listPublishedServiceFamilies>>;
 export default async function HomePage({
   searchParams,
 }: Readonly<{
-  searchParams: Promise<{ preview?: string; visualEditor?: string }>;
+  searchParams: Promise<{
+    preview?: string;
+    visualEditor?: string;
+    share?: string;
+  }>;
 }>) {
-  const { preview, visualEditor } = await searchParams;
+  const { preview, visualEditor, share } = await searchParams;
   const deps = {
     services: new PrismaServiceRepository(prisma),
     families: new PrismaServiceFamilyRepository(prisma),
@@ -96,15 +100,20 @@ export default async function HomePage({
     listPublishedServiceFamilies(deps, { worldKey: "pixel-digital" }).catch(
       () => [],
     ),
-    getCmsHomeContent("pixel-digital", preview).catch(emptyHomeContent),
+    getCmsHomeContent("pixel-digital", preview, share).catch(emptyHomeContent),
   ]);
-  if (!preview && cms.pageId) recordPageView(prisma, cms.pageId);
+  if (!preview && !share && cms.pageId) recordPageView(prisma, cms.pageId);
   const sections = cms.sections.length ? cms.sections : DEFAULT_SECTIONS;
   const mediaById = new Map(cms.mediaAssets.map((asset) => [asset.id, asset]));
 
   return (
     <main id="main-content" className="public-home">
       {visualEditor === "1" ? <CmsPreviewBridge /> : null}
+      {cms.isSharedPreview ? (
+        <aside className="cms-preview-banner">
+          Aperçu partagé · aucune modification n’est encore publique
+        </aside>
+      ) : null}
       <OrganizationJsonLd
         name="Pixel&Digital"
         path="/"

@@ -27,6 +27,7 @@ import {
 import { ConfirmAction } from "../_components/confirm-action";
 import {
   createPageAction,
+  createPreviewShareAction,
   deleteMediaAction,
   deleteSectionAction,
   duplicatePageAction,
@@ -34,6 +35,7 @@ import {
   saveSectionFieldsAction,
   saveSiteIdentityDraftAction,
   restorePageRevisionAction,
+  revokePreviewShareAction,
   schedulePageRevisionAction,
   startPageRevisionAction,
   startSiteIdentityDraftAction,
@@ -112,6 +114,14 @@ export function DuplicatePageForm({
   );
 }
 
+export type PreviewShareDto = Readonly<{
+  id: string;
+  token: string;
+  label: string | null;
+  revisionId: string;
+  expiresAt: Date;
+}>;
+
 export function RevisionEditor({
   pageId,
   draft,
@@ -121,6 +131,7 @@ export function RevisionEditor({
   authors,
   images,
   publicPath,
+  activeShares,
 }: Readonly<{
   pageId: string;
   draft: WorkspaceRevisionDto | null;
@@ -130,6 +141,7 @@ export function RevisionEditor({
   authors: Readonly<Record<string, string>>;
   images: readonly ImageOption[];
   publicPath: string;
+  activeShares: readonly PreviewShareDto[];
 }>) {
   const [startState, startAction] = useActionState(
     startPageRevisionAction,
@@ -167,6 +179,12 @@ export function RevisionEditor({
         authors={authors}
         images={images}
         publicPath={publicPath}
+      />
+      <PreviewShareManager
+        pageId={pageId}
+        revisionId={draft.id}
+        publicPath={publicPath}
+        shares={activeShares}
       />
       {changeSummary ? <RevisionChangeSummary summary={changeSummary} /> : null}
       <RevisionHistory
@@ -1321,6 +1339,99 @@ function SiteIdentityTransition({
       <SubmitButton>{label}</SubmitButton>
       <Feedback state={state} />
     </form>
+  );
+}
+
+function PreviewShareManager({
+  pageId,
+  revisionId,
+  publicPath,
+  shares,
+}: Readonly<{
+  pageId: string;
+  revisionId: string;
+  publicPath: string;
+  shares: readonly PreviewShareDto[];
+}>) {
+  const [createState, createAction] = useActionState(
+    createPreviewShareAction,
+    IDLE_ACTION_STATE,
+  );
+  useRefreshOnSuccess(createState.status);
+  return (
+    <details className="admin-user-card__details cms-preview-shares">
+      <summary>Liens d’aperçu partageables ({shares.length})</summary>
+      {shares.length > 0 ? (
+        <ul className="cms-preview-shares__list">
+          {shares.map((share) => (
+            <PreviewShareRow
+              key={share.id}
+              share={share}
+              publicPath={publicPath}
+            />
+          ))}
+        </ul>
+      ) : (
+        <p className="admin-empty">Aucun lien de partage actif.</p>
+      )}
+      <form action={createAction} className="cms-preview-shares__create">
+        <input type="hidden" name="pageId" value={pageId} />
+        <input type="hidden" name="revisionId" value={revisionId} />
+        <label>
+          Description (facultatif)
+          <input name="label" maxLength={80} placeholder="Pour le client X" />
+        </label>
+        <label>
+          Expire dans
+          <select name="expiresInDays" defaultValue="7">
+            <option value="1">1 jour</option>
+            <option value="7">7 jours</option>
+            <option value="30">30 jours</option>
+            <option value="90">90 jours</option>
+          </select>
+        </label>
+        <SubmitButton>Créer un lien de partage</SubmitButton>
+        <Feedback state={createState} />
+      </form>
+      <p className="admin-field-help">
+        Le lien montre exactement cette version, même après une modification
+        ultérieure, sans nécessiter de compte Workspace.
+      </p>
+    </details>
+  );
+}
+
+function PreviewShareRow({
+  share,
+  publicPath,
+}: Readonly<{ share: PreviewShareDto; publicPath: string }>) {
+  const [revokeState, revokeAction] = useActionState(
+    revokePreviewShareAction,
+    IDLE_ACTION_STATE,
+  );
+  useRefreshOnSuccess(revokeState.status);
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const url = `${origin}${publicPath}?share=${share.token}`;
+  return (
+    <li className="cms-preview-shares__item">
+      <div>
+        <strong>{share.label || "Lien de partage"}</strong>
+        <span>
+          Expire le {share.expiresAt.toLocaleDateString("fr-FR")}
+        </span>
+      </div>
+      <input
+        readOnly
+        value={url}
+        aria-label="URL du lien de partage"
+        onFocus={(event) => event.currentTarget.select()}
+      />
+      <form action={revokeAction}>
+        <input type="hidden" name="id" value={share.id} />
+        <SubmitButton>Révoquer</SubmitButton>
+      </form>
+      <Feedback state={revokeState} />
+    </li>
   );
 }
 

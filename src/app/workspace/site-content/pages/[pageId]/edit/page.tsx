@@ -21,7 +21,7 @@ export default async function VisualPageEditorRoute({
     searchParams,
   ]);
   const decodedPageId = decodeURIComponent(pageId);
-  const [content, users] = await Promise.all([
+  const [content, users, activeShares] = await Promise.all([
     getWorkspaceContent(
       { workspaceContentReader: new PrismaWorkspaceContentReader(prisma) },
       context,
@@ -37,6 +37,14 @@ export default async function VisualPageEditorRoute({
       where: { status: "ACTIVE" },
       select: { id: true, displayName: true, normalizedEmail: true },
       orderBy: { displayName: "asc" },
+    }),
+    prisma.pagePreviewShare.findMany({
+      where: {
+        pageId: decodedPageId,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: "desc" },
     }),
   ]);
   if (!content.ok) redirect(`/workspace/site-content/pages?world=${world}`);
@@ -57,6 +65,13 @@ export default async function VisualPageEditorRoute({
       users={users.map((user) => ({
         id: user.id,
         name: user.displayName ?? user.normalizedEmail ?? "Collaborateur",
+      }))}
+      activeShares={activeShares.map((share) => ({
+        id: share.id,
+        token: share.token,
+        label: share.label,
+        revisionId: share.revisionId,
+        expiresAt: share.expiresAt,
       }))}
     />
   );

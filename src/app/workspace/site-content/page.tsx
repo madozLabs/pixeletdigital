@@ -105,7 +105,7 @@ export default async function SiteContentPage({
   const pageStatus = tab === "pages" ? params.status || undefined : undefined;
   const mediaType = tab === "media" ? params.type || undefined : undefined;
 
-  const [contentResult, enquiryResult, commentUsers] = await Promise.all([
+  const [contentResult, enquiryResult, commentUsers, activeShares] = await Promise.all([
     getWorkspaceContent(
       { workspaceContentReader: new PrismaWorkspaceContentReader(prisma) },
       context,
@@ -133,6 +133,16 @@ export default async function SiteContentPage({
           where: { status: "ACTIVE" },
           select: { id: true, displayName: true, normalizedEmail: true },
           orderBy: { displayName: "asc" },
+        })
+      : Promise.resolve([]),
+    params.page
+      ? prisma.pagePreviewShare.findMany({
+          where: {
+            pageId: params.page,
+            revokedAt: null,
+            expiresAt: { gt: new Date() },
+          },
+          orderBy: { createdAt: "desc" },
         })
       : Promise.resolve([]),
   ]);
@@ -237,6 +247,13 @@ export default async function SiteContentPage({
           users={commentUsers.map((user) => ({
             id: user.id,
             name: user.displayName ?? user.normalizedEmail ?? "Collaborateur",
+          }))}
+          activeShares={activeShares.map((share) => ({
+            id: share.id,
+            token: share.token,
+            label: share.label,
+            revisionId: share.revisionId,
+            expiresAt: share.expiresAt,
           }))}
         />
       ) : (
@@ -594,6 +611,7 @@ export function PageEditor({
   revisionAuthors,
   currentUserId,
   users,
+  activeShares,
 }: {
   worldKey: string;
   page: EditablePage;
@@ -602,6 +620,13 @@ export function PageEditor({
   revisionAuthors: Readonly<Record<string, string>>;
   currentUserId: string;
   users: readonly Readonly<{ id: string; name: string }>[];
+  activeShares: readonly Readonly<{
+    id: string;
+    token: string;
+    label: string | null;
+    revisionId: string;
+    expiresAt: Date;
+  }>[];
 }) {
   const activeRevision = page.draftRevision ?? page.publishedRevision;
   const sections = activeRevision?.sections ?? [];
@@ -701,6 +726,7 @@ export function PageEditor({
               asset.mimeType.startsWith("image/"),
             )}
             publicPath={publicPath}
+            activeShares={activeShares}
           />
         }
       >

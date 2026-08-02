@@ -507,6 +507,57 @@ export async function schedulePageRevisionAction(
   }
 }
 
+export async function createPreviewShareAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const pageId = text(formData, "pageId");
+    const revisionId = text(formData, "revisionId");
+    const page = await prisma.page.findUniqueOrThrow({ where: { id: pageId } });
+    const { actor } = await actorFor(page.worldKey);
+    const days = Number(formData.get("expiresInDays"));
+    const expiresInDays = Number.isFinite(days) && days > 0 ? Math.min(days, 90) : 7;
+    const label = text(formData, "label") || null;
+    await prisma.pagePreviewShare.create({
+      data: {
+        token: randomUUID().replace(/-/g, ""),
+        pageId,
+        revisionId,
+        label,
+        createdById: actor.id,
+        expiresAt: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000),
+      },
+    });
+    revalidatePath("/workspace/site-content");
+    return { status: "success", message: "Lien de partage créé." };
+  } catch (error) {
+    return toActionState(error);
+  }
+}
+
+export async function revokePreviewShareAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const id = text(formData, "id");
+    const share = await prisma.pagePreviewShare.findUniqueOrThrow({
+      where: { id },
+      include: { page: true },
+    });
+    await actorFor(share.page.worldKey);
+    await prisma.pagePreviewShare.update({
+      where: { id },
+      data: { revokedAt: new Date() },
+    });
+    revalidatePath("/workspace/site-content");
+    return { status: "success", message: "Lien de partage révoqué." };
+  } catch (error) {
+    return toActionState(error);
+  }
+}
+
 export async function transitionPageRevisionAction(
   _state: ActionState,
   formData: FormData,

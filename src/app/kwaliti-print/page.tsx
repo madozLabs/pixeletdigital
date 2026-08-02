@@ -54,9 +54,13 @@ type Families = Awaited<ReturnType<typeof listPublishedServiceFamilies>>;
 export default async function KwalitiPrintHomePage({
   searchParams,
 }: Readonly<{
-  searchParams: Promise<{ preview?: string; visualEditor?: string }>;
+  searchParams: Promise<{
+    preview?: string;
+    visualEditor?: string;
+    share?: string;
+  }>;
 }>) {
-  const { preview, visualEditor } = await searchParams;
+  const { preview, visualEditor, share } = await searchParams;
   const deps = {
     services: new PrismaServiceRepository(prisma),
     families: new PrismaServiceFamilyRepository(prisma),
@@ -67,9 +71,9 @@ export default async function KwalitiPrintHomePage({
     listPublishedServiceFamilies(deps, { worldKey: "kwaliti-print" }).catch(
       () => [],
     ),
-    getCmsHomeContent("kwaliti-print", preview).catch(emptyHomeContent),
+    getCmsHomeContent("kwaliti-print", preview, share).catch(emptyHomeContent),
   ]);
-  if (!preview && cms.pageId) recordPageView(prisma, cms.pageId);
+  if (!preview && !share && cms.pageId) recordPageView(prisma, cms.pageId);
   const sections = cms.sections.length ? cms.sections : DEFAULT_SECTIONS;
   const mediaById = new Map(cms.mediaAssets.map((asset) => [asset.id, asset]));
 

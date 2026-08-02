@@ -470,18 +470,40 @@ model Page {
   createdAt           DateTime
   updatedAt           DateTime
 
-  revisions         PageRevision[]  @relation("PageRevisions")
-  draftRevision     PageRevision?   @relation("PageDraftRevision", fields: [draftRevisionId], references: [id], onDelete: SetNull)
-  publishedRevision PageRevision?   @relation("PagePublishedRevision", fields: [publishedRevisionId], references: [id], onDelete: SetNull)
-  service           Service?        @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  revisions         PageRevision[]     @relation("PageRevisions")
+  draftRevision     PageRevision?      @relation("PageDraftRevision", fields: [draftRevisionId], references: [id], onDelete: SetNull)
+  publishedRevision PageRevision?      @relation("PagePublishedRevision", fields: [publishedRevisionId], references: [id], onDelete: SetNull)
+  service           Service?           @relation(fields: [serviceId], references: [id], onDelete: Restrict)
   editorialItems    EditorialItem[]
   views             PageView[]
+  previewShares     PagePreviewShare[]
 
   @@unique([worldKey, pageType, slug])
   @@unique([worldKey, routePath])
   @@index([worldKey, lifecycle])
   @@index([worldKey, slug, lifecycle])
   @@map("pages")
+}
+
+// Grants a named, expiring, unauthenticated preview of one specific
+// revision -- for sharing a draft with an external client who has no
+// Workspace login. Deliberately scoped to a single revisionId (not "latest
+// draft") so the link keeps showing what was actually shared even if the
+// draft moves on afterwards.
+model PagePreviewShare {
+  id          String    @id @default(cuid())
+  token       String    @unique
+  pageId      String
+  page        Page      @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  revisionId  String
+  label       String?
+  createdById String?
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
+
+  @@index([pageId])
+  @@map("page_preview_shares")
 }
 
 // Minimal internal analytics: one row per real public pageview (preview

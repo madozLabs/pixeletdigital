@@ -1,3 +1,4 @@
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import { actorHasWorldAccess } from "@/app/workspace/_lib/authorization";
 import { getWorkspaceRequestContext } from "@/app/workspace/get-workspace-context";
@@ -22,6 +23,7 @@ export type CmsClosingContent = Readonly<{
 
 export type CmsHomeContent = Readonly<{
   pageId: string | null;
+  isSharedPreview: boolean;
   sections: readonly CmsHomeSection[];
   mediaAssets: readonly CmsHomeMediaAsset[];
   hero: CmsHeroContent | null;
@@ -70,6 +72,10 @@ export type CmsItemsBlock = CmsCopyBlock &
 
 const HOME_SLUG = "accueil";
 
+type HomeRevision = Prisma.PageRevisionGetPayload<{
+  include: { sections: true; ogImage: true };
+}>;
+
 function str(payload: Record<string, unknown>, key: string): string | null {
   const value = payload[key];
   return typeof value === "string" && value.trim().length > 0
@@ -85,7 +91,33 @@ function str(payload: Record<string, unknown>, key: string): string | null {
 export async function getCmsHomeContent(
   worldKey: string,
   previewRevisionId?: string,
+  shareToken?: string,
 ): Promise<CmsHomeContent> {
+  // An invalid/expired token deliberately falls through to the normal
+  // published-page path below rather than returning an empty/error state --
+  // a broken share link should degrade to "shows the real live page", not
+  // to the hardcoded placeholder copy with a misleading "shared preview"
+  // banner still showing on top of it.
+  if (shareToken) {
+    const share = await prisma.pagePreviewShare
+      .findUnique({ where: { token: shareToken }, include: { page: true } })
+      .catch(() => null);
+    const valid =
+      share &&
+      !share.revokedAt &&
+      share.expiresAt >= new Date() &&
+      share.page.worldKey === worldKey &&
+      share.page.slug === HOME_SLUG;
+    if (valid) {
+      const revision = await prisma.pageRevision
+        .findUnique({
+          where: { id: share.revisionId },
+          include: { sections: { orderBy: { order: "asc" } }, ogImage: true },
+        })
+        .catch(() => null);
+      if (revision) return buildHomeContent(share.page.id, revision, true);
+    }
+  }
   if (previewRevisionId) {
     const context = await getWorkspaceRequestContext();
     if (!context?.actor || !actorHasWorldAccess(context.actor, worldKey)) {
@@ -121,6 +153,14 @@ export async function getCmsHomeContent(
   const activeRevision = previewRevisionId
     ? page.draftRevision
     : page.publishedRevision;
+  return buildHomeContent(page.id, activeRevision, false);
+}
+
+async function buildHomeContent(
+  pageId: string,
+  activeRevision: HomeRevision | null | undefined,
+  isSharedPreview: boolean,
+): Promise<CmsHomeContent> {
   const sections = activeRevision?.sections ?? [];
   const seo: CmsHomeSeo | null = activeRevision
     ? {
@@ -219,7 +259,8 @@ export async function getCmsHomeContent(
   }
 
   return {
-    pageId: page.id,
+    pageId,
+    isSharedPreview,
     sections: sections.map((section) => ({
       id: section.id,
       sectionType: section.sectionType,
@@ -246,6 +287,7 @@ export async function getCmsHomeContent(
 export function emptyHomeContent(): CmsHomeContent {
   return {
     pageId: null,
+    isSharedPreview: false,
     sections: [],
     mediaAssets: [],
     hero: null,

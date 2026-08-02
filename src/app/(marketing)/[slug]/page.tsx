@@ -18,6 +18,7 @@ type Props = Readonly<{
     preview?: string;
     world?: string;
     visualEditor?: string;
+    share?: string;
   }>;
 }>;
 
@@ -25,7 +26,25 @@ async function loadPage(
   worldKey: "pixel-digital" | "kwaliti-print",
   slug: string,
   previewRevisionId?: string,
+  shareToken?: string,
 ) {
+  if (shareToken) {
+    const share = await prisma.pagePreviewShare
+      .findUnique({ where: { token: shareToken }, include: { page: true } })
+      .catch(() => null);
+    if (!share || share.revokedAt || share.expiresAt < new Date()) return null;
+    if (share.page.worldKey !== worldKey || share.page.slug !== slug) {
+      return null;
+    }
+    const revision = await prisma.pageRevision
+      .findUnique({
+        where: { id: share.revisionId },
+        include: { sections: { orderBy: { order: "asc" } }, ogImage: true },
+      })
+      .catch(() => null);
+    if (!revision) return null;
+    return { ...share.page, draftRevision: revision, publishedRevision: null };
+  }
   if (previewRevisionId) {
     const context = await getWorkspaceRequestContext();
     if (!context?.actor || !actorHasWorldAccess(context.actor, worldKey)) {
@@ -78,10 +97,10 @@ export async function generateMetadata({
   searchParams,
 }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const { preview, world } = await searchParams;
+  const { preview, world, share } = await searchParams;
   const worldKey =
     world === "kwaliti-print" ? "kwaliti-print" : "pixel-digital";
-  const page = await loadPage(worldKey, slug, preview);
+  const page = await loadPage(worldKey, slug, preview, share);
   if (!page) {
     return {
       title: "Page",
@@ -89,7 +108,7 @@ export async function generateMetadata({
       robots: { index: false, follow: false },
     };
   }
-  const revision = preview ? page.draftRevision : page.publishedRevision;
+  const revision = preview || share ? page.draftRevision : page.publishedRevision;
   const sections = revision?.sections ?? [];
   const description =
     revision?.seoDescription ||
@@ -113,24 +132,24 @@ export async function generateMetadata({
       type: "website",
       images: revision?.ogImage ? [{ url: revision.ogImage.publicUrl }] : undefined,
     },
-    robots: preview ? { index: false, follow: false } : undefined,
+    robots: preview || share ? { index: false, follow: false } : undefined,
   };
 }
 
 export default async function CmsPublicPage({ params, searchParams }: Props) {
   const { slug } = await params;
-  const { preview, world, visualEditor } = await searchParams;
+  const { preview, world, visualEditor, share } = await searchParams;
   const worldKey =
     world === "kwaliti-print" ? "kwaliti-print" : "pixel-digital";
   // The "accueil" page feeds the real home hero; avoid a duplicate route.
-  if (slug === "accueil" && !preview) {
+  if (slug === "accueil" && !preview && !share) {
     redirect(worldKey === "kwaliti-print" ? "/kwaliti-print" : "/");
   }
-  const page = await loadPage(worldKey, slug, preview);
+  const page = await loadPage(worldKey, slug, preview, share);
   if (!page) notFound();
-  if (!preview) recordPageView(prisma, page.id);
+  if (!preview && !share) recordPageView(prisma, page.id);
 
-  const sections = preview
+  const sections = preview || share
     ? (page.draftRevision?.sections ?? [])
     : (page.publishedRevision?.sections ?? []);
   const mediaIds = sections.flatMap((section) => {
@@ -166,6 +185,10 @@ export default async function CmsPublicPage({ params, searchParams }: Props) {
       {preview ? (
         <aside className="cms-preview-banner">
           Aperçu privé · aucune modification n’est encore publique
+        </aside>
+      ) : share ? (
+        <aside className="cms-preview-banner">
+          Aperçu partagé · aucune modification n’est encore publique
         </aside>
       ) : null}
       {sections.map((section) => (
