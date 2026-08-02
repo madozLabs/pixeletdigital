@@ -456,6 +456,7 @@ export async function updatePageRevisionMetadataAction(
       title: text(formData, "title"),
       seoTitle: text(formData, "seoTitle"),
       seoDescription: text(formData, "seoDescription"),
+      ogImageMediaId: text(formData, "ogImageMediaId"),
     },
   );
   if (result.ok) revalidatePath("/workspace/site-content");
@@ -569,6 +570,7 @@ export async function restorePageRevisionAction(
           title: source.title,
           seoTitle: source.seoTitle,
           seoDescription: source.seoDescription,
+          ogImageMediaId: source.ogImageMediaId,
           version: 1,
           createdById: actor.id,
           createdAt: now,
@@ -749,6 +751,7 @@ export async function duplicatePageAction(
           title: `${source.title} (copie)`,
           seoTitle: sourceRevision?.seoTitle ?? null,
           seoDescription: sourceRevision?.seoDescription ?? null,
+          ogImageMediaId: sourceRevision?.ogImageMediaId ?? null,
           createdById: actor.id,
           createdAt: now,
           updatedAt: now,
@@ -1600,7 +1603,10 @@ export async function deleteMediaAction(
     const identityUsageCount = await prisma.siteIdentityMediaUsage.count({
       where: { mediaId: asset.id },
     });
-    if (revisionUsageCount > 0 || identityUsageCount > 0) {
+    const ogImageUsageCount = await prisma.pageRevision.count({
+      where: { ogImageMediaId: asset.id },
+    });
+    if (revisionUsageCount > 0 || identityUsageCount > 0 || ogImageUsageCount > 0) {
       throw new Error("MEDIA_IN_USE");
     }
     const supabaseUrl = process.env.SUPABASE_URL;
@@ -1625,6 +1631,37 @@ export async function deleteMediaAction(
     await prisma.mediaAsset.delete({ where: { id } });
     revalidatePath("/workspace/site-content");
     return { status: "success", message: "Média supprimé." };
+  } catch (error) {
+    return toActionState(error);
+  }
+}
+
+export async function updateMediaDetailsAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const id = text(formData, "id");
+    const asset = await prisma.mediaAsset.findUniqueOrThrow({ where: { id } });
+    await actorFor(asset.worldKey);
+    const rightsExpiresAtRaw = text(formData, "rightsExpiresAt");
+    await prisma.mediaAsset.update({
+      where: { id },
+      data: {
+        title: text(formData, "title") || asset.title,
+        altText: text(formData, "altText"),
+        caption: text(formData, "caption") || null,
+        credit: text(formData, "credit") || null,
+        rightsStatement: text(formData, "rightsStatement") || null,
+        rightsExpiresAt: rightsExpiresAtRaw ? new Date(rightsExpiresAtRaw) : null,
+        tags: text(formData, "tags")
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean),
+      },
+    });
+    revalidatePath("/workspace/site-content");
+    return { status: "success", message: "Détails du média enregistrés." };
   } catch (error) {
     return toActionState(error);
   }

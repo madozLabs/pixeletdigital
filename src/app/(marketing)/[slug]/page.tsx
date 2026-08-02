@@ -38,10 +38,16 @@ async function loadPage(
         },
         include: {
           draftRevision: {
-            include: { sections: { orderBy: { order: "asc" } } },
+            include: {
+              sections: { orderBy: { order: "asc" } },
+              ogImage: true,
+            },
           },
           publishedRevision: {
-            include: { sections: { orderBy: { order: "asc" } } },
+            include: {
+              sections: { orderBy: { order: "asc" } },
+              ogImage: true,
+            },
           },
         },
       })
@@ -52,10 +58,10 @@ async function loadPage(
       where: { worldKey, slug, lifecycle: "PUBLISHED" },
       include: {
         draftRevision: {
-          include: { sections: { orderBy: { order: "asc" } } },
+          include: { sections: { orderBy: { order: "asc" } }, ogImage: true },
         },
         publishedRevision: {
-          include: { sections: { orderBy: { order: "asc" } } },
+          include: { sections: { orderBy: { order: "asc" } }, ogImage: true },
         },
       },
     })
@@ -78,27 +84,29 @@ export async function generateMetadata({
       robots: { index: false, follow: false },
     };
   }
-  const sections = preview
-    ? (page.draftRevision?.sections ?? [])
-    : (page.publishedRevision?.sections ?? []);
+  const revision = preview ? page.draftRevision : page.publishedRevision;
+  const sections = revision?.sections ?? [];
   const description =
+    revision?.seoDescription ||
     sections
       .map((section) =>
         stringValue(section.payload as Record<string, unknown>, "text"),
       )
-      .find(Boolean) || `Découvrez ${page.title} par Pixel&Digital.`;
+      .find(Boolean) ||
+    `Découvrez ${page.title} par Pixel&Digital.`;
+  const title = revision?.seoTitle || page.title;
+  const canonicalPath =
+    worldKey === "kwaliti-print" ? `/kwaliti-print/${slug}` : `/${slug}`;
   return {
-    title: page.title,
+    title,
     description,
-    alternates: {
-      canonical:
-        worldKey === "kwaliti-print" ? `/kwaliti-print/${slug}` : `/${slug}`,
-    },
+    alternates: { canonical: canonicalPath },
     openGraph: {
-      title: page.title,
+      title,
       description,
-      url: worldKey === "kwaliti-print" ? `/kwaliti-print/${slug}` : `/${slug}`,
+      url: canonicalPath,
       type: "website",
+      images: revision?.ogImage ? [{ url: revision.ogImage.publicUrl }] : undefined,
     },
     robots: preview ? { index: false, follow: false } : undefined,
   };

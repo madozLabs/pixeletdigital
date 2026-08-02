@@ -29,22 +29,37 @@ import {
 } from "./_components/cms-section-design";
 import { OrganizationJsonLd } from "./_components/organization-json-ld";
 
+const HOME_TITLE = "Pixel&Digital — Agence créative et digitale";
 const HOME_DESCRIPTION =
   "Agence créative et digitale : stratégie, identité, contenu, digital et production pour construire des marques visibles et crédibles.";
 
-export const metadata: Metadata = {
-  title: { absolute: "Pixel&Digital — Agence créative et digitale" },
-  description: HOME_DESCRIPTION,
-  alternates: { canonical: "/" },
-  openGraph: {
-    title: "Pixel&Digital — Agence créative et digitale",
-    description: HOME_DESCRIPTION,
-    url: "/",
-    type: "website",
-  },
-};
-
 export const revalidate = 60;
+
+export async function generateMetadata({
+  searchParams,
+}: Readonly<{
+  searchParams: Promise<{ preview?: string }>;
+}>): Promise<Metadata> {
+  const { preview } = await searchParams;
+  const cms = await getCmsHomeContent("pixel-digital", preview).catch(
+    emptyHomeContent,
+  );
+  const title = cms.seo?.title || HOME_TITLE;
+  const description = cms.seo?.description || HOME_DESCRIPTION;
+  return {
+    title: { absolute: title },
+    description,
+    alternates: { canonical: "/" },
+    openGraph: {
+      title,
+      description,
+      url: "/",
+      type: "website",
+      images: cms.seo?.ogImageUrl ? [{ url: cms.seo.ogImageUrl }] : undefined,
+    },
+    robots: preview ? { index: false, follow: false } : undefined,
+  };
+}
 
 const MANIFESTO = [
   "Les likes paient rarement les factures.",

@@ -19,6 +19,7 @@ export type PageRevision = Readonly<{
   title: string;
   seoTitle: string | null;
   seoDescription: string | null;
+  ogImageMediaId: string | null;
   version: number;
   createdById: string | null;
   reviewedById: string | null;
@@ -52,6 +53,7 @@ export function editPageRevision(
     title: string;
     seoTitle: string;
     seoDescription: string;
+    ogImageMediaId: string;
   }>,
   now: Date,
 ): Result<PageRevision, PageRevisionError> {
@@ -83,6 +85,7 @@ export function editPageRevision(
       title,
       seoTitle: seoTitle || null,
       seoDescription: seoDescription || null,
+      ogImageMediaId: input.ogImageMediaId.trim() || null,
       version: revision.version + 1,
       updatedAt: new Date(now),
     }),

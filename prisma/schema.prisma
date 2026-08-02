@@ -261,64 +261,64 @@ enum PaymentMethod {
 }
 
 model World {
-  id              String           @id @default(cuid())
-  key             String           @unique
-  displayName     String
-  mode            WorldMode
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  roleAssignments RoleAssignment[]
-  auditEvents     AuditEvent[]
-  projects        Project[]
-  pages           Page[]
-  services        Service[]
-  serviceFamilies ServiceFamily[]
-  enquiries       Enquiry[]
-  editorialItems  EditorialItem[]
-  clients         Client[]
-  catalogueItems  CatalogueItem[]
-  quotes          Quote[]
-  invoices        Invoice[]
-  mediaAssets     MediaAsset[]
-  siteSettings    SiteSettings?
-  leads           Lead[]
+  id                 String              @id @default(cuid())
+  key                String              @unique
+  displayName        String
+  mode               WorldMode
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  roleAssignments    RoleAssignment[]
+  auditEvents        AuditEvent[]
+  projects           Project[]
+  pages              Page[]
+  services           Service[]
+  serviceFamilies    ServiceFamily[]
+  enquiries          Enquiry[]
+  editorialItems     EditorialItem[]
+  clients            Client[]
+  catalogueItems     CatalogueItem[]
+  quotes             Quote[]
+  invoices           Invoice[]
+  mediaAssets        MediaAsset[]
+  siteSettings       SiteSettings?
+  leads              Lead[]
   billingAttachments BillingAttachment[]
-  creditNotes     CreditNote[]
-  expenses        Expense[]
-  revenueEntries  RevenueEntry[]
-  comments        Comment[]
+  creditNotes        CreditNote[]
+  expenses           Expense[]
+  revenueEntries     RevenueEntry[]
+  comments           Comment[]
 
   @@map("worlds")
 }
 
 model User {
-  id                String           @id @default(cuid())
-  displayName       String?
-  normalizedEmail   String?          @unique
-  status            UserStatus
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  authAccounts      AuthAccount[]
-  roleAssignments   RoleAssignment[]
-  memberships       TeamMembership[]
-  managedClients    Client[]         @relation("ClientAccountManager")
-  commercialClients Client[]         @relation("ClientCommercialOwner")
-  managedProjects   Project[]        @relation("ProjectManager")
-  assignedTasks     Task[]           @relation("TaskAssignee")
-  createdTasks      Task[]           @relation("TaskCreator")
-  editorialItems    EditorialItem[]  @relation("EditorialOwner")
-  reviewedItems     EditorialItem[]  @relation("EditorialReviewer")
-  ownedLeads        Lead[]           @relation("LeadOwner")
-  authoredLeadNotes LeadNote[]       @relation("LeadNoteAuthor")
-  ownedNextActions  NextAction[]     @relation("NextActionOwner")
-  leadActivities    LeadActivity[]   @relation("LeadActivityActor")
-  editPresences     EditPresence[]
+  id                         String              @id @default(cuid())
+  displayName                String?
+  normalizedEmail            String?             @unique
+  status                     UserStatus
+  createdAt                  DateTime            @default(now())
+  updatedAt                  DateTime            @updatedAt
+  authAccounts               AuthAccount[]
+  roleAssignments            RoleAssignment[]
+  memberships                TeamMembership[]
+  managedClients             Client[]            @relation("ClientAccountManager")
+  commercialClients          Client[]            @relation("ClientCommercialOwner")
+  managedProjects            Project[]           @relation("ProjectManager")
+  assignedTasks              Task[]              @relation("TaskAssignee")
+  createdTasks               Task[]              @relation("TaskCreator")
+  editorialItems             EditorialItem[]     @relation("EditorialOwner")
+  reviewedItems              EditorialItem[]     @relation("EditorialReviewer")
+  ownedLeads                 Lead[]              @relation("LeadOwner")
+  authoredLeadNotes          LeadNote[]          @relation("LeadNoteAuthor")
+  ownedNextActions           NextAction[]        @relation("NextActionOwner")
+  leadActivities             LeadActivity[]      @relation("LeadActivityActor")
+  editPresences              EditPresence[]
   uploadedBillingAttachments BillingAttachment[]
-  recordedExpenses  Expense[]
-  recordedRevenueEntries RevenueEntry[]
-  postedComments    Comment[]
-  commentMentions   CommentMention[]
-  notifications     Notification[]
+  recordedExpenses           Expense[]
+  recordedRevenueEntries     RevenueEntry[]
+  postedComments             Comment[]
+  commentMentions            CommentMention[]
+  notifications              Notification[]
 
   @@map("users")
 }
@@ -491,6 +491,8 @@ model PageRevision {
   title          String
   seoTitle       String?
   seoDescription String?
+  ogImageMediaId String?
+  ogImage        MediaAsset?        @relation(fields: [ogImageMediaId], references: [id], onDelete: Restrict)
   version        Int                @default(1)
   createdById    String?
   reviewedById   String?
@@ -506,6 +508,7 @@ model PageRevision {
 
   @@unique([pageId, revisionNumber])
   @@index([pageId, status])
+  @@index([ogImageMediaId])
   @@map("page_revisions")
 }
 
@@ -585,8 +588,9 @@ model MediaAsset {
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
-  usages             SectionMediaUsage[]
-  siteIdentityUsages SiteIdentityMediaUsage[]
+  usages              SectionMediaUsage[]
+  siteIdentityUsages  SiteIdentityMediaUsage[]
+  ogImageForRevisions PageRevision[]
 
   @@unique([bucket, objectPath])
   @@index([worldKey, createdAt])
@@ -1186,18 +1190,18 @@ model ExpenseCategory {
 // version/lifecycle, only create and delete (a mistake is deleted and
 // re-entered rather than amended in place).
 model Expense {
-  id            String          @id
-  worldKey      String
-  categoryId    String
-  label         String
-  amountCents   Int
-  expenseDate   DateTime
-  notes         String?
-  createdById   String?
-  createdAt     DateTime
-  world         World           @relation(fields: [worldKey], references: [key], onDelete: Restrict)
-  category      ExpenseCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  createdBy     User?           @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  id          String          @id
+  worldKey    String
+  categoryId  String
+  label       String
+  amountCents Int
+  expenseDate DateTime
+  notes       String?
+  createdById String?
+  createdAt   DateTime
+  world       World           @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  category    ExpenseCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  createdBy   User?           @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([worldKey, expenseDate])
   @@index([categoryId])
@@ -1208,16 +1212,16 @@ model Expense {
 // same append-only, create/delete-only shape as Expense; no category, the
 // report groups these under a single "Recettes hors facture" bucket.
 model RevenueEntry {
-  id            String   @id
-  worldKey      String
-  label         String
-  amountCents   Int
-  revenueDate   DateTime
-  notes         String?
-  createdById   String?
-  createdAt     DateTime
-  world         World    @relation(fields: [worldKey], references: [key], onDelete: Restrict)
-  createdBy     User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  id          String   @id
+  worldKey    String
+  label       String
+  amountCents Int
+  revenueDate DateTime
+  notes       String?
+  createdById String?
+  createdAt   DateTime
+  world       World    @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  createdBy   User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([worldKey, revenueDate])
   @@map("revenue_entries")

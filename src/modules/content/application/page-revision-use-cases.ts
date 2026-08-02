@@ -53,6 +53,7 @@ export async function updatePageDraftMetadata(
     title: string;
     seoTitle: string;
     seoDescription: string;
+    ogImageMediaId: string;
   }>,
 ): Promise<Result<PageRevision, ContentApplicationError>> {
   const access = await mutablePage(dependencies, context, input.pageId, false);

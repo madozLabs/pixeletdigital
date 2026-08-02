@@ -93,6 +93,7 @@ export class PrismaPageRevisionRepository implements PageRevisionRepository {
             title: source?.title ?? page.title,
             seoTitle: source?.seoTitle ?? null,
             seoDescription: source?.seoDescription ?? null,
+            ogImageMediaId: source?.ogImageMediaId ?? null,
             version: 1,
             createdById: input.actorId,
             createdAt: input.now,
@@ -232,12 +233,13 @@ export class PrismaPageRevisionRepository implements PageRevisionRepository {
 
 function revisionData(
   revision: PageRevision,
-): Prisma.PageRevisionUpdateManyMutationInput {
+): Prisma.PageRevisionUncheckedUpdateManyInput {
   return {
     status: revision.status,
     title: revision.title,
     seoTitle: revision.seoTitle,
     seoDescription: revision.seoDescription,
+    ogImageMediaId: revision.ogImageMediaId,
     version: revision.version,
     reviewedById: revision.reviewedById,
     publishedById: revision.publishedById,

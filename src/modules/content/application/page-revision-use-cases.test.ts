@@ -64,6 +64,7 @@ describe("page revision use cases", () => {
         title: "Forged",
         seoTitle: "",
         seoDescription: "",
+        ogImageMediaId: "",
       },
     );
     const stale = await updatePageDraftMetadata(
@@ -76,6 +77,7 @@ describe("page revision use cases", () => {
         title: "Stale",
         seoTitle: "",
         seoDescription: "",
+        ogImageMediaId: "",
       },
     );
 
@@ -124,6 +126,7 @@ describe("page revision use cases", () => {
         title: "Ready for review",
         seoTitle: "Reviewed SEO title",
         seoDescription: "Reviewed SEO description",
+        ogImageMediaId: "",
       },
     );
     expect(edited).toMatchObject({ ok: true, value: { version: 2 } });
@@ -265,6 +268,7 @@ function revision(overrides: Partial<PageRevision> = {}): PageRevision {
     title: "Published title",
     seoTitle: null,
     seoDescription: null,
+    ogImageMediaId: null,
     version: 1,
     createdById: "author_1",
     reviewedById: "reviewer_1",

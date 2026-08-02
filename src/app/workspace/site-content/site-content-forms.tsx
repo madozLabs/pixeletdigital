@@ -37,6 +37,7 @@ import {
   startSiteIdentityDraftAction,
   transitionSiteIdentityAction,
   transitionPageRevisionAction,
+  updateMediaDetailsAction,
   updatePageRevisionMetadataAction,
   uploadMediaAction,
 } from "./actions";
@@ -116,6 +117,8 @@ export function RevisionEditor({
   history,
   changeSummary,
   authors,
+  images,
+  publicPath,
 }: Readonly<{
   pageId: string;
   draft: WorkspaceRevisionDto | null;
@@ -129,6 +132,8 @@ export function RevisionEditor({
     totalChanges: number;
   }> | null;
   authors: Readonly<Record<string, string>>;
+  images: readonly ImageOption[];
+  publicPath: string;
 }>) {
   const [startState, startAction] = useActionState(
     startPageRevisionAction,
@@ -160,7 +165,13 @@ export function RevisionEditor({
   }
   return (
     <>
-      <ActiveRevisionEditor pageId={pageId} revision={draft} authors={authors} />
+      <ActiveRevisionEditor
+        pageId={pageId}
+        revision={draft}
+        authors={authors}
+        images={images}
+        publicPath={publicPath}
+      />
       {changeSummary ? <RevisionChangeSummary summary={changeSummary} /> : null}
       <RevisionHistory
         pageId={pageId}
@@ -1154,11 +1165,13 @@ function IdentityMediaPicker({
   label,
   selectedId,
   images,
+  disabled = false,
 }: Readonly<{
   name: string;
   label: string;
   selectedId: string;
   images: readonly ImageOption[];
+  disabled?: boolean;
 }>) {
   return (
     <fieldset className="cms-identity-media">
@@ -1170,6 +1183,7 @@ function IdentityMediaPicker({
             name={name}
             value=""
             defaultChecked={!selectedId}
+            disabled={disabled}
           />
           <span>Aucun</span>
         </label>
@@ -1180,6 +1194,7 @@ function IdentityMediaPicker({
               name={name}
               value={image.id}
               defaultChecked={selectedId === image.id}
+              disabled={disabled}
             />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={image.publicUrl} alt={image.altText} />
@@ -1290,16 +1305,26 @@ function ActiveRevisionEditor({
   pageId,
   revision,
   authors,
+  images,
+  publicPath,
 }: Readonly<{
   pageId: string;
   revision: WorkspaceRevisionDto;
   authors: Readonly<Record<string, string>>;
+  images: readonly ImageOption[];
+  publicPath: string;
 }>) {
   const [saveState, saveAction] = useActionState(
     updatePageRevisionMetadataAction,
     IDLE_ACTION_STATE,
   );
   useRefreshOnSuccess(saveState.status);
+  const [previewTitle, setPreviewTitle] = useState(
+    revision.seoTitle || revision.title,
+  );
+  const [previewDescription, setPreviewDescription] = useState(
+    revision.seoDescription ?? "",
+  );
   const transitions =
     revision.status === "DRAFT"
       ? [["IN_REVIEW", "Soumettre en revue"]]
@@ -1340,6 +1365,7 @@ function ActiveRevisionEditor({
             defaultValue={revision.seoTitle ?? ""}
             maxLength={70}
             disabled={revision.status !== "DRAFT"}
+            onValueChange={(value) => setPreviewTitle(value || revision.title)}
           />
           <CharCounterField
             label="Description SEO"
@@ -1348,8 +1374,21 @@ function ActiveRevisionEditor({
             maxLength={180}
             multiline
             disabled={revision.status !== "DRAFT"}
+            onValueChange={setPreviewDescription}
           />
         </div>
+        <SerpPreview
+          title={previewTitle}
+          description={previewDescription}
+          path={publicPath}
+        />
+        <IdentityMediaPicker
+          name="ogImageMediaId"
+          label="Image de partage (Open Graph, réseaux sociaux)"
+          selectedId={revision.ogImageMediaId ?? ""}
+          images={images}
+          disabled={revision.status !== "DRAFT"}
+        />
         {revision.status === "DRAFT" ? (
           <SubmitButton>Enregistrer la version</SubmitButton>
         ) : null}
@@ -1990,6 +2029,32 @@ function BackgroundImageAdjustments({
   );
 }
 
+function SerpPreview({
+  title,
+  description,
+  path,
+}: Readonly<{ title: string; description: string; path: string }>) {
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "";
+  return (
+    <div className="cms-serp-preview">
+      <span className="cms-serp-preview__label">Aperçu dans Google</span>
+      <div className="cms-serp-preview__card">
+        <span className="cms-serp-preview__url">
+          {origin}
+          {path}
+        </span>
+        <strong className="cms-serp-preview__title">
+          {title || "Titre de la page"}
+        </strong>
+        <p className="cms-serp-preview__description">
+          {description || "Aucune description SEO renseignée pour le moment."}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function CharCounterField({
   label,
   name,
@@ -1997,6 +2062,7 @@ function CharCounterField({
   maxLength,
   multiline = false,
   disabled = false,
+  onValueChange,
 }: Readonly<{
   label: string;
   name: string;
@@ -2004,9 +2070,14 @@ function CharCounterField({
   maxLength: number;
   multiline?: boolean;
   disabled?: boolean;
+  onValueChange?: (value: string) => void;
 }>) {
   const [length, setLength] = useState(defaultValue.length);
   const remaining = maxLength - length;
+  function handleChange(value: string) {
+    setLength(value.length);
+    onValueChange?.(value);
+  }
   return (
     <label>
       <span className="cms-char-counter__head">
@@ -2027,7 +2098,7 @@ function CharCounterField({
           defaultValue={defaultValue}
           maxLength={maxLength}
           disabled={disabled}
-          onChange={(event) => setLength(event.target.value.length)}
+          onChange={(event) => handleChange(event.target.value)}
         />
       ) : (
         <input
@@ -2035,7 +2106,7 @@ function CharCounterField({
           defaultValue={defaultValue}
           maxLength={maxLength}
           disabled={disabled}
-          onChange={(event) => setLength(event.target.value.length)}
+          onChange={(event) => handleChange(event.target.value)}
         />
       )}
     </label>
@@ -2451,6 +2522,71 @@ export function UploadMediaForm({ worldKey }: Readonly<{ worldKey: string }>) {
         Une fois envoyée, l’image apparaît ci-contre et devient sélectionnable
         comme image principale ou arrière-plan dans l’éditeur de pages.
       </p>
+    </form>
+  );
+}
+
+export function EditMediaDetailsForm({
+  mediaId,
+  title,
+  altText,
+  caption,
+  credit,
+  rightsStatement,
+  rightsExpiresAt,
+  tags,
+}: Readonly<{
+  mediaId: string;
+  title: string;
+  altText: string;
+  caption: string;
+  credit: string;
+  rightsStatement: string;
+  rightsExpiresAt: string;
+  tags: string;
+}>) {
+  const [state, action] = useActionState(
+    updateMediaDetailsAction,
+    IDLE_ACTION_STATE,
+  );
+  useRefreshOnSuccess(state.status);
+  return (
+    <form action={action} className="cms-media-details-form">
+      <input type="hidden" name="id" value={mediaId} />
+      <label>
+        Titre
+        <input name="title" defaultValue={title} />
+      </label>
+      <label>
+        Texte alternatif
+        <input name="altText" defaultValue={altText} />
+      </label>
+      <label>
+        Tags
+        <input name="tags" defaultValue={tags} placeholder="équipe, campagne, print" />
+      </label>
+      <label>
+        Légende
+        <input name="caption" defaultValue={caption} />
+      </label>
+      <label>
+        Crédit
+        <input name="credit" defaultValue={credit} placeholder="Nom du photographe ou de la source" />
+      </label>
+      <label>
+        Mention de droits
+        <input
+          name="rightsStatement"
+          defaultValue={rightsStatement}
+          placeholder="Licence achetée, usage interne, libre de droits…"
+        />
+      </label>
+      <label>
+        Droits valables jusqu’au
+        <input type="date" name="rightsExpiresAt" defaultValue={rightsExpiresAt} />
+      </label>
+      <SubmitButton>Enregistrer les détails</SubmitButton>
+      <Feedback state={state} />
     </form>
   );
 }

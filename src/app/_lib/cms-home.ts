@@ -29,6 +29,13 @@ export type CmsHomeContent = Readonly<{
   steps: CmsItemsBlock | null;
   featureGrid: CmsItemsBlock | null;
   media: CmsActionBlock | null;
+  seo: CmsHomeSeo | null;
+}>;
+
+export type CmsHomeSeo = Readonly<{
+  title: string | null;
+  description: string | null;
+  ogImageUrl: string | null;
 }>;
 
 export type CmsHomeSection = Readonly<{
@@ -94,19 +101,27 @@ export async function getCmsHomeContent(
       },
       include: {
         draftRevision: {
-          include: { sections: { orderBy: { order: "asc" } } },
+          include: { sections: { orderBy: { order: "asc" } }, ogImage: true },
         },
         publishedRevision: {
-          include: { sections: { orderBy: { order: "asc" } } },
+          include: { sections: { orderBy: { order: "asc" } }, ogImage: true },
         },
       },
     })
     .catch(() => null);
   if (!page) return emptyHomeContent();
 
-  const sections = previewRevisionId
-    ? (page.draftRevision?.sections ?? [])
-    : (page.publishedRevision?.sections ?? []);
+  const activeRevision = previewRevisionId
+    ? page.draftRevision
+    : page.publishedRevision;
+  const sections = activeRevision?.sections ?? [];
+  const seo: CmsHomeSeo | null = activeRevision
+    ? {
+        title: activeRevision.seoTitle,
+        description: activeRevision.seoDescription,
+        ogImageUrl: activeRevision.ogImage?.publicUrl ?? null,
+      }
+    : null;
   const mediaIds = sections.flatMap((section) => {
     const payload = section.payload as Record<string, unknown>;
     return [
@@ -216,6 +231,7 @@ export async function getCmsHomeContent(
     steps,
     featureGrid,
     media: mediaBlock,
+    seo,
   };
 }
 
@@ -230,6 +246,7 @@ export function emptyHomeContent(): CmsHomeContent {
     steps: null,
     featureGrid: null,
     media: null,
+    seo: null,
   };
 }
 

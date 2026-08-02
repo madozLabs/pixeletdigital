@@ -34,6 +34,7 @@ export type WorkspaceRevisionDto = Readonly<{
   title: string;
   seoTitle: string | null;
   seoDescription: string | null;
+  ogImageMediaId: string | null;
   version: number;
   createdById: string | null;
   reviewedById: string | null;
@@ -66,6 +67,11 @@ export type WorkspaceMediaDto = Readonly<{
   mimeType: string;
   sizeBytes: number;
   createdAt: Date;
+  tags: readonly string[];
+  caption: string | null;
+  credit: string | null;
+  rightsStatement: string | null;
+  rightsExpiresAt: Date | null;
 }>;
 
 export type WorkspaceContentDto = Readonly<{

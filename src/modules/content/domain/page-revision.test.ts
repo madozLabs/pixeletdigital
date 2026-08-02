@@ -14,6 +14,7 @@ const revision = (status: PageRevision["status"]): PageRevision => ({
   title: "Page",
   seoTitle: null,
   seoDescription: null,
+  ogImageMediaId: null,
   version: 1,
   createdById: "editor-1",
   reviewedById: null,
@@ -29,14 +30,19 @@ describe("page revision", () => {
     expect(
       editPageRevision(
         revision("DRAFT"),
-        { title: "Nouvelle page", seoTitle: "SEO", seoDescription: "Résumé" },
+        {
+          title: "Nouvelle page",
+          seoTitle: "SEO",
+          seoDescription: "Résumé",
+          ogImageMediaId: "",
+        },
         new Date("2026-07-27T00:00:00Z"),
       ).ok,
     ).toBe(true);
     expect(
       editPageRevision(
         revision("PUBLISHED"),
-        { title: "Non", seoTitle: "", seoDescription: "" },
+        { title: "Non", seoTitle: "", seoDescription: "", ogImageMediaId: "" },
         new Date(),
       ).ok,
     ).toBe(false);

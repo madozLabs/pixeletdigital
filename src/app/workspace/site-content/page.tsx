@@ -33,6 +33,7 @@ import {
   DeleteMediaForm,
   DeleteSectionForm,
   DuplicatePageForm,
+  EditMediaDetailsForm,
   RevisionEditor,
   SiteIdentityEditor,
   SectionFieldsForm,
@@ -634,6 +635,10 @@ export function PageEditor({
             history={page.revisionHistory}
             changeSummary={changeSummary}
             authors={revisionAuthors}
+            images={media.filter((asset) =>
+              asset.mimeType.startsWith("image/"),
+            )}
+            publicPath={publicPath}
           />
         }
       >
@@ -797,6 +802,12 @@ function MediaPanel({
               const isRecent =
                 index === 0 &&
                 now.getTime() - asset.createdAt.getTime() < 5 * 60 * 1000;
+              const daysToExpiry = asset.rightsExpiresAt
+                ? Math.ceil(
+                    (asset.rightsExpiresAt.getTime() - now.getTime()) /
+                      (24 * 60 * 60 * 1000),
+                  )
+                : null;
               return (
                 <article className="cms-gallery__tile" key={asset.id}>
                   <div className="cms-gallery__thumb">
@@ -813,11 +824,49 @@ function MediaPanel({
                   </div>
                   <div className="cms-gallery__caption">
                     <strong>{asset.title}</strong>
+                    {asset.tags.length > 0 ? (
+                      <span className="cms-gallery__tags">
+                        {asset.tags.map((tag) => (
+                          <span key={tag} className="cms-gallery__tag">
+                            {tag}
+                          </span>
+                        ))}
+                      </span>
+                    ) : null}
+                    {daysToExpiry !== null ? (
+                      <p
+                        className={
+                          daysToExpiry < 0
+                            ? "cms-gallery__rights cms-gallery__rights--expired"
+                            : daysToExpiry <= 30
+                              ? "cms-gallery__rights cms-gallery__rights--warning"
+                              : "cms-gallery__rights"
+                        }
+                      >
+                        {daysToExpiry < 0
+                          ? "Droits d’usage expirés"
+                          : `Droits d’usage jusqu’au ${asset.rightsExpiresAt?.toLocaleDateString("fr-FR")}`}
+                      </p>
+                    ) : null}
                     <details className="cms-gallery__details">
                       <summary>Détails</summary>
                       <MediaUrlField
                         title={asset.title}
                         publicUrl={asset.publicUrl}
+                      />
+                      <EditMediaDetailsForm
+                        mediaId={asset.id}
+                        title={asset.title}
+                        altText={asset.altText}
+                        caption={asset.caption ?? ""}
+                        credit={asset.credit ?? ""}
+                        rightsStatement={asset.rightsStatement ?? ""}
+                        rightsExpiresAt={
+                          asset.rightsExpiresAt
+                            ? asset.rightsExpiresAt.toISOString().slice(0, 10)
+                            : ""
+                        }
+                        tags={asset.tags.join(", ")}
                       />
                       <DeleteMediaForm mediaId={asset.id} />
                     </details>
