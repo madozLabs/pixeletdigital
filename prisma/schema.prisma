@@ -1084,6 +1084,10 @@ model EditPresence {
   entityType   String
   entityId     String
   contextLabel String?
+  // The specific page-builder section (block) this viewer currently has
+  // selected, if any -- lets other editors see "someone is on this exact
+  // block right now" instead of just "someone is on this page".
+  sectionId    String?
   lastSeenAt   DateTime @default(now())
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

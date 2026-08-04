@@ -20,6 +20,7 @@ import {
   type DropResult,
 } from "@hello-pangea/dnd";
 import {
+  AlertTriangle,
   Copy,
   ChevronDown,
   ChevronUp,
@@ -54,6 +55,7 @@ import {
   type SectionImageSettingKey,
 } from "@/modules/content/domain/section-image-settings";
 import { CMS_PREVIEW_READY } from "@/app/_components/cms-preview-bridge";
+import type { PresenceViewer } from "../_components/edit-presence-actions";
 import {
   Feedback,
   IDLE_ACTION_STATE,
@@ -188,6 +190,26 @@ export function PageBuilder({
       sectionGlobalComponentNames[index] ?? null,
     ]),
   );
+  // Populated from EditPresence's heartbeat (a sibling client component
+  // mounted once per page, outside this tree) via a window event -- lets
+  // the builder warn "someone else is on this exact block right now"
+  // without a shared prop/state path between the two.
+  const [activeViewers, setActiveViewers] = useState<
+    readonly PresenceViewer[]
+  >([]);
+  useEffect(() => {
+    function handlePresenceUpdated(event: Event) {
+      const detail = (event as CustomEvent<{ viewers?: PresenceViewer[] }>)
+        .detail;
+      setActiveViewers(detail?.viewers ?? []);
+    }
+    window.addEventListener("cms:presence-updated", handlePresenceUpdated);
+    return () =>
+      window.removeEventListener(
+        "cms:presence-updated",
+        handlePresenceUpdated,
+      );
+  }, []);
   const [orderedIds, setOrderedIds] = useState(sectionIds);
   const [selectedId, setSelectedId] = useState<string | null>(
     sectionIds[0] ?? null,
@@ -1071,6 +1093,16 @@ export function PageBuilder({
                                         {errorsById.get(id)?.length} erreur(s)
                                       </em>
                                     ) : null}
+                                    {activeViewers.some(
+                                      (viewer) => viewer.sectionId === id,
+                                    ) ? (
+                                      <em
+                                        className="cms-outline-item__concurrent"
+                                        title="Un autre éditeur modifie ce bloc en ce moment"
+                                      >
+                                        <AlertTriangle size={12} /> en cours
+                                      </em>
+                                    ) : null}
                                   </span>
                                 </button>
                                 {editable && revisionId ? (
@@ -1149,6 +1181,28 @@ export function PageBuilder({
                     {labelById.get(selectedId) ?? typeById.get(selectedId)}
                   </strong>
                 </div>
+                {(() => {
+                  const concurrentEditors = activeViewers.filter(
+                    (viewer) => viewer.sectionId === selectedId,
+                  );
+                  if (concurrentEditors.length === 0) return null;
+                  const names = concurrentEditors
+                    .map((viewer) => viewer.name)
+                    .join(", ");
+                  return (
+                    <p
+                      className="cms-concurrent-edit-warning"
+                      role="status"
+                    >
+                      <AlertTriangle size={14} /> {names}{" "}
+                      {concurrentEditors.length > 1
+                        ? "modifient"
+                        : "modifie"}{" "}
+                      aussi ce bloc en ce moment. Vos modifications risquent
+                      d’écraser les siennes.
+                    </p>
+                  );
+                })()}
                 {childById.get(selectedId)}
               </>
             ) : (

@@ -9,6 +9,7 @@ export type PresenceViewer = Readonly<{
   id: string;
   name: string;
   contextLabel: string | null;
+  sectionId: string | null;
 }>;
 
 const ACTIVE_WINDOW_MS = 75_000;
@@ -35,6 +36,7 @@ export async function heartbeatEditPresence(
   entityType: PresenceEntityType,
   entityId: string,
   contextLabel?: string | null,
+  sectionId?: string | null,
 ): Promise<readonly PresenceViewer[]> {
   const { actor, now } = await authorize(entityType, entityId);
   const activeSince = new Date(now.getTime() - ACTIVE_WINDOW_MS);
@@ -51,9 +53,10 @@ export async function heartbeatEditPresence(
         entityType,
         entityId,
         contextLabel,
+        sectionId,
         lastSeenAt: now,
       },
-      update: { contextLabel, lastSeenAt: now },
+      update: { contextLabel, sectionId, lastSeenAt: now },
     }),
   ]);
   const viewers = await prisma.editPresence.findMany({
@@ -66,13 +69,15 @@ export async function heartbeatEditPresence(
     select: {
       user: { select: { id: true, displayName: true, normalizedEmail: true } },
       contextLabel: true,
+      sectionId: true,
     },
     orderBy: { lastSeenAt: "desc" },
   });
-  return viewers.map(({ user, contextLabel }) => ({
+  return viewers.map(({ user, contextLabel, sectionId: viewerSectionId }) => ({
     id: user.id,
     name: user.displayName || user.normalizedEmail || "Un collègue",
     contextLabel,
+    sectionId: viewerSectionId,
   }));
 }
 

@@ -4074,6 +4074,35 @@
   font-style: normal;
 }
 
+.cms-outline-item__concurrent {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.15rem;
+  color: #9a6b00;
+  font-size: 0.65rem;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.cms-concurrent-edit-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid color-mix(in srgb, #e6a700 45%, var(--wk-border));
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, #e6a700 12%, var(--wk-card));
+  color: #7a5400;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.cms-concurrent-edit-warning svg {
+  flex-shrink: 0;
+}
+
 .cms-outline-item {
   display: flex;
   align-items: center;
