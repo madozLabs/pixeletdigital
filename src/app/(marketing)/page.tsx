@@ -22,7 +22,7 @@ import { PrismaServiceFamilyRepository } from "@/modules/content/infrastructure/
 import { PrismaServiceRepository } from "@/modules/content/infrastructure/prisma-service-repository";
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
 
-import { CmsSection } from "./_components/cms-section";
+import { CmsSection, type CmsPublicPageSummary } from "./_components/cms-section";
 import {
   CmsPrimaryImageOverlay,
   CmsSectionBackground,
@@ -105,6 +105,7 @@ export default async function HomePage({
   if (!preview && !share && cms.pageId) recordPageView(prisma, cms.pageId);
   const sections = cms.sections.length ? cms.sections : DEFAULT_SECTIONS;
   const mediaById = new Map(cms.mediaAssets.map((asset) => [asset.id, asset]));
+  const publicPages = await resolveCollectionPages(sections);
 
   return (
     <main id="main-content" className="public-home">
@@ -126,6 +127,7 @@ export default async function HomePage({
           mediaById={mediaById}
           services={services}
           families={families}
+          pages={publicPages}
           editing={visualEditor === "1"}
         />
       ))}
@@ -133,17 +135,65 @@ export default async function HomePage({
   );
 }
 
+// Mirrors the collection-page resolution in [slug]/page.tsx, needed here
+// because SERVICE_INDEX blocks with source "PAGES" (e.g. a portfolio grid)
+// can appear on this bespoke home route too.
+async function resolveCollectionPages(
+  sections: readonly CmsHomeSection[],
+): Promise<readonly CmsPublicPageSummary[]> {
+  const pageTypeFilters = [
+    ...new Set(
+      sections
+        .filter(
+          (section) =>
+            section.sectionType === "SERVICE_INDEX" &&
+            (section.payload as Record<string, unknown>).source === "PAGES",
+        )
+        .map((section) => {
+          const filter = (section.payload as Record<string, unknown>)
+            .pageTypeFilter;
+          return typeof filter === "string" ? filter.trim() : "";
+        }),
+    ),
+  ];
+  if (!pageTypeFilters.length) return [];
+  const needsAllPageTypes = pageTypeFilters.includes("");
+  const collectionPages = await prisma.page
+    .findMany({
+      where: {
+        worldKey: "pixel-digital",
+        lifecycle: "PUBLISHED",
+        pageKind: { not: "COMPONENT_LIBRARY" },
+        ...(needsAllPageTypes
+          ? {}
+          : { pageType: { in: pageTypeFilters.filter(Boolean) } }),
+      },
+      orderBy: { updatedAt: "desc" },
+      take: 100,
+    })
+    .catch(() => []);
+  return collectionPages.map((collectionPage) => ({
+    slug: collectionPage.slug,
+    routePath: collectionPage.routePath,
+    pageType: collectionPage.pageType,
+    title: collectionPage.title,
+    description: "",
+  }));
+}
+
 function PixelHomeSection({
   section,
   mediaById,
   services,
   families,
+  pages,
   editing,
 }: Readonly<{
   section: CmsHomeSection;
   mediaById: ReadonlyMap<string, CmsHomeMediaAsset>;
   services: Services;
   families: Families;
+  pages: readonly CmsPublicPageSummary[];
   editing: boolean;
 }>) {
   const payload = section.payload;
@@ -276,7 +326,7 @@ function PixelHomeSection({
     );
   }
 
-  if (type === "SERVICE_INDEX") {
+  if (type === "SERVICE_INDEX" && value(payload, "source") !== "PAGES") {
     const groups = groupServicesByFamily(services, families);
     return (
       <section
@@ -453,6 +503,7 @@ function PixelHomeSection({
       payload={payload as Record<string, unknown>}
       mediaById={mediaById}
       services={services}
+      pages={pages}
       worldKey="pixel-digital"
       editing={editing}
     />

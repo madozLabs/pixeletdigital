@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { CmsPreviewBridge } from "@/app/_components/cms-preview-bridge";
 import { HeroParallax } from "@/app/_components/hero-parallax";
+import { HeroVideoBackground } from "@/app/_components/hero-video-background";
 import { MagneticButton } from "@/app/_components/magnetic-button";
 import { Reveal } from "@/app/_components/reveal";
 import {
@@ -121,6 +122,8 @@ function KwalitiHomeSection({
 
   if (section.sectionType === "HERO") {
     const asset = primaryMedia(payload, mediaById);
+    const posterId = value(payload, "posterMediaId");
+    const poster = posterId ? mediaById.get(posterId) : undefined;
     return (
       <>
         <section
@@ -168,7 +171,14 @@ function KwalitiHomeSection({
           <Reveal delay={0.1}>
             <figure className="kp-hero__visual" data-cms-media-slot="primary">
               <HeroParallax className="kp-hero__parallax" strength={4}>
-                {asset?.mimeType.startsWith("image/") ? (
+                {asset?.mimeType.startsWith("video/") ? (
+                  <HeroVideoBackground
+                    className="kp-hero__video"
+                    src={asset.publicUrl}
+                    poster={poster?.publicUrl}
+                    alt={asset.altText}
+                  />
+                ) : asset?.mimeType.startsWith("image/") ? (
                   <Image
                     className="kp-hero__photo"
                     src={asset.publicUrl}
@@ -207,6 +217,11 @@ function KwalitiHomeSection({
                 aria-hidden="true"
               >
                 échelle 1:1
+              </span>
+              <span className="kp-hero__cmyk" aria-hidden="true">
+                <span className="kp-shape kp-shape--cyan" />
+                <span className="kp-shape kp-shape--magenta" />
+                <span className="kp-shape kp-shape--yellow" />
               </span>
               {asset ? <figcaption>{asset.altText}</figcaption> : null}
             </figure>

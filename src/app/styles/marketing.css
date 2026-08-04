@@ -1524,6 +1524,7 @@ a.world-switcher__item:focus-visible {
   line-height: 0.9;
   letter-spacing: -0.075em;
   max-width: 8.5ch;
+  white-space: pre-line;
 }
 
 .kp-hero__lede {
@@ -2236,6 +2237,15 @@ a.world-switcher__item:focus-visible {
     var(--cms-image-position-y, 50%);
 }
 
+.kp-hero__video {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 /* CMS section-level visual controls */
 .cms-designed-section {
   position: relative;
@@ -2543,72 +2553,53 @@ a.world-switcher__item:focus-visible {
   width: fit-content;
 }
 
-/* Kwaliti Print hero: halftone, misregistration, floating CMYK shapes */
-.kp-hero__visual::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background-image: radial-gradient(
-    rgb(255 255 255 / 14%) 1px,
-    transparent 1.5px
-  );
-  background-size: 14px 14px;
-  pointer-events: none;
+/* Kwaliti Print hero: the title "prints" into register once on load --
+   a nod to the trade, played once, never repeated elsewhere on the site. */
+.kp-hero h1 {
+  animation: kpTitleRegister 0.55s 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
-.kp-hero__visual::after {
-  content: "◎";
-  position: absolute;
-  top: 0.9rem;
-  right: 1.2rem;
-  z-index: 2;
-  color: rgb(255 255 255 / 45%);
-  font-size: 1.1rem;
-  letter-spacing: 0.8rem;
-}
-
-.kp-hero__visual strong {
-  color: #fff;
-  text-shadow:
-    -4px 0 var(--kp-cyan),
-    4px 2px var(--kp-magenta),
-    0 -4px rgb(252 209 22 / 85%);
-  animation: kpRegister 7s ease-in-out infinite;
-}
-
-@keyframes kpRegister {
-  0%,
-  86%,
+@keyframes kpTitleRegister {
+  0% {
+    text-shadow:
+      -6px 2px var(--kp-cyan),
+      6px -2px var(--kp-magenta),
+      0 5px var(--kp-yellow);
+  }
   100% {
-    text-shadow:
-      -4px 0 var(--kp-cyan),
-      4px 2px var(--kp-magenta),
-      0 -4px rgb(252 209 22 / 85%);
+    text-shadow: none;
   }
-  90% {
-    text-shadow:
-      -7px 1px var(--kp-cyan),
-      7px -2px var(--kp-magenta),
-      2px -6px rgb(252 209 22 / 85%);
-  }
-  94% {
-    text-shadow:
-      -2px -1px var(--kp-cyan),
-      2px 3px var(--kp-magenta),
-      -1px -2px rgb(252 209 22 / 85%);
-  }
+}
+
+/* CMYK reference bar, tucked in a corner -- never centered, echoing the
+   registration marks already framing this panel. */
+.kp-hero__cmyk {
+  position: absolute;
+  z-index: 4;
+  left: 1.1rem;
+  bottom: 1.1rem;
+  display: flex;
+  gap: 0.4rem;
+}
+
+.kp-shape {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
 }
 
 .kp-shape--cyan {
+  background: var(--kp-cyan);
   animation: kpFloat 11s ease-in-out infinite alternate;
 }
 
 .kp-shape--yellow {
+  background: var(--kp-yellow);
   animation: kpFloat 9s ease-in-out infinite alternate-reverse;
 }
 
 .kp-shape--magenta {
+  background: var(--kp-magenta);
   animation: kpSpin 26s linear infinite;
 }
 
@@ -2623,10 +2614,13 @@ a.world-switcher__item:focus-visible {
 
 @keyframes kpSpin {
   from {
-    transform: rotate(24deg);
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(0.2rem, -0.15rem) rotate(180deg);
   }
   to {
-    transform: rotate(384deg);
+    transform: translate(0, 0) rotate(360deg);
   }
 }
 
@@ -2729,7 +2723,7 @@ a.world-switcher__item:focus-visible {
   .home-hero__orb--black,
   .home-hero__stamp,
   .home-hero__ticker,
-  .kp-hero__visual strong,
+  .kp-hero h1,
   .kp-shape--cyan,
   .kp-shape--yellow,
   .kp-shape--magenta,
