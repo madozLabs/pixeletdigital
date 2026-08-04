@@ -14,6 +14,7 @@ import {
   type CmsHomeSection,
 } from "@/app/_lib/cms-home";
 import { groupServicesByFamily } from "@/app/_lib/group-services-by-family";
+import { resolveLocalImage } from "@/app/_lib/local-image";
 import { recordPageView } from "@/modules/content/application/record-page-view";
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import { listPublishedServiceFamilies } from "@/modules/content/application/public/list-published-service-families";
@@ -213,6 +214,7 @@ function PixelHomeSection({
           .filter(Boolean)
       : DEFAULT_HERO_LINES;
     const asset = primaryMedia(payload, mediaById);
+    const localHeroImage = resolveLocalImage("pixel-digital/hero/hero-bg.jpg");
     return (
       <section
         {...cmsSectionDesignProps(payload, "home-hero")}
@@ -270,17 +272,30 @@ function PixelHomeSection({
                     priority
                     sizes="(max-width: 760px) 100vw, 46vw"
                   />
+                ) : localHeroImage ? (
+                  <Image
+                    className="home-hero__photo"
+                    src={localHeroImage}
+                    alt="Atelier Pixel&Digital en pleine activité"
+                    fill
+                    priority
+                    sizes="(max-width: 760px) 100vw, 46vw"
+                  />
                 ) : (
-                  <>
-                    <div className="home-hero__orb home-hero__orb--red" />
-                    <div className="home-hero__orb home-hero__orb--black" />
-                  </>
+                  <div className="home-hero__blueprint" aria-hidden="true">
+                    <div className="home-hero__crosshair" />
+                    <span className="home-hero__coords">
+                      12.3714° N · 1.5197° O
+                    </span>
+                  </div>
                 )}
               </HeroParallax>
-              {asset?.mimeType.startsWith("image/") ? (
+              {asset?.mimeType.startsWith("image/") || localHeroImage ? (
                 <CmsPrimaryImageOverlay />
               ) : null}
-              {!asset ? <div className="home-hero__stamp">P&amp;D</div> : null}
+              {!asset && !localHeroImage ? (
+                <div className="home-hero__stamp">P&amp;D</div>
+              ) : null}
               <div className="home-hero__caption">
                 Stratégie · Identité · Contenu · Digital · Production
               </div>
