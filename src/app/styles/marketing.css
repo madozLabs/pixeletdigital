@@ -780,7 +780,7 @@ a.world-switcher__item:focus-visible {
 
 .home-hero__grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(20rem, 0.85fr);
+  grid-template-columns: minmax(0, 1.7fr) minmax(16rem, 0.9fr);
   gap: clamp(2rem, 5vw, 6rem);
   align-items: center;
   min-height: 72vh;
@@ -795,15 +795,19 @@ a.world-switcher__item:focus-visible {
   display: flex;
   flex-direction: column;
   margin-top: 1.5rem;
-  font-size: clamp(4.2rem, 9.5vw, 10.5rem);
-  line-height: 0.8;
-  letter-spacing: -0.075em;
+  font-size: clamp(3rem, 5.4vw, 5.5rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
   text-transform: uppercase;
 }
 
-.home-hero__title span {
+/* Direct children only -- line-level spans, not every nested word span
+   from KineticHeading (that over-broad match was inflating each word's
+   box by 0.5ch and throwing off wrap math). */
+.home-hero__title > span {
   padding-left: 0.5ch;
   font-weight: 400;
+  text-wrap: pretty;
 }
 
 .home-hero__title strong {

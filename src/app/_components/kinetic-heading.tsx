@@ -70,7 +70,7 @@ export function KineticHeading({
                 }}
               >
                 {word}
-                {wordIndex < line.split(" ").length - 1 ? "\u00a0" : ""}
+                {wordIndex < line.split(" ").length - 1 ? " " : ""}
               </motion.span>
             </span>
           ))}
