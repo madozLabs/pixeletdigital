@@ -19,6 +19,9 @@ const mocks = vi.hoisted(() => ({
   undo: vi.fn(),
   redo: vi.fn(),
   refresh: vi.fn(),
+  insertComponentInstance: vi.fn(),
+  detachComponentInstance: vi.fn(),
+  setRestriction: vi.fn(),
   onDragEnd: null as null | ((result: unknown) => void),
 }));
 
@@ -78,6 +81,9 @@ vi.mock("./actions", () => ({
   deleteSectionAction: mocks.remove,
   undoPageEditAction: mocks.undo,
   redoPageEditAction: mocks.redo,
+  insertGlobalComponentInstanceAction: mocks.insertComponentInstance,
+  detachGlobalComponentInstanceAction: mocks.detachComponentInstance,
+  setSectionRestrictionAction: mocks.setRestriction,
 }));
 
 import { PageBuilder } from "./page-builder";
@@ -222,6 +228,8 @@ function renderBuilder() {
         },
       ]}
       sectionGlobalComponentNames={[null, null]}
+      sectionRestrictedRoles={[null, null]}
+      currentActorRole="SUPER_ADMIN"
       globalComponents={[]}
       componentLibraryPageId={null}
       editable

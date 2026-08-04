@@ -27,6 +27,7 @@ import {
   ExternalLink,
   GripVertical,
   Layers,
+  Lock,
   Monitor,
   MoreVertical,
   Redo2,
@@ -72,8 +73,40 @@ import {
   reorderPageBlocksAction,
   restoreLastDeletedBlockAction,
   setPageBlockMediaAction,
+  setSectionRestrictionAction,
   undoPageEditAction,
 } from "./actions";
+
+// Mirrors ROLE_RANK in actions.ts -- lower number = more privileged. Kept
+// client-side only to decide what to render (show the lock, disable the
+// form); the actual enforcement lives server-side in
+// assertSectionEditAllowed, which this must stay consistent with but never
+// substitutes for.
+const ROLE_RANK: Readonly<Record<string, number>> = {
+  SUPER_ADMIN: 0,
+  ADMIN: 1,
+  WORLD_MANAGER: 2,
+  EDITOR: 3,
+  SALES: 4,
+  CONTRIBUTOR: 5,
+  READER: 6,
+};
+const RESTRICTABLE_ROLES = ["SUPER_ADMIN", "ADMIN", "WORLD_MANAGER", "EDITOR"] as const;
+const PUBLISH_ROLE_RANKS = new Set([
+  ROLE_RANK.SUPER_ADMIN,
+  ROLE_RANK.ADMIN,
+  ROLE_RANK.WORLD_MANAGER,
+]);
+
+function actorMeetsRole(
+  actorRole: string | null,
+  requiredRole: string | null,
+): boolean {
+  if (!requiredRole) return true;
+  const actorRank = ROLE_RANK[actorRole ?? ""] ?? Number.MAX_SAFE_INTEGER;
+  const requiredRank = ROLE_RANK[requiredRole] ?? 0;
+  return actorRank <= requiredRank;
+}
 
 const SIDEBAR_STORAGE_KEY = "cms-page-builder-sidebar-collapsed";
 
@@ -126,6 +159,8 @@ export function PageBuilder({
   sectionLabels,
   sectionErrors,
   sectionGlobalComponentNames,
+  sectionRestrictedRoles,
+  currentActorRole,
   globalComponents,
   componentLibraryPageId,
   settings,
@@ -158,6 +193,8 @@ export function PageBuilder({
   sectionLabels: readonly string[];
   sectionErrors: readonly (readonly string[])[];
   sectionGlobalComponentNames: readonly (string | null)[];
+  sectionRestrictedRoles: readonly (string | null)[];
+  currentActorRole: string | null;
   globalComponents: readonly Readonly<{
     id: string;
     name: string;
@@ -189,6 +226,12 @@ export function PageBuilder({
       id,
       sectionGlobalComponentNames[index] ?? null,
     ]),
+  );
+  const restrictedRoleBySectionId = new Map(
+    sectionIds.map((id, index) => [id, sectionRestrictedRoles[index] ?? null]),
+  );
+  const canManageRestrictions = PUBLISH_ROLE_RANKS.has(
+    ROLE_RANK[currentActorRole ?? ""] ?? Number.MAX_SAFE_INTEGER,
   );
   // Populated from EditPresence's heartbeat (a sibling client component
   // mounted once per page, outside this tree) via a window event -- lets
@@ -1103,6 +1146,14 @@ export function PageBuilder({
                                         <AlertTriangle size={12} /> en cours
                                       </em>
                                     ) : null}
+                                    {restrictedRoleBySectionId.get(id) ? (
+                                      <em
+                                        className="cms-outline-item__restricted"
+                                        title={`Réservé au rôle ${restrictedRoleBySectionId.get(id)} ou plus`}
+                                      >
+                                        <Lock size={12} /> restreint
+                                      </em>
+                                    ) : null}
                                   </span>
                                 </button>
                                 {editable && revisionId ? (
@@ -1203,7 +1254,28 @@ export function PageBuilder({
                     </p>
                   );
                 })()}
-                {childById.get(selectedId)}
+                {editable && revisionId && canManageRestrictions ? (
+                  <SectionRestrictionForm
+                    pageId={pageId}
+                    revisionId={revisionId}
+                    sectionId={selectedId}
+                    currentRestriction={
+                      restrictedRoleBySectionId.get(selectedId) ?? null
+                    }
+                  />
+                ) : null}
+                {actorMeetsRole(
+                  currentActorRole,
+                  restrictedRoleBySectionId.get(selectedId) ?? null,
+                ) ? (
+                  childById.get(selectedId)
+                ) : (
+                  <p className="cms-section-locked">
+                    <Lock size={14} /> Ce bloc est réservé au rôle{" "}
+                    {restrictedRoleBySectionId.get(selectedId)} ou plus. Vous
+                    ne pouvez pas le modifier.
+                  </p>
+                )}
               </>
             ) : (
               <p className="admin-empty">
@@ -1669,6 +1741,47 @@ function BlockLibrary({
         </div>
       </div>
     </details>
+  );
+}
+
+function SectionRestrictionForm({
+  pageId,
+  revisionId,
+  sectionId,
+  currentRestriction,
+}: Readonly<{
+  pageId: string;
+  revisionId: string;
+  sectionId: string;
+  currentRestriction: string | null;
+}>) {
+  const router = useRouter();
+  const [state, action] = useActionState(
+    setSectionRestrictionAction,
+    IDLE_ACTION_STATE,
+  );
+  useEffect(() => {
+    if (state.status === "success") router.refresh();
+  }, [router, state.status]);
+  return (
+    <form action={action} className="cms-section-restriction">
+      <input type="hidden" name="pageId" value={pageId} />
+      <input type="hidden" name="revisionId" value={revisionId} />
+      <input type="hidden" name="sectionId" value={sectionId} />
+      <label>
+        <Lock size={13} /> Restreindre ce bloc
+        <select name="restrictedRole" defaultValue={currentRestriction ?? ""}>
+          <option value="">Aucune restriction</option>
+          {RESTRICTABLE_ROLES.map((role) => (
+            <option key={role} value={role}>
+              {role} ou plus
+            </option>
+          ))}
+        </select>
+      </label>
+      <SubmitButton>Appliquer</SubmitButton>
+      <Feedback state={state} />
+    </form>
   );
 }
 

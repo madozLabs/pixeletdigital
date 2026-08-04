@@ -56,6 +56,7 @@ export type WorkspaceRevisionSectionDto = Readonly<{
   payloadSchemaVersion: number;
   version: number;
   globalComponentId: string | null;
+  restrictedRole: string | null;
   createdAt: Date;
   updatedAt: Date;
 }>;

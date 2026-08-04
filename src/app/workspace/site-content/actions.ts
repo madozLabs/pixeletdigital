@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import type { Prisma } from "@/generated/prisma/client";
+import type { AccessRole, Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import { recordAuditEvent } from "@/modules/audit/infrastructure/record-audit-event";
 import {
@@ -44,6 +44,20 @@ import {
 
 const EDIT_ROLES = new Set(["SUPER_ADMIN", "ADMIN", "WORLD_MANAGER", "EDITOR"]);
 const PUBLISH_ROLES = new Set(["SUPER_ADMIN", "ADMIN", "WORLD_MANAGER"]);
+
+// Lower number = more privileged. Used to answer "is this actor at least as
+// privileged as the role a section is restricted to" for per-block edit
+// permissions (see assertSectionEditAllowed) -- separate from EDIT_ROLES/
+// PUBLISH_ROLES above, which gate whole actions rather than one block.
+const ROLE_RANK: Readonly<Record<string, number>> = {
+  SUPER_ADMIN: 0,
+  ADMIN: 1,
+  WORLD_MANAGER: 2,
+  EDITOR: 3,
+  SALES: 4,
+  CONTRIBUTOR: 5,
+  READER: 6,
+};
 
 function text(formData: FormData, key: string): string {
   return String(formData.get(key) ?? "").trim();
@@ -131,6 +145,8 @@ const ERROR_MESSAGE: Readonly<Record<string, string>> = {
   TEMPLATE_NAME_REQUIRED: "Merci de donner un nom au gabarit.",
   TEMPLATE_NAME_TAKEN: "Un gabarit porte déjà ce nom dans cet univers.",
   TEMPLATE_EMPTY: "Cette page n'a aucun bloc à enregistrer comme gabarit.",
+  SECTION_RESTRICTED:
+    "Ce bloc est réservé à un rôle plus élevé que le vôtre.",
 };
 
 function toActionState(error: unknown): ActionState {
@@ -1042,6 +1058,20 @@ async function assertEditableRevision(pageId: string, revisionId: string) {
   }
 }
 
+// A section can additionally be locked to a minimum role (restrictedRole,
+// e.g. only ADMIN+ may touch the pricing block) on top of the normal
+// page-edit permission everyone in EDIT_ROLES already has. Null means no
+// extra restriction.
+function assertSectionEditAllowed(
+  actorRole: string | null,
+  restrictedRole: string | null,
+): void {
+  if (!restrictedRole) return;
+  const actorRank = ROLE_RANK[actorRole ?? ""] ?? Number.MAX_SAFE_INTEGER;
+  const requiredRank = ROLE_RANK[restrictedRole] ?? 0;
+  if (actorRank > requiredRank) throw new Error("SECTION_RESTRICTED");
+}
+
 /**
  * Undo/redo works as a linear timeline of full-section snapshots per
  * revision, with a cursor marking "where we are". Every mutation captures
@@ -1754,13 +1784,22 @@ export async function saveSectionAction(
   try {
     const pageId = text(formData, "pageId");
     const page = await prisma.page.findUniqueOrThrow({ where: { id: pageId } });
-    await actorFor(page.worldKey);
+    const { actor } = await actorFor(page.worldKey);
     const revisionId = text(formData, "revisionId");
     if (!revisionId) throw new Error("PAGE_NOT_DRAFT");
     await assertEditableRevision(page.id, revisionId);
+    const sectionId = text(formData, "id") || null;
+    if (sectionId) {
+      const existing = await prisma.pageRevisionSection.findFirst({
+        where: { id: sectionId, revisionId },
+        select: { restrictedRole: true },
+      });
+      if (!existing) throw new Error("SECTION_PAGE_MISMATCH");
+      assertSectionEditAllowed(actor.role, existing.restrictedRole);
+    }
     const payload = parsePayload(text(formData, "payload"));
     await saveRevisionSection({
-      id: text(formData, "id") || null,
+      id: sectionId,
       pageId,
       revisionId,
       expectedVersion: Number(formData.get("expectedVersion")),
@@ -1862,7 +1901,7 @@ export async function saveSectionFieldsAction(
   try {
     const pageId = text(formData, "pageId");
     const page = await prisma.page.findUniqueOrThrow({ where: { id: pageId } });
-    await actorFor(page.worldKey);
+    const { actor } = await actorFor(page.worldKey);
     const revisionId = text(formData, "revisionId");
     if (!revisionId) throw new Error("PAGE_NOT_DRAFT");
     await assertEditableRevision(page.id, revisionId);
@@ -1871,6 +1910,7 @@ export async function saveSectionFieldsAction(
       where: { id, revisionId },
     });
     if (!existing) throw new Error("SECTION_PAGE_MISMATCH");
+    assertSectionEditAllowed(actor.role, existing.restrictedRole);
     const payload: Record<string, unknown> = {
       ...(existing.payload as Record<string, unknown>),
     };
@@ -1932,6 +1972,7 @@ export async function deleteSectionAction(
         include: { mediaUsages: { orderBy: { order: "asc" } } },
       });
       if (!section) throw new Error("SECTION_PAGE_MISMATCH");
+      assertSectionEditAllowed(actor.role, section.restrictedRole);
       const historyCursor = await beginSectionHistory(transaction, revisionId);
       await transaction.pageBlockDeletion.create({
         data: {
@@ -1977,6 +2018,50 @@ export async function deleteSectionAction(
     });
     revalidatePath("/workspace/site-content");
     return { status: "success", message: "Section supprimée." };
+  } catch (error) {
+    return toActionState(error);
+  }
+}
+
+const SECTION_RESTRICTABLE_ROLES = new Set([
+  "SUPER_ADMIN",
+  "ADMIN",
+  "WORLD_MANAGER",
+  "EDITOR",
+]);
+
+// Only PUBLISH_ROLES may lock a block down or unlock it -- an EDITOR
+// shouldn't be able to hand themselves a section only ADMIN+ can touch,
+// nor lock a colleague out of a block they're currently relying on.
+export async function setSectionRestrictionAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const pageId = text(formData, "pageId");
+    const revisionId = text(formData, "revisionId");
+    const sectionId = text(formData, "sectionId");
+    const restrictedRole = text(formData, "restrictedRole");
+    if (restrictedRole && !SECTION_RESTRICTABLE_ROLES.has(restrictedRole)) {
+      throw new Error("INVALID_SECTION_PAYLOAD");
+    }
+    const page = await prisma.page.findUniqueOrThrow({ where: { id: pageId } });
+    await actorFor(page.worldKey, true);
+    await assertEditableRevision(pageId, revisionId);
+    const updated = await prisma.pageRevisionSection.updateMany({
+      where: { id: sectionId, revisionId },
+      data: {
+        restrictedRole: restrictedRole ? (restrictedRole as AccessRole) : null,
+      },
+    });
+    if (updated.count !== 1) throw new Error("SECTION_PAGE_MISMATCH");
+    revalidatePath("/workspace/site-content");
+    return {
+      status: "success",
+      message: restrictedRole
+        ? "Restriction appliquée à ce bloc."
+        : "Restriction retirée de ce bloc.",
+    };
   } catch (error) {
     return toActionState(error);
   }

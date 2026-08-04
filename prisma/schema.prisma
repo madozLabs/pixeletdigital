@@ -577,6 +577,12 @@ model PageRevisionSection {
   globalComponentId String?
   globalComponent   GlobalComponent? @relation("GlobalComponentInstances", fields: [globalComponentId], references: [id], onDelete: Restrict)
 
+  // When set, only actors whose role is this role or more privileged may
+  // edit or delete this specific block -- everyone with normal page-edit
+  // access can still see and reorder it. Null means no extra restriction
+  // beyond the page's own edit permissions (setRestriction/actions.ts).
+  restrictedRole AccessRole?
+
   // Set (via the reverse relation) when this row is the canonical, editable
   // source content of a global component -- i.e. it lives on that world's
   // hidden component-library page. Restrict so the source can't be deleted

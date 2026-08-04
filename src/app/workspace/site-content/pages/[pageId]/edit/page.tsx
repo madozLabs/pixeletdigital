@@ -62,6 +62,7 @@ export default async function VisualPageEditorRoute({
       pages={content.value.allPagesForNavigation}
       revisionAuthors={content.value.revisionAuthors}
       currentUserId={context.actor?.id ?? ""}
+      currentActorRole={context.actor?.role ?? null}
       users={users.map((user) => ({
         id: user.id,
         name: user.displayName ?? user.normalizedEmail ?? "Collaborateur",

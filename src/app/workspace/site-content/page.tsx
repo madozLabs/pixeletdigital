@@ -245,6 +245,7 @@ export default async function SiteContentPage({
           pages={allPagesForNavigation}
           revisionAuthors={revisionAuthors}
           currentUserId={context.actor?.id ?? ""}
+          currentActorRole={context.actor?.role ?? null}
           users={commentUsers.map((user) => ({
             id: user.id,
             name: user.displayName ?? user.normalizedEmail ?? "Collaborateur",
@@ -611,6 +612,7 @@ export async function PageEditor({
   pages,
   revisionAuthors,
   currentUserId,
+  currentActorRole,
   users,
   activeShares,
 }: {
@@ -620,6 +622,7 @@ export async function PageEditor({
   pages: readonly WorkspacePageDto[];
   revisionAuthors: Readonly<Record<string, string>>;
   currentUserId: string;
+  currentActorRole: string | null;
   users: readonly Readonly<{ id: string; name: string }>[];
   activeShares: readonly Readonly<{
     id: string;
@@ -735,6 +738,10 @@ export async function PageEditor({
         sectionGlobalComponentNames={sections.map(
           (section) => componentNameById.get(section.globalComponentId ?? "") ?? null,
         )}
+        sectionRestrictedRoles={sections.map(
+          (section) => section.restrictedRole,
+        )}
+        currentActorRole={currentActorRole}
         globalComponents={globalComponents}
         componentLibraryPageId={componentLibraryPage?.id ?? null}
         mediaAssets={media}
