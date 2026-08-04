@@ -4165,6 +4165,65 @@
   color: #a52a2a;
 }
 
+.cms-block-context-menu__actions {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.cms-canvas-context-menu {
+  position: fixed;
+  z-index: 1200;
+  display: grid;
+  gap: 0.25rem;
+  width: 13rem;
+  padding: 0.45rem;
+  color: #171717;
+  color-scheme: light;
+  background: #fff;
+  border: 1px solid var(--wk-border);
+  border-radius: 0.55rem;
+  box-shadow: 0 10px 30px rgb(25 30 42 / 24%);
+}
+
+.cms-canvas-context-menu button,
+.cms-canvas-context-menu select {
+  width: 100%;
+  min-height: 2rem;
+}
+
+.cms-canvas-context-menu button {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.cms-canvas-context-menu button.is-danger {
+  color: #a52a2a;
+}
+
+.cms-canvas-context-menu button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.cms-canvas-context-menu__bulk {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.cms-canvas-context-menu__bulk p {
+  margin: 0;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #757b87;
+}
+
 .cms-visual-builder__inspector .cms-section-card {
   padding: 0;
   border: 0;

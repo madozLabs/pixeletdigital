@@ -12,6 +12,7 @@ import {
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import {
   DragDropContext,
   Draggable,
@@ -179,8 +180,24 @@ export function PageBuilder({
     sectionIds[0] ? [sectionIds[0]] : [],
   );
   const multiSelectAnchorRef = useRef<string | null>(sectionIds[0] ?? null);
+  // connectPreview() only reruns when the canvas iframe reloads (a saved
+  // mutation), not on every render -- so its element handlers (attached
+  // once per reload) would otherwise see whatever multiSelectedIds was at
+  // that reload instead of the live value. Mirrored into a ref so the
+  // canvas's right-click handler can read the current selection anyway.
+  const multiSelectedIdsRef = useRef(multiSelectedIds);
+  useEffect(() => {
+    multiSelectedIdsRef.current = multiSelectedIds;
+  }, [multiSelectedIds]);
   const [bulkMutationState, setBulkMutationState] = useState(IDLE_ACTION_STATE);
   const [isBulkPending, startBulkTransition] = useTransition();
+  // Right-click in the canvas -- positioned in the parent document (not the
+  // iframe) so it isn't clipped by the frame's own overflow:hidden wrapper.
+  const [contextMenu, setContextMenu] = useState<{
+    sectionId: string;
+    x: number;
+    y: number;
+  } | null>(null);
   const [panel, setPanel] = useState<"layers" | "properties" | "settings">(
     "layers",
   );
@@ -231,6 +248,9 @@ export function PageBuilder({
     // undo/redo, another editor's change, ...).
     setMultiSelectedIds((current) =>
       current.filter((id) => sectionIds.includes(id)),
+    );
+    setContextMenu((current) =>
+      current && !sectionIds.includes(current.sectionId) ? null : current,
     );
   }
 
@@ -611,6 +631,33 @@ export function PageBuilder({
         event.stopPropagation();
         selectSection(sectionId);
       };
+      if (editable) {
+        element.oncontextmenu = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          // Right-clicking inside an active multi-selection keeps it intact
+          // (so the menu can offer bulk actions); otherwise it behaves like
+          // a normal click and selects just this block first.
+          const currentMultiSelection = multiSelectedIdsRef.current;
+          const isPartOfMultiSelection =
+            currentMultiSelection.includes(sectionId) &&
+            currentMultiSelection.length > 1;
+          if (!isPartOfMultiSelection) selectSection(sectionId);
+          const frameRect = iframeRef.current?.getBoundingClientRect();
+          if (!frameRect) return;
+          const menuWidth = 220;
+          const menuHeight = 260;
+          const x = Math.min(
+            Math.max(8, frameRect.left + event.clientX),
+            window.innerWidth - menuWidth - 8,
+          );
+          const y = Math.min(
+            Math.max(8, frameRect.top + event.clientY),
+            window.innerHeight - menuHeight - 8,
+          );
+          setContextMenu({ sectionId, x, y });
+        };
+      }
       element
         .querySelectorAll<HTMLElement>("[data-cms-field]")
         .forEach((editableField) => {
@@ -774,6 +821,7 @@ export function PageBuilder({
     setSelectedId(id);
     setMultiSelectedIds([id]);
     multiSelectAnchorRef.current = id;
+    setContextMenu(null);
     setPanel("properties");
     window.dispatchEvent(
       new CustomEvent("cms:section-selected", {
@@ -805,6 +853,7 @@ export function PageBuilder({
     id: string,
     event: React.MouseEvent<HTMLButtonElement>,
   ) {
+    setContextMenu(null);
     if (event.shiftKey && multiSelectAnchorRef.current) {
       const anchorIndex = orderedIds.indexOf(multiSelectAnchorRef.current);
       const targetIndex = orderedIds.indexOf(id);
@@ -1357,6 +1406,55 @@ export function PageBuilder({
           </div>
         )}
       </section>
+      {contextMenu && editable && revisionId
+        ? createPortal(
+            <CanvasContextMenu
+              x={contextMenu.x}
+              y={contextMenu.y}
+              onClose={() => setContextMenu(null)}
+            >
+              {multiSelectedIds.includes(contextMenu.sectionId) &&
+              multiSelectedIds.length > 1 ? (
+                <div className="cms-canvas-context-menu__bulk">
+                  <p>{multiSelectedIds.length} blocs sélectionnés</p>
+                  <button
+                    type="button"
+                    disabled={isBulkPending}
+                    onClick={() => {
+                      bulkDuplicateSelected();
+                      setContextMenu(null);
+                    }}
+                  >
+                    <Copy size={14} /> Dupliquer la sélection
+                  </button>
+                  <button
+                    type="button"
+                    className="is-danger"
+                    disabled={isBulkPending}
+                    onClick={() => {
+                      bulkDeleteSelected();
+                      setContextMenu(null);
+                    }}
+                  >
+                    <Trash2 size={14} /> Supprimer la sélection
+                  </button>
+                </div>
+              ) : (
+                <BlockContextMenuActions
+                  pageId={pageId}
+                  revisionId={revisionId}
+                  sectionId={contextMenu.sectionId}
+                  index={orderedIds.indexOf(contextMenu.sectionId)}
+                  orderedIds={orderedIds}
+                  targetPages={targetPages}
+                  onMove={persistOrder}
+                  onAfterAction={() => setContextMenu(null)}
+                />
+              )}
+            </CanvasContextMenu>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
@@ -1520,10 +1618,12 @@ function DuplicateBlockButton({
   pageId,
   revisionId,
   sectionId,
+  onAfterAction,
 }: Readonly<{
   pageId: string;
   revisionId: string;
   sectionId: string;
+  onAfterAction?: () => void;
 }>) {
   const router = useRouter();
   const [state, action] = useActionState(
@@ -1531,8 +1631,11 @@ function DuplicateBlockButton({
     IDLE_ACTION_STATE,
   );
   useEffect(() => {
-    if (state.status === "success") router.refresh();
-  }, [router, state.status]);
+    if (state.status === "success") {
+      router.refresh();
+      onAfterAction?.();
+    }
+  }, [router, state.status, onAfterAction]);
   return (
     <form action={action} className="cms-builder__duplicate">
       <input type="hidden" name="pageId" value={pageId} />
@@ -1563,6 +1666,46 @@ function BlockContextMenu({
   targetPages: readonly Readonly<{ id: string; title: string }>[];
   onMove: (ids: string[]) => void;
 }>) {
+  return (
+    <details className="cms-block-context-menu">
+      <summary aria-label="Actions du bloc">
+        <MoreVertical size={16} />
+      </summary>
+      <BlockContextMenuActions
+        pageId={pageId}
+        revisionId={revisionId}
+        sectionId={sectionId}
+        index={index}
+        orderedIds={orderedIds}
+        targetPages={targetPages}
+        onMove={onMove}
+      />
+    </details>
+  );
+}
+
+// Shared by the outline's "Actions du bloc" disclosure (above) and the
+// canvas's right-click floating menu (CanvasContextMenu, below) so both
+// surfaces stay behind the same move/duplicate/copy/delete logic.
+function BlockContextMenuActions({
+  pageId,
+  revisionId,
+  sectionId,
+  index,
+  orderedIds,
+  targetPages,
+  onMove,
+  onAfterAction,
+}: Readonly<{
+  pageId: string;
+  revisionId: string;
+  sectionId: string;
+  index: number;
+  orderedIds: readonly string[];
+  targetPages: readonly Readonly<{ id: string; title: string }>[];
+  onMove: (ids: string[]) => void;
+  onAfterAction?: () => void;
+}>) {
   const router = useRouter();
   const [deleteState, deleteAction] = useActionState(
     deleteSectionAction,
@@ -1573,9 +1716,11 @@ function BlockContextMenu({
     IDLE_ACTION_STATE,
   );
   useEffect(() => {
-    if (deleteState.status === "success" || copyState.status === "success")
+    if (deleteState.status === "success" || copyState.status === "success") {
       router.refresh();
-  }, [copyState.status, deleteState.status, router]);
+      onAfterAction?.();
+    }
+  }, [copyState.status, deleteState.status, router, onAfterAction]);
   function move(offset: number) {
     const target = index + offset;
     if (target < 0 || target >= orderedIds.length) return;
@@ -1584,64 +1729,102 @@ function BlockContextMenu({
     if (!item) return;
     next.splice(target, 0, item);
     onMove(next);
+    onAfterAction?.();
   }
   return (
-    <details className="cms-block-context-menu">
-      <summary aria-label="Actions du bloc">
-        <MoreVertical size={16} />
-      </summary>
-      <div>
-        <button type="button" onClick={() => move(-1)} disabled={index === 0}>
-          <ChevronUp size={14} /> Monter
-        </button>
-        <button
-          type="button"
-          onClick={() => move(1)}
-          disabled={index === orderedIds.length - 1}
-        >
-          <ChevronDown size={14} /> Descendre
-        </button>
-        <DuplicateBlockButton
-          pageId={pageId}
-          revisionId={revisionId}
-          sectionId={sectionId}
-        />
-        {targetPages.length ? (
-          <form action={copyAction}>
-            <input type="hidden" name="pageId" value={pageId} />
-            <input type="hidden" name="revisionId" value={revisionId} />
-            <input type="hidden" name="sectionId" value={sectionId} />
-            <select
-              name="targetPageId"
-              aria-label="Page de destination"
-              required
-              defaultValue=""
-            >
-              <option value="" disabled>
-                Copier vers…
-              </option>
-              {targetPages.map((page) => (
-                <option key={page.id} value={page.id}>
-                  {page.title}
-                </option>
-              ))}
-            </select>
-            <button type="submit">
-              <Copy size={14} /> Copier
-            </button>
-            <Feedback state={copyState} />
-          </form>
-        ) : null}
-        <form action={deleteAction}>
+    <div className="cms-block-context-menu__actions">
+      <button type="button" onClick={() => move(-1)} disabled={index === 0}>
+        <ChevronUp size={14} /> Monter
+      </button>
+      <button
+        type="button"
+        onClick={() => move(1)}
+        disabled={index === orderedIds.length - 1}
+      >
+        <ChevronDown size={14} /> Descendre
+      </button>
+      <DuplicateBlockButton
+        pageId={pageId}
+        revisionId={revisionId}
+        sectionId={sectionId}
+        onAfterAction={onAfterAction}
+      />
+      {targetPages.length ? (
+        <form action={copyAction}>
           <input type="hidden" name="pageId" value={pageId} />
           <input type="hidden" name="revisionId" value={revisionId} />
-          <input type="hidden" name="id" value={sectionId} />
-          <button type="submit" className="is-danger">
-            <Trash2 size={14} /> Supprimer
+          <input type="hidden" name="sectionId" value={sectionId} />
+          <select
+            name="targetPageId"
+            aria-label="Page de destination"
+            required
+            defaultValue=""
+          >
+            <option value="" disabled>
+              Copier vers…
+            </option>
+            {targetPages.map((page) => (
+              <option key={page.id} value={page.id}>
+                {page.title}
+              </option>
+            ))}
+          </select>
+          <button type="submit">
+            <Copy size={14} /> Copier
           </button>
-          <Feedback state={deleteState} />
+          <Feedback state={copyState} />
         </form>
-      </div>
-    </details>
+      ) : null}
+      <form action={deleteAction}>
+        <input type="hidden" name="pageId" value={pageId} />
+        <input type="hidden" name="revisionId" value={revisionId} />
+        <input type="hidden" name="id" value={sectionId} />
+        <button type="submit" className="is-danger">
+          <Trash2 size={14} /> Supprimer
+        </button>
+        <Feedback state={deleteState} />
+      </form>
+    </div>
+  );
+}
+
+// Floating menu portaled to document.body so it isn't clipped by the
+// canvas frame's overflow:hidden wrapper. Closes on outside click, Escape,
+// or after any action inside it completes.
+function CanvasContextMenu({
+  x,
+  y,
+  onClose,
+  children,
+}: Readonly<{
+  x: number;
+  y: number;
+  onClose: () => void;
+  children: React.ReactNode;
+}>) {
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) onClose();
+    }
+    function handleKeydown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeydown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeydown);
+    };
+  }, [onClose]);
+  return (
+    <div
+      ref={menuRef}
+      role="menu"
+      className="cms-canvas-context-menu"
+      style={{ left: x, top: y }}
+    >
+      {children}
+    </div>
   );
 }
