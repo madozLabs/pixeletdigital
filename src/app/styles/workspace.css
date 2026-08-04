@@ -3940,6 +3940,25 @@
   font-size: 0.85rem;
 }
 
+.cms-component-instance-panel {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--wk-border));
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--accent) 6%, var(--wk-card));
+}
+
+.cms-component-instance-panel > p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.cms-component-instance-panel .button {
+  justify-self: start;
+}
+
 .cms-visual-builder__activate {
   margin: 0.85rem;
   border: 2px solid color-mix(in srgb, var(--accent) 45%, var(--wk-border));

@@ -12,6 +12,7 @@ import {
   Image,
   Menu,
   Palette,
+  Puzzle,
   Settings,
 } from "lucide-react";
 import { buildCmsWorldSwitchHref } from "./cms-navigation";
@@ -32,6 +33,11 @@ const NAVIGATION = [
     href: "/workspace/site-content/media",
     label: "Médiathèque",
     icon: Image,
+  },
+  {
+    href: "/workspace/site-content/components",
+    label: "Composants",
+    icon: Puzzle,
   },
   {
     href: "/workspace/site-content/navigation",

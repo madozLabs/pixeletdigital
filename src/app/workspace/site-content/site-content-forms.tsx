@@ -24,6 +24,7 @@ import {
   createDefaultNestedBlock,
   getPageBlockDefinition,
   NESTABLE_BLOCK_TYPES,
+  PAGE_BLOCK_REGISTRY,
   parseColumnsPayload,
   type NestableBlockType,
   type NestedBlock,
@@ -43,8 +44,10 @@ import {
 } from "../_components/feedback";
 import { ConfirmAction } from "../_components/confirm-action";
 import {
+  createGlobalComponentAction,
   createPageAction,
   createPreviewShareAction,
+  deleteGlobalComponentAction,
   deleteMediaAction,
   deleteSectionAction,
   duplicatePageAction,
@@ -126,6 +129,74 @@ export function DuplicatePageForm({
       <button type="submit" className="admin-table__action">
         Dupliquer
       </button>
+      <Feedback state={state} />
+    </form>
+  );
+}
+
+export function CreateGlobalComponentForm({
+  worldKey,
+}: Readonly<{ worldKey: string }>) {
+  const [state, action] = useActionState(
+    createGlobalComponentAction,
+    IDLE_ACTION_STATE,
+  );
+  useRefreshOnSuccess(state.status);
+  return (
+    <form action={action} className="admin-form-card cms-create-card">
+      <h2>Nouveau composant</h2>
+      <input type="hidden" name="worldKey" value={worldKey} />
+      <label>
+        Nom
+        <input name="name" required maxLength={80} placeholder="Bandeau CTA final" />
+      </label>
+      <label>
+        Type de bloc
+        <select name="sectionType" required defaultValue="">
+          <option value="" disabled>
+            Choisir…
+          </option>
+          {PAGE_BLOCK_REGISTRY.map((block) => (
+            <option key={block.type} value={block.type}>
+              {block.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <Feedback state={state} />
+      <SubmitButton>Créer le composant</SubmitButton>
+      <p className="section__note">
+        Son contenu se remplit ensuite dans la bibliothèque de composants, à
+        l’aide de l’éditeur de page habituel.
+      </p>
+    </form>
+  );
+}
+
+export function DeleteGlobalComponentForm({
+  componentId,
+  usageCount,
+}: Readonly<{ componentId: string; usageCount: number }>) {
+  const [state, action] = useActionState(
+    deleteGlobalComponentAction,
+    IDLE_ACTION_STATE,
+  );
+  useRefreshOnSuccess(state.status);
+  return (
+    <form action={action}>
+      <input type="hidden" name="componentId" value={componentId} />
+      {usageCount > 0 ? (
+        <span
+          className="admin-table__action"
+          title="Détachez d’abord chaque page qui utilise ce composant."
+        >
+          Utilisé ({usageCount})
+        </span>
+      ) : (
+        <ConfirmAction consequence="Ce composant global sera supprimé définitivement.">
+          Supprimer
+        </ConfirmAction>
+      )}
       <Feedback state={state} />
     </form>
   );

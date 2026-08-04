@@ -287,6 +287,7 @@ model World {
   expenses           Expense[]
   revenueEntries     RevenueEntry[]
   comments           Comment[]
+  globalComponents   GlobalComponent[]
 
   @@map("worlds")
 }
@@ -567,11 +568,49 @@ model PageRevisionSection {
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
 
+  // Set when this row is an *instance* of a global component -- its own
+  // payload is ignored at render time in favor of the component's live
+  // (sourceSection) payload. Restrict so a component can't be deleted out
+  // from under pages that still reference it (see deleteGlobalComponentAction,
+  // which requires detaching every instance first).
+  globalComponentId String?
+  globalComponent   GlobalComponent? @relation("GlobalComponentInstances", fields: [globalComponentId], references: [id], onDelete: Restrict)
+
+  // Set (via the reverse relation) when this row is the canonical, editable
+  // source content of a global component -- i.e. it lives on that world's
+  // hidden component-library page. Restrict so the source can't be deleted
+  // while the component still exists.
+  sourceForComponent GlobalComponent? @relation("GlobalComponentSource")
+
   mediaUsages SectionMediaUsage[]
 
   @@unique([revisionId, sectionKey])
   @@index([revisionId, order])
+  @@index([globalComponentId])
   @@map("page_revision_sections")
+}
+
+// A reusable block: one canonical PageRevisionSection (sourceSection, living
+// on a hidden per-world "component library" page) that any number of other
+// pages can embed as a lightweight instance. Editing the source through the
+// normal page builder updates every instance immediately, since instances
+// defer to the source's live payload at render time instead of storing
+// their own copy.
+model GlobalComponent {
+  id              String   @id
+  worldKey        String
+  world           World    @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  name            String
+  sectionType     String
+  sourceSectionId String   @unique
+  sourceSection   PageRevisionSection @relation("GlobalComponentSource", fields: [sourceSectionId], references: [id], onDelete: Restrict)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  instances PageRevisionSection[] @relation("GlobalComponentInstances")
+
+  @@unique([worldKey, name])
+  @@map("global_components")
 }
 
 model SectionMediaUsage {

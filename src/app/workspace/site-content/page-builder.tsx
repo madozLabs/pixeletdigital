@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 
 import {
+  getPageBlockDefinition,
   isPageBlockType,
   PAGE_BLOCK_REGISTRY,
 } from "@/modules/content/domain/page-block-registry";
@@ -62,7 +63,9 @@ import {
   addPageBlockAction,
   copyPageBlockToPageAction,
   deleteSectionAction,
+  detachGlobalComponentInstanceAction,
   duplicatePageBlockAction,
+  insertGlobalComponentInstanceAction,
   redoPageEditAction,
   reorderPageBlocksAction,
   restoreLastDeletedBlockAction,
@@ -105,6 +108,7 @@ function readStoredSidebarCollapsed(): boolean {
 
 export function PageBuilder({
   pageId,
+  worldKey,
   revisionId,
   revisionVersion,
   sectionIds,
@@ -119,10 +123,14 @@ export function PageBuilder({
   targetPages,
   sectionLabels,
   sectionErrors,
+  sectionGlobalComponentNames,
+  globalComponents,
+  componentLibraryPageId,
   settings,
   children,
 }: Readonly<{
   pageId: string;
+  worldKey: string;
   revisionId: string | null;
   revisionVersion: number | null;
   sectionIds: readonly string[];
@@ -147,6 +155,13 @@ export function PageBuilder({
   }>[];
   sectionLabels: readonly string[];
   sectionErrors: readonly (readonly string[])[];
+  sectionGlobalComponentNames: readonly (string | null)[];
+  globalComponents: readonly Readonly<{
+    id: string;
+    name: string;
+    sectionType: string;
+  }>[];
+  componentLibraryPageId: string | null;
   settings: React.ReactNode;
   children: React.ReactNode;
 }>) {
@@ -166,6 +181,12 @@ export function PageBuilder({
   );
   const galleryBySectionId = new Map(
     sectionIds.map((id, index) => [id, sectionGalleryMediaIds[index] ?? []]),
+  );
+  const componentNameBySectionId = new Map(
+    sectionIds.map((id, index) => [
+      id,
+      sectionGlobalComponentNames[index] ?? null,
+    ]),
   );
   const [orderedIds, setOrderedIds] = useState(sectionIds);
   const [selectedId, setSelectedId] = useState<string | null>(
@@ -967,6 +988,13 @@ export function PageBuilder({
               {editable && revisionId ? (
                 <BlockLibrary pageId={pageId} revisionId={revisionId} />
               ) : null}
+              {editable && revisionId && globalComponents.length > 0 ? (
+                <ComponentLibraryPanel
+                  pageId={pageId}
+                  revisionId={revisionId}
+                  components={globalComponents}
+                />
+              ) : null}
             </div>
             <Feedback state={blockMutationState} />
             <Feedback state={reorderState} />
@@ -1101,6 +1129,18 @@ export function PageBuilder({
                 Dupliquer/Supprimer dans l’onglet Calques, ou cliquez un seul
                 bloc pour modifier ses propriétés.
               </p>
+            ) : editable &&
+              selectedId &&
+              revisionId &&
+              componentNameBySectionId.get(selectedId) ? (
+              <GlobalComponentInstancePanel
+                pageId={pageId}
+                worldKey={worldKey}
+                revisionId={revisionId}
+                sectionId={selectedId}
+                componentName={componentNameBySectionId.get(selectedId) ?? ""}
+                componentLibraryPageId={componentLibraryPageId}
+              />
             ) : selectedId && childById.has(selectedId) ? (
               <>
                 <div className="cms-visual-builder__inspector-header">
@@ -1575,6 +1615,130 @@ function BlockLibrary({
         </div>
       </div>
     </details>
+  );
+}
+
+function GlobalComponentInstancePanel({
+  pageId,
+  worldKey,
+  revisionId,
+  sectionId,
+  componentName,
+  componentLibraryPageId,
+}: Readonly<{
+  pageId: string;
+  worldKey: string;
+  revisionId: string;
+  sectionId: string;
+  componentName: string;
+  componentLibraryPageId: string | null;
+}>) {
+  const router = useRouter();
+  const [state, action] = useActionState(
+    detachGlobalComponentInstanceAction,
+    IDLE_ACTION_STATE,
+  );
+  useEffect(() => {
+    if (state.status === "success") router.refresh();
+  }, [router, state.status]);
+  return (
+    <div className="cms-component-instance-panel">
+      <p>
+        Ce bloc est le composant global <strong>{componentName}</strong>. Le
+        modifier changera son affichage sur toutes les pages qui
+        l’utilisent.
+      </p>
+      {componentLibraryPageId ? (
+        <a
+          className="button button--primary"
+          href={`/workspace/site-content/pages/${componentLibraryPageId}/edit?world=${worldKey}`}
+        >
+          Modifier le composant
+        </a>
+      ) : null}
+      <form action={action}>
+        <input type="hidden" name="pageId" value={pageId} />
+        <input type="hidden" name="revisionId" value={revisionId} />
+        <input type="hidden" name="sectionId" value={sectionId} />
+        <SubmitButton>Détacher (rendre indépendant)</SubmitButton>
+        <Feedback state={state} />
+      </form>
+    </div>
+  );
+}
+
+function ComponentLibraryPanel({
+  pageId,
+  revisionId,
+  components,
+}: Readonly<{
+  pageId: string;
+  revisionId: string;
+  components: readonly Readonly<{
+    id: string;
+    name: string;
+    sectionType: string;
+  }>[];
+}>) {
+  return (
+    <details className="cms-block-library cms-component-library">
+      <summary className="button">
+        <Plus size={16} /> Composants globaux
+      </summary>
+      <div className="cms-block-library__panel">
+        <div className="cms-block-library__heading">
+          <strong>Composants globaux</strong>
+          <span>
+            Un composant modifié une fois change instantanément sur toutes
+            les pages qui l’utilisent.
+          </span>
+        </div>
+        <div className="cms-block-library__grid">
+          {components.map((component) => (
+            <AddComponentInstanceButton
+              key={component.id}
+              pageId={pageId}
+              revisionId={revisionId}
+              component={component}
+            />
+          ))}
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function AddComponentInstanceButton({
+  pageId,
+  revisionId,
+  component,
+}: Readonly<{
+  pageId: string;
+  revisionId: string;
+  component: Readonly<{ id: string; name: string; sectionType: string }>;
+}>) {
+  const router = useRouter();
+  const [state, action] = useActionState(
+    insertGlobalComponentInstanceAction,
+    IDLE_ACTION_STATE,
+  );
+  useEffect(() => {
+    if (state.status === "success") router.refresh();
+  }, [router, state.status]);
+  return (
+    <form action={action} className="cms-block-library__item">
+      <input type="hidden" name="pageId" value={pageId} />
+      <input type="hidden" name="revisionId" value={revisionId} />
+      <input type="hidden" name="componentId" value={component.id} />
+      <span className="cms-block-library__category">COMPOSANT</span>
+      <strong>{component.name}</strong>
+      <p>
+        {getPageBlockDefinition(component.sectionType)?.label ??
+          component.sectionType}
+      </p>
+      <SubmitButton>Ajouter</SubmitButton>
+      <Feedback state={state} />
+    </form>
   );
 }
 

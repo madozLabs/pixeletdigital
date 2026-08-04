@@ -21,6 +21,7 @@ export class PrismaWorkspaceContentReader implements WorkspaceContentReader {
     const pageSearch = input.pageSearch?.trim();
     const pagesWhere = {
       worldKey: input.worldKey,
+      pageKind: { not: "COMPONENT_LIBRARY" },
       ...(pageSearch
         ? {
             OR: [
@@ -84,7 +85,10 @@ export class PrismaWorkspaceContentReader implements WorkspaceContentReader {
       topViewsRaw,
     ] = await Promise.all([
       this.database.page.findMany({
-        where: { worldKey: input.worldKey },
+        where: {
+          worldKey: input.worldKey,
+          pageKind: { not: "COMPONENT_LIBRARY" },
+        },
         orderBy: { updatedAt: "desc" },
         take: 6,
       }),
@@ -115,7 +119,10 @@ export class PrismaWorkspaceContentReader implements WorkspaceContentReader {
         : Promise.resolve([]),
       input.tab === "identity" || input.selectedPageId
         ? this.database.page.findMany({
-            where: { worldKey: input.worldKey },
+            where: {
+              worldKey: input.worldKey,
+              pageKind: { not: "COMPONENT_LIBRARY" },
+            },
             orderBy: [{ title: "asc" }, { createdAt: "asc" }],
           })
         : Promise.resolve([]),

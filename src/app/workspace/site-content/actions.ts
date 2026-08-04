@@ -121,6 +121,13 @@ const ERROR_MESSAGE: Readonly<Record<string, string>> = {
     "Vous ne pouvez pas approuver une révision que vous avez vous-même soumise : demandez à un autre approbateur.",
   INVALID_SCHEDULE_DATE:
     "La date de publication programmée doit être dans le futur.",
+  COMPONENT_NAME_REQUIRED: "Merci de donner un nom au composant.",
+  COMPONENT_NAME_TAKEN: "Un composant porte déjà ce nom dans cet univers.",
+  COMPONENT_NOT_FOUND: "Ce composant global n'existe plus.",
+  COMPONENT_IN_USE:
+    "Ce composant est utilisé par au moins une page. Détachez d'abord chaque bloc qui l'utilise avant de le supprimer.",
+  SECTION_NOT_A_COMPONENT_INSTANCE:
+    "Ce bloc n'est pas lié à un composant global.",
 };
 
 function toActionState(error: unknown): ActionState {
@@ -988,6 +995,7 @@ type SnapshotSection = {
   order: number;
   payload: Prisma.JsonValue;
   payloadSchemaVersion: number;
+  globalComponentId: string | null;
   mediaUsages: readonly { mediaId: string; slot: string; order: number }[];
 };
 
@@ -1007,6 +1015,7 @@ async function captureSectionsSnapshot(
     order: section.order,
     payload: section.payload,
     payloadSchemaVersion: section.payloadSchemaVersion,
+    globalComponentId: section.globalComponentId,
     mediaUsages: section.mediaUsages.map((usage) => ({
       mediaId: usage.mediaId,
       slot: usage.slot,
@@ -1055,6 +1064,10 @@ function parseSnapshotSections(value: Prisma.JsonValue): SnapshotSection[] {
         order: record.order,
         payload: (record.payload ?? {}) as Prisma.JsonValue,
         payloadSchemaVersion: record.payloadSchemaVersion,
+        globalComponentId:
+          typeof record.globalComponentId === "string"
+            ? record.globalComponentId
+            : null,
         mediaUsages,
       },
     ];
@@ -1163,6 +1176,7 @@ async function restoreSectionsSnapshot(
           order: section.order,
           payload: section.payload as Prisma.InputJsonValue,
           payloadSchemaVersion: section.payloadSchemaVersion,
+          globalComponentId: section.globalComponentId,
           version: { increment: 1 },
           updatedAt: now,
         },
@@ -1177,6 +1191,7 @@ async function restoreSectionsSnapshot(
           order: section.order,
           payload: section.payload as Prisma.InputJsonValue,
           payloadSchemaVersion: section.payloadSchemaVersion,
+          globalComponentId: section.globalComponentId,
           version: 1,
           createdAt: now,
           updatedAt: now,
@@ -2212,6 +2227,308 @@ export async function updateMediaDetailsAction(
     });
     revalidatePath("/workspace/site-content");
     return { status: "success", message: "Détails du média enregistrés." };
+  } catch (error) {
+    return toActionState(error);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Global components ("symbols"): a reusable block whose canonical, editable
+// content lives as one PageRevisionSection on a hidden per-world "component
+// library" page. Other pages embed it as a lightweight instance (a section
+// row with globalComponentId set and no payload of its own); the public
+// renderer and the builder's own iframe preview -- which is just that same
+// public route in preview mode -- resolve instances to the component's live
+// payload at render time (see resolveEffectiveSection in
+// (marketing)/[slug]/page.tsx), so editing the source through the normal
+// page builder updates every instance immediately.
+// ---------------------------------------------------------------------------
+
+const COMPONENT_LIBRARY_SLUG = "__component_library__";
+
+async function ensureComponentLibraryPage(
+  transaction: Prisma.TransactionClient,
+  worldKey: string,
+  actorId: string | undefined,
+  now: Date,
+): Promise<{ pageId: string; revisionId: string }> {
+  const existing = await transaction.page.findFirst({
+    where: { worldKey, pageKind: "COMPONENT_LIBRARY" },
+    select: { id: true, draftRevisionId: true },
+  });
+  if (existing?.draftRevisionId) {
+    return { pageId: existing.id, revisionId: existing.draftRevisionId };
+  }
+  if (existing) throw new Error("COMPONENT_NOT_FOUND");
+  const pageId = randomUUID();
+  const revisionId = `revision_${randomUUID()}`;
+  await transaction.page.create({
+    data: {
+      id: pageId,
+      worldKey,
+      pageType: "LANDING",
+      pageKind: "COMPONENT_LIBRARY",
+      title: "Bibliothèque de composants",
+      slug: COMPONENT_LIBRARY_SLUG,
+      routePath: null,
+      lifecycle: "DRAFT",
+      version: 1,
+      createdAt: now,
+      updatedAt: now,
+    },
+  });
+  await transaction.pageRevision.create({
+    data: {
+      id: revisionId,
+      pageId,
+      revisionNumber: 1,
+      status: "DRAFT",
+      title: "Bibliothèque de composants",
+      createdById: actorId,
+      createdAt: now,
+      updatedAt: now,
+    },
+  });
+  await transaction.page.update({
+    where: { id: pageId },
+    data: { draftRevisionId: revisionId },
+  });
+  return { pageId, revisionId };
+}
+
+export async function createGlobalComponentAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const worldKey = text(formData, "worldKey");
+    const name = text(formData, "name");
+    const sectionType = text(formData, "sectionType");
+    if (!name) throw new Error("COMPONENT_NAME_REQUIRED");
+    if (!isPageBlockType(sectionType)) {
+      throw new Error("INVALID_SECTION_PAYLOAD");
+    }
+    const { actor } = await actorFor(worldKey);
+    const existingName = await prisma.globalComponent.findUnique({
+      where: { worldKey_name: { worldKey, name } },
+      select: { id: true },
+    });
+    if (existingName) throw new Error("COMPONENT_NAME_TAKEN");
+    const now = new Date();
+    await prisma.$transaction(async (transaction) => {
+      const { revisionId } = await ensureComponentLibraryPage(
+        transaction,
+        worldKey,
+        actor.id,
+        now,
+      );
+      const aggregate = await transaction.pageRevisionSection.aggregate({
+        where: { revisionId },
+        _max: { order: true },
+      });
+      const sourceSectionId = `revision_section_${randomUUID()}`;
+      await transaction.pageRevisionSection.create({
+        data: {
+          id: sourceSectionId,
+          revisionId,
+          sectionKey: `section_${randomUUID()}`,
+          sectionType,
+          order: (aggregate._max.order ?? -1) + 1,
+          payload: createDefaultBlockPayload(
+            sectionType,
+          ) as Prisma.InputJsonValue,
+          payloadSchemaVersion: 1,
+          version: 1,
+          createdAt: now,
+          updatedAt: now,
+        },
+      });
+      await transaction.globalComponent.create({
+        data: {
+          id: `global_component_${randomUUID()}`,
+          worldKey,
+          name,
+          sectionType,
+          sourceSectionId,
+          createdAt: now,
+          updatedAt: now,
+        },
+      });
+    });
+    revalidatePath("/workspace/site-content/components");
+    return { status: "success", message: "Composant global créé." };
+  } catch (error) {
+    return toActionState(error);
+  }
+}
+
+export async function insertGlobalComponentInstanceAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const pageId = text(formData, "pageId");
+    const revisionId = text(formData, "revisionId");
+    const componentId = text(formData, "componentId");
+    const page = await prisma.page.findUniqueOrThrow({ where: { id: pageId } });
+    await actorFor(page.worldKey);
+    await assertEditableRevision(pageId, revisionId);
+    const component = await prisma.globalComponent.findUnique({
+      where: { id: componentId },
+    });
+    if (!component || component.worldKey !== page.worldKey) {
+      throw new Error("COMPONENT_NOT_FOUND");
+    }
+    const now = new Date();
+    await prisma.$transaction(async (transaction) => {
+      const historyCursor = await beginSectionHistory(transaction, revisionId);
+      const aggregate = await transaction.pageRevisionSection.aggregate({
+        where: { revisionId },
+        _max: { order: true },
+      });
+      await transaction.pageRevisionSection.create({
+        data: {
+          id: `revision_section_${randomUUID()}`,
+          revisionId,
+          sectionKey: `section_${randomUUID()}`,
+          sectionType: component.sectionType,
+          order: (aggregate._max.order ?? -1) + 1,
+          payload: {},
+          payloadSchemaVersion: 1,
+          version: 1,
+          globalComponentId: component.id,
+          createdAt: now,
+          updatedAt: now,
+        },
+      });
+      const nextSequence = await endSectionHistory(
+        transaction,
+        revisionId,
+        historyCursor,
+      );
+      await transaction.pageRevision.update({
+        where: { id: revisionId },
+        data: {
+          version: { increment: 1 },
+          snapshotCursor: nextSequence,
+          updatedAt: now,
+        },
+      });
+      await transaction.page.update({
+        where: { id: pageId },
+        data: { updatedAt: now },
+      });
+    });
+    revalidatePath("/workspace/site-content");
+    return { status: "success", message: "Composant ajouté à la page." };
+  } catch (error) {
+    return toActionState(error);
+  }
+}
+
+export async function detachGlobalComponentInstanceAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const pageId = text(formData, "pageId");
+    const revisionId = text(formData, "revisionId");
+    const sectionId = text(formData, "sectionId");
+    const page = await prisma.page.findUniqueOrThrow({ where: { id: pageId } });
+    await actorFor(page.worldKey);
+    await assertEditableRevision(pageId, revisionId);
+    const section = await prisma.pageRevisionSection.findFirst({
+      where: { id: sectionId, revisionId },
+      include: {
+        globalComponent: {
+          include: { sourceSection: { include: { mediaUsages: true } } },
+        },
+      },
+    });
+    if (!section?.globalComponentId || !section.globalComponent) {
+      throw new Error("SECTION_NOT_A_COMPONENT_INSTANCE");
+    }
+    const source = section.globalComponent.sourceSection;
+    const now = new Date();
+    await prisma.$transaction(async (transaction) => {
+      const historyCursor = await beginSectionHistory(transaction, revisionId);
+      await transaction.pageRevisionSection.update({
+        where: { id: sectionId },
+        data: {
+          sectionType: source.sectionType,
+          payload: source.payload as Prisma.InputJsonValue,
+          payloadSchemaVersion: source.payloadSchemaVersion,
+          globalComponentId: null,
+          version: { increment: 1 },
+          updatedAt: now,
+        },
+      });
+      await transaction.sectionMediaUsage.deleteMany({
+        where: { sectionId },
+      });
+      if (source.mediaUsages.length > 0) {
+        await transaction.sectionMediaUsage.createMany({
+          data: source.mediaUsages.map((usage) => ({
+            sectionId,
+            mediaId: usage.mediaId,
+            slot: usage.slot,
+            order: usage.order,
+          })),
+        });
+      }
+      const nextSequence = await endSectionHistory(
+        transaction,
+        revisionId,
+        historyCursor,
+      );
+      await transaction.pageRevision.update({
+        where: { id: revisionId },
+        data: {
+          version: { increment: 1 },
+          snapshotCursor: nextSequence,
+          updatedAt: now,
+        },
+      });
+      await transaction.page.update({
+        where: { id: pageId },
+        data: { updatedAt: now },
+      });
+    });
+    revalidatePath("/workspace/site-content");
+    return {
+      status: "success",
+      message: "Composant détaché : ce bloc est maintenant indépendant.",
+    };
+  } catch (error) {
+    return toActionState(error);
+  }
+}
+
+export async function deleteGlobalComponentAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const componentId = text(formData, "componentId");
+    const component = await prisma.globalComponent.findUniqueOrThrow({
+      where: { id: componentId },
+    });
+    await actorFor(component.worldKey);
+    const instanceCount = await prisma.pageRevisionSection.count({
+      where: { globalComponentId: componentId },
+    });
+    if (instanceCount > 0) throw new Error("COMPONENT_IN_USE");
+    await prisma.$transaction(async (transaction) => {
+      await transaction.globalComponent.delete({ where: { id: componentId } });
+      await transaction.sectionMediaUsage.deleteMany({
+        where: { sectionId: component.sourceSectionId },
+      });
+      await transaction.pageRevisionSection.delete({
+        where: { id: component.sourceSectionId },
+      });
+    });
+    revalidatePath("/workspace/site-content/components");
+    return { status: "success", message: "Composant global supprimé." };
   } catch (error) {
     return toActionState(error);
   }

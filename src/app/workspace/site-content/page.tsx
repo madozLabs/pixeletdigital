@@ -603,7 +603,7 @@ export function PagesPanel({
 
 type EditablePage = WorkspaceEditablePageDto;
 
-export function PageEditor({
+export async function PageEditor({
   worldKey,
   page,
   media,
@@ -630,6 +630,20 @@ export function PageEditor({
 }) {
   const activeRevision = page.draftRevision ?? page.publishedRevision;
   const sections = activeRevision?.sections ?? [];
+  const [componentLibraryPage, globalComponents] = await Promise.all([
+    prisma.page.findFirst({
+      where: { worldKey, pageKind: "COMPONENT_LIBRARY" },
+      select: { id: true },
+    }),
+    prisma.globalComponent.findMany({
+      where: { worldKey },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, sectionType: true },
+    }),
+  ]);
+  const componentNameById = new Map(
+    globalComponents.map((component) => [component.id, component.name]),
+  );
   const editable = page.draftRevision?.status === "DRAFT";
   const publicPath =
     page.routePath ??
@@ -676,11 +690,16 @@ export function PageEditor({
       <PageBuilder
         key={activeRevision?.id ?? "empty"}
         pageId={page.id}
+        worldKey={worldKey}
         revisionId={page.draftRevision?.id ?? null}
         revisionVersion={page.draftRevision?.version ?? null}
         sectionIds={sections.map((section) => section.id)}
         sectionTypes={sections.map((section) => section.sectionType)}
         sectionLabels={sections.map((section) => {
+          const componentName = componentNameById.get(
+            section.globalComponentId ?? "",
+          );
+          if (componentName) return componentName;
           const payload = section.payload as Record<string, unknown>;
           const title = [payload.title, payload.heading, payload.name].find(
             (value): value is string =>
@@ -689,10 +708,15 @@ export function PageEditor({
           return title?.trim() ?? section.sectionType;
         })}
         sectionErrors={sections.map((section) =>
-          validatePageBlock(
-            section.sectionType,
-            section.payload as Record<string, unknown>,
-          ),
+          // A component instance's own payload is intentionally empty (it
+          // renders the component's live content instead) -- validating it
+          // would just flag every instance as broken.
+          section.globalComponentId
+            ? []
+            : validatePageBlock(
+                section.sectionType,
+                section.payload as Record<string, unknown>,
+              ),
         )}
         sectionVersions={sections.map((section) => section.version)}
         sectionMediaIds={sections.map((section) => {
@@ -707,6 +731,11 @@ export function PageEditor({
               )
             : [];
         })}
+        sectionGlobalComponentNames={sections.map(
+          (section) => componentNameById.get(section.globalComponentId ?? "") ?? null,
+        )}
+        globalComponents={globalComponents}
+        componentLibraryPageId={componentLibraryPage?.id ?? null}
         mediaAssets={media}
         editable={editable}
         previewUrl={previewUrl}

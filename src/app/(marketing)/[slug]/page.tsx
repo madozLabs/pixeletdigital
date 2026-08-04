@@ -7,6 +7,7 @@ import { actorHasWorldAccess } from "@/app/workspace/_lib/authorization";
 import { publishDueScheduledRevisions } from "@/modules/content/application/publish-scheduled-revisions";
 import { recordPageView } from "@/modules/content/application/record-page-view";
 import { CmsPreviewBridge } from "@/app/_components/cms-preview-bridge";
+import { resolveEffectiveSection } from "@/modules/content/domain/global-component-resolution";
 import { CmsSection, stringValue } from "../_components/cms-section";
 
 // See (marketing)/page.tsx for why this is ISR rather than force-dynamic.
@@ -39,7 +40,13 @@ async function loadPage(
     const revision = await prisma.pageRevision
       .findUnique({
         where: { id: share.revisionId },
-        include: { sections: { orderBy: { order: "asc" } }, ogImage: true },
+        include: {
+          sections: {
+            orderBy: { order: "asc" },
+            include: { globalComponent: { include: { sourceSection: true } } },
+          },
+          ogImage: true,
+        },
       })
       .catch(() => null);
     if (!revision) return null;
@@ -60,13 +67,23 @@ async function loadPage(
         include: {
           draftRevision: {
             include: {
-              sections: { orderBy: { order: "asc" } },
+              sections: {
+                orderBy: { order: "asc" },
+                include: {
+                  globalComponent: { include: { sourceSection: true } },
+                },
+              },
               ogImage: true,
             },
           },
           publishedRevision: {
             include: {
-              sections: { orderBy: { order: "asc" } },
+              sections: {
+                orderBy: { order: "asc" },
+                include: {
+                  globalComponent: { include: { sourceSection: true } },
+                },
+              },
               ogImage: true,
             },
           },
@@ -82,10 +99,26 @@ async function loadPage(
       where: { worldKey, slug, lifecycle: "PUBLISHED" },
       include: {
         draftRevision: {
-          include: { sections: { orderBy: { order: "asc" } }, ogImage: true },
+          include: {
+            sections: {
+              orderBy: { order: "asc" },
+              include: {
+                globalComponent: { include: { sourceSection: true } },
+              },
+            },
+            ogImage: true,
+          },
         },
         publishedRevision: {
-          include: { sections: { orderBy: { order: "asc" } }, ogImage: true },
+          include: {
+            sections: {
+              orderBy: { order: "asc" },
+              include: {
+                globalComponent: { include: { sourceSection: true } },
+              },
+            },
+            ogImage: true,
+          },
         },
       },
     })
@@ -109,7 +142,7 @@ export async function generateMetadata({
     };
   }
   const revision = preview || share ? page.draftRevision : page.publishedRevision;
-  const sections = revision?.sections ?? [];
+  const sections = (revision?.sections ?? []).map(resolveEffectiveSection);
   const description =
     revision?.seoDescription ||
     sections
@@ -149,9 +182,11 @@ export default async function CmsPublicPage({ params, searchParams }: Props) {
   if (!page) notFound();
   if (!preview && !share) recordPageView(prisma, page.id);
 
-  const sections = preview || share
-    ? (page.draftRevision?.sections ?? [])
-    : (page.publishedRevision?.sections ?? []);
+  const sections = (
+    preview || share
+      ? (page.draftRevision?.sections ?? [])
+      : (page.publishedRevision?.sections ?? [])
+  ).map(resolveEffectiveSection);
   const mediaIds = sections.flatMap((section) => {
     const payload = section.payload as Record<string, unknown>;
     return [

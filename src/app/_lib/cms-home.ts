@@ -3,6 +3,7 @@ import { prisma } from "@/infrastructure/shared/prisma-client";
 import { actorHasWorldAccess } from "@/app/workspace/_lib/authorization";
 import { getWorkspaceRequestContext } from "@/app/workspace/get-workspace-context";
 import { publishDueScheduledRevisions } from "@/modules/content/application/publish-scheduled-revisions";
+import { resolveEffectiveSection } from "@/modules/content/domain/global-component-resolution";
 
 export type CmsHeroContent = Readonly<{
   eyebrow: string | null;
@@ -72,8 +73,15 @@ export type CmsItemsBlock = CmsCopyBlock &
 
 const HOME_SLUG = "accueil";
 
+const SECTIONS_WITH_COMPONENT_INCLUDE = {
+  orderBy: { order: "asc" as const },
+  include: {
+    globalComponent: { include: { sourceSection: true } },
+  },
+};
+
 type HomeRevision = Prisma.PageRevisionGetPayload<{
-  include: { sections: true; ogImage: true };
+  include: { sections: typeof SECTIONS_WITH_COMPONENT_INCLUDE; ogImage: true };
 }>;
 
 function str(payload: Record<string, unknown>, key: string): string | null {
@@ -112,7 +120,7 @@ export async function getCmsHomeContent(
       const revision = await prisma.pageRevision
         .findUnique({
           where: { id: share.revisionId },
-          include: { sections: { orderBy: { order: "asc" } }, ogImage: true },
+          include: { sections: SECTIONS_WITH_COMPONENT_INCLUDE, ogImage: true },
         })
         .catch(() => null);
       if (revision) return buildHomeContent(share.page.id, revision, true);
@@ -140,10 +148,10 @@ export async function getCmsHomeContent(
       },
       include: {
         draftRevision: {
-          include: { sections: { orderBy: { order: "asc" } }, ogImage: true },
+          include: { sections: SECTIONS_WITH_COMPONENT_INCLUDE, ogImage: true },
         },
         publishedRevision: {
-          include: { sections: { orderBy: { order: "asc" } }, ogImage: true },
+          include: { sections: SECTIONS_WITH_COMPONENT_INCLUDE, ogImage: true },
         },
       },
     })
@@ -161,7 +169,7 @@ async function buildHomeContent(
   activeRevision: HomeRevision | null | undefined,
   isSharedPreview: boolean,
 ): Promise<CmsHomeContent> {
-  const sections = activeRevision?.sections ?? [];
+  const sections = (activeRevision?.sections ?? []).map(resolveEffectiveSection);
   const seo: CmsHomeSeo | null = activeRevision
     ? {
         title: activeRevision.seoTitle,

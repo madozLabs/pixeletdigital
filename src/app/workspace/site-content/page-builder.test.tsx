@@ -202,6 +202,7 @@ function renderBuilder() {
   return render(
     <PageBuilder
       pageId="page_1"
+      worldKey="pixel-digital"
       revisionId="revision_1"
       revisionVersion={3}
       sectionIds={["section_1", "section_2"]}
@@ -220,6 +221,9 @@ function renderBuilder() {
           mimeType: "image/jpeg",
         },
       ]}
+      sectionGlobalComponentNames={[null, null]}
+      globalComponents={[]}
+      componentLibraryPageId={null}
       editable
       previewUrl="/preview?visualEditor=1"
       publishedPreviewUrl="/published?visualEditor=1"
