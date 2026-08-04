@@ -128,6 +128,9 @@ const ERROR_MESSAGE: Readonly<Record<string, string>> = {
     "Ce composant est utilisé par au moins une page. Détachez d'abord chaque bloc qui l'utilise avant de le supprimer.",
   SECTION_NOT_A_COMPONENT_INSTANCE:
     "Ce bloc n'est pas lié à un composant global.",
+  TEMPLATE_NAME_REQUIRED: "Merci de donner un nom au gabarit.",
+  TEMPLATE_NAME_TAKEN: "Un gabarit porte déjà ce nom dans cet univers.",
+  TEMPLATE_EMPTY: "Cette page n'a aucun bloc à enregistrer comme gabarit.",
 };
 
 function toActionState(error: unknown): ActionState {
@@ -781,6 +784,41 @@ export async function restorePageRevisionAction(
   }
 }
 
+type TemplateSection = {
+  sectionType: string;
+  order: number;
+  payload: Prisma.JsonValue;
+  payloadSchemaVersion: number;
+  globalComponentId: string | null;
+};
+
+function parseTemplateSections(value: Prisma.JsonValue): TemplateSection[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
+    const record = entry as Record<string, unknown>;
+    if (
+      typeof record.sectionType !== "string" ||
+      typeof record.order !== "number" ||
+      typeof record.payloadSchemaVersion !== "number"
+    ) {
+      return [];
+    }
+    return [
+      {
+        sectionType: record.sectionType,
+        order: record.order,
+        payload: (record.payload ?? {}) as Prisma.JsonValue,
+        payloadSchemaVersion: record.payloadSchemaVersion,
+        globalComponentId:
+          typeof record.globalComponentId === "string"
+            ? record.globalComponentId
+            : null,
+      },
+    ];
+  });
+}
+
 export async function createPageAction(
   _state: ActionState,
   formData: FormData,
@@ -794,6 +832,15 @@ export async function createPageAction(
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
       throw new Error("INVALID_PAGE_SLUG");
     }
+    const templateId = text(formData, "templateId");
+    const template = templateId
+      ? await prisma.pageTemplate.findFirst({
+          where: { id: templateId, worldKey },
+        })
+      : null;
+    const templateSections = template
+      ? parseTemplateSections(template.sections)
+      : [];
     // A new page starts as DRAFT, so nothing public changes yet -- no
     // A new draft does not change the published revision.
     await prisma.$transaction(async (transaction) => {
@@ -833,6 +880,23 @@ export async function createPageAction(
           updatedAt: now,
         },
       });
+      for (const section of templateSections) {
+        await transaction.pageRevisionSection.create({
+          data: {
+            id: `revision_section_${randomUUID()}`,
+            revisionId,
+            sectionKey: `section_${randomUUID()}`,
+            sectionType: section.sectionType,
+            order: section.order,
+            payload: section.payload as Prisma.InputJsonValue,
+            payloadSchemaVersion: section.payloadSchemaVersion,
+            globalComponentId: section.globalComponentId,
+            version: 1,
+            createdAt: now,
+            updatedAt: now,
+          },
+        });
+      }
       await transaction.page.update({
         where: { id: pageId },
         data: { draftRevisionId: revisionId },
@@ -2529,6 +2593,75 @@ export async function deleteGlobalComponentAction(
     });
     revalidatePath("/workspace/site-content/components");
     return { status: "success", message: "Composant global supprimé." };
+  } catch (error) {
+    return toActionState(error);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Page templates: a one-shot snapshot of a page's current sections, applied
+// when creating a new page (see createPageAction above). Unlike global
+// components, a template never stays linked to the page it was captured
+// from -- copying it is the whole point, not sharing a live source.
+// ---------------------------------------------------------------------------
+
+export async function saveTemplateFromPageAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const pageId = text(formData, "pageId");
+    const revisionId = text(formData, "revisionId");
+    const worldKey = text(formData, "worldKey");
+    const name = text(formData, "name");
+    if (!name) throw new Error("TEMPLATE_NAME_REQUIRED");
+    await actorFor(worldKey);
+    await assertEditableRevision(pageId, revisionId);
+    const sections = await prisma.pageRevisionSection.findMany({
+      where: { revisionId },
+      orderBy: { order: "asc" },
+    });
+    if (sections.length === 0) throw new Error("TEMPLATE_EMPTY");
+    const existingName = await prisma.pageTemplate.findUnique({
+      where: { worldKey_name: { worldKey, name } },
+      select: { id: true },
+    });
+    if (existingName) throw new Error("TEMPLATE_NAME_TAKEN");
+    const snapshot: TemplateSection[] = sections.map((section) => ({
+      sectionType: section.sectionType,
+      order: section.order,
+      payload: section.payload,
+      payloadSchemaVersion: section.payloadSchemaVersion,
+      globalComponentId: section.globalComponentId,
+    }));
+    await prisma.pageTemplate.create({
+      data: {
+        id: `page_template_${randomUUID()}`,
+        worldKey,
+        name,
+        sections: snapshot as unknown as Prisma.InputJsonValue,
+      },
+    });
+    revalidatePath("/workspace/site-content/templates");
+    return { status: "success", message: "Gabarit enregistré." };
+  } catch (error) {
+    return toActionState(error);
+  }
+}
+
+export async function deletePageTemplateAction(
+  _state: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  try {
+    const templateId = text(formData, "templateId");
+    const template = await prisma.pageTemplate.findUniqueOrThrow({
+      where: { id: templateId },
+    });
+    await actorFor(template.worldKey);
+    await prisma.pageTemplate.delete({ where: { id: templateId } });
+    revalidatePath("/workspace/site-content/templates");
+    return { status: "success", message: "Gabarit supprimé." };
   } catch (error) {
     return toActionState(error);
   }

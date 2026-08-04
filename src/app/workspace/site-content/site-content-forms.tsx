@@ -49,11 +49,13 @@ import {
   createPreviewShareAction,
   deleteGlobalComponentAction,
   deleteMediaAction,
+  deletePageTemplateAction,
   deleteSectionAction,
   duplicatePageAction,
   saveSectionAction,
   saveSectionFieldsAction,
   saveSiteIdentityDraftAction,
+  saveTemplateFromPageAction,
   restorePageRevisionAction,
   revokePreviewShareAction,
   schedulePageRevisionAction,
@@ -86,7 +88,13 @@ function useRefreshOnSuccess(status: string) {
   }, [router, status]);
 }
 
-export function CreatePageForm({ worldKey }: Readonly<{ worldKey: string }>) {
+export function CreatePageForm({
+  worldKey,
+  templates = [],
+}: Readonly<{
+  worldKey: string;
+  templates?: readonly Readonly<{ id: string; name: string; blockCount: number }>[];
+}>) {
   const [state, action] = useActionState(createPageAction, IDLE_ACTION_STATE);
   return (
     <form action={action} className="admin-form-card cms-create-card">
@@ -108,6 +116,20 @@ export function CreatePageForm({ worldKey }: Readonly<{ worldKey: string }>) {
           <option>PORTFOLIO</option>
         </select>
       </label>
+      {templates.length > 0 ? (
+        <label>
+          Gabarit de départ
+          <select name="templateId" defaultValue="">
+            <option value="">Page vide</option>
+            {templates.map((template) => (
+              <option key={template.id} value={template.id}>
+                {template.name} ({template.blockCount} bloc
+                {template.blockCount > 1 ? "s" : ""})
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       <Feedback state={state} />
       <SubmitButton>Créer la page</SubmitButton>
       <p className="section__note">
@@ -197,6 +219,55 @@ export function DeleteGlobalComponentForm({
           Supprimer
         </ConfirmAction>
       )}
+      <Feedback state={state} />
+    </form>
+  );
+}
+
+export function SaveAsTemplateForm({
+  pageId,
+  worldKey,
+  revisionId,
+}: Readonly<{ pageId: string; worldKey: string; revisionId: string }>) {
+  const [state, action] = useActionState(
+    saveTemplateFromPageAction,
+    IDLE_ACTION_STATE,
+  );
+  useRefreshOnSuccess(state.status);
+  return (
+    <form action={action} className="admin-form-card cms-create-card">
+      <h2>Enregistrer comme gabarit</h2>
+      <input type="hidden" name="pageId" value={pageId} />
+      <input type="hidden" name="worldKey" value={worldKey} />
+      <input type="hidden" name="revisionId" value={revisionId} />
+      <label>
+        Nom du gabarit
+        <input name="name" required maxLength={80} placeholder="Page de service" />
+      </label>
+      <Feedback state={state} />
+      <SubmitButton>Enregistrer</SubmitButton>
+      <p className="section__note">
+        Copie les blocs actuels de cette page dans un gabarit réutilisable
+        pour créer de nouvelles pages.
+      </p>
+    </form>
+  );
+}
+
+export function DeletePageTemplateForm({
+  templateId,
+}: Readonly<{ templateId: string }>) {
+  const [state, action] = useActionState(
+    deletePageTemplateAction,
+    IDLE_ACTION_STATE,
+  );
+  useRefreshOnSuccess(state.status);
+  return (
+    <form action={action}>
+      <input type="hidden" name="templateId" value={templateId} />
+      <ConfirmAction consequence="Ce gabarit sera supprimé définitivement.">
+        Supprimer
+      </ConfirmAction>
       <Feedback state={state} />
     </form>
   );

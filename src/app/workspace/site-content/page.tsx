@@ -36,6 +36,7 @@ import {
   DuplicatePageForm,
   EditMediaDetailsForm,
   RevisionEditor,
+  SaveAsTemplateForm,
   SiteIdentityEditor,
   SectionFieldsForm,
   SectionJsonForm,
@@ -744,19 +745,28 @@ export async function PageEditor({
           (candidate) => candidate.id !== page.id && candidate.draftRevisionId,
         )}
         settings={
-          <RevisionEditor
-            pageId={page.id}
-            draft={page.draftRevision}
-            published={page.publishedRevision}
-            history={page.revisionHistory}
-            changeSummary={changeSummary}
-            authors={revisionAuthors}
-            images={media.filter((asset) =>
-              asset.mimeType.startsWith("image/"),
-            )}
-            publicPath={publicPath}
-            activeShares={activeShares}
-          />
+          <>
+            <RevisionEditor
+              pageId={page.id}
+              draft={page.draftRevision}
+              published={page.publishedRevision}
+              history={page.revisionHistory}
+              changeSummary={changeSummary}
+              authors={revisionAuthors}
+              images={media.filter((asset) =>
+                asset.mimeType.startsWith("image/"),
+              )}
+              publicPath={publicPath}
+              activeShares={activeShares}
+            />
+            {editable && page.draftRevision ? (
+              <SaveAsTemplateForm
+                pageId={page.id}
+                worldKey={worldKey}
+                revisionId={page.draftRevision.id}
+              />
+            ) : null}
+          </>
         }
       >
         {sections.map((section) => (

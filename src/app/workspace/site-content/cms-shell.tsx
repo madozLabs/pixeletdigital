@@ -10,6 +10,7 @@ import {
   Gauge,
   Globe2,
   Image,
+  LayoutTemplate,
   Menu,
   Palette,
   Puzzle,
@@ -38,6 +39,11 @@ const NAVIGATION = [
     href: "/workspace/site-content/components",
     label: "Composants",
     icon: Puzzle,
+  },
+  {
+    href: "/workspace/site-content/templates",
+    label: "Gabarits",
+    icon: LayoutTemplate,
   },
   {
     href: "/workspace/site-content/navigation",

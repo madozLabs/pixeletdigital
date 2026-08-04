@@ -288,6 +288,7 @@ model World {
   revenueEntries     RevenueEntry[]
   comments           Comment[]
   globalComponents   GlobalComponent[]
+  pageTemplates      PageTemplate[]
 
   @@map("worlds")
 }
@@ -611,6 +612,23 @@ model GlobalComponent {
 
   @@unique([worldKey, name])
   @@map("global_components")
+}
+
+// A reusable starting point for new pages: a snapshot of one revision's
+// sections at "save as template" time. Unlike GlobalComponent, this is a
+// one-shot copy applied when a page is created -- it does not stay linked
+// to whatever page it was captured from, and later edits to that page (or
+// to pages created from this template) never propagate either way.
+model PageTemplate {
+  id        String   @id
+  worldKey  String
+  world     World    @relation(fields: [worldKey], references: [key], onDelete: Restrict)
+  name      String
+  sections  Json
+  createdAt DateTime @default(now())
+
+  @@unique([worldKey, name])
+  @@map("page_templates")
 }
 
 model SectionMediaUsage {
