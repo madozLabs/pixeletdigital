@@ -205,14 +205,58 @@ export default async function CmsPublicPage({ params, searchParams }: Props) {
         .catch(() => [])
     : [];
   const mediaById = new Map(media.map((asset) => [asset.id, asset]));
-  const services = sections.some(
+  const collectionSections = sections.filter(
     (section) => section.sectionType === "SERVICE_INDEX",
+  );
+  const services = collectionSections.some(
+    (section) =>
+      (section.payload as Record<string, unknown>).source !== "PAGES",
   )
     ? await prisma.service.findMany({
         where: { worldKey: page.worldKey, lifecycle: "PUBLISHED" },
         orderBy: { name: "asc" },
       })
     : [];
+  const pageTypeFilters = [
+    ...new Set(
+      collectionSections
+        .filter(
+          (section) =>
+            (section.payload as Record<string, unknown>).source === "PAGES",
+        )
+        .map((section) => {
+          const filter = (section.payload as Record<string, unknown>)
+            .pageTypeFilter;
+          return typeof filter === "string" ? filter.trim() : "";
+        }),
+    ),
+  ];
+  // Any block with no filter needs every published page, which makes
+  // fetching per-filter pointless -- just grab everything once.
+  const needsAllPageTypes = pageTypeFilters.includes("");
+  const collectionPages = pageTypeFilters.length
+    ? await prisma.page
+        .findMany({
+          where: {
+            worldKey: page.worldKey,
+            lifecycle: "PUBLISHED",
+            pageKind: { not: "COMPONENT_LIBRARY" },
+            ...(needsAllPageTypes
+              ? {}
+              : { pageType: { in: pageTypeFilters.filter(Boolean) } }),
+          },
+          orderBy: { updatedAt: "desc" },
+          take: 100,
+        })
+        .catch(() => [])
+    : [];
+  const publicPages = collectionPages.map((collectionPage) => ({
+    slug: collectionPage.slug,
+    routePath: collectionPage.routePath,
+    pageType: collectionPage.pageType,
+    title: collectionPage.title,
+    description: "",
+  }));
 
   return (
     <main id="main-content" className="cms-public-page">
@@ -234,6 +278,7 @@ export default async function CmsPublicPage({ params, searchParams }: Props) {
           payload={section.payload as Record<string, unknown>}
           mediaById={mediaById}
           services={services}
+          pages={publicPages}
           worldKey={worldKey}
           editing={visualEditor === "1"}
         />

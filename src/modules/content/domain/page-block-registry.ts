@@ -118,8 +118,8 @@ export const PAGE_BLOCK_REGISTRY: readonly PageBlockDefinition[] = [
   ),
   block(
     "SERVICE_INDEX",
-    "Catalogue de services",
-    "Services publiés de l’univers, alimentés automatiquement.",
+    "Collection dynamique",
+    "Liste alimentée automatiquement depuis les services ou les pages publiées de l’univers.",
     "CONTENT",
     [
       { key: "eyebrow", label: "Sur-titre", kind: "TEXT" },

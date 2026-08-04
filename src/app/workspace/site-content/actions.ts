@@ -1821,6 +1821,12 @@ const TYPED_PAYLOAD_KEYS = [
   "text",
   "label",
   "href",
+  // SERVICE_INDEX ("Collection dynamique"): which live source it lists,
+  // and how that source is filtered/capped -- see cms-section.tsx and
+  // resolveCollectionPages in the [slug]/(marketing) route.
+  "source",
+  "pageTypeFilter",
+  "limit",
   "mediaId",
   "backgroundMediaId",
   "backgroundOverlay",

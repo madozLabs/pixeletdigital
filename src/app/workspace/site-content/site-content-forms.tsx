@@ -2109,7 +2109,69 @@ export function SectionFieldsForm({
       {sectionType === "CASE_STUDY" || sectionType === "TESTIMONIAL" ? (
         <EvidenceFields sectionType={sectionType} payload={evidencePayload} />
       ) : null}
-      {sectionType === "DIVIDER" || sectionType === "CUSTOM_HTML" ? (
+      {sectionType === "SERVICE_INDEX" ? (
+        <>
+          <div className="admin-form-grid">
+            <label>
+              Ordre
+              <input type="number" name="order" min="0" defaultValue={order} />
+            </label>
+            <label>
+              Sur-titre
+              <input name="eyebrow" defaultValue={eyebrow} />
+            </label>
+          </div>
+          <label>
+            Titre
+            <textarea name="title" rows={3} defaultValue={title} />
+          </label>
+          <label>
+            Source de la collection
+            <select
+              name="source"
+              defaultValue={
+                typeof evidencePayload.source === "string"
+                  ? evidencePayload.source
+                  : "SERVICES"
+              }
+            >
+              <option value="SERVICES">Services publiés</option>
+              <option value="PAGES">Pages publiées</option>
+            </select>
+          </label>
+          {evidencePayload.source === "PAGES" ? (
+            <div className="admin-form-grid">
+              <label>
+                Type de page (optionnel)
+                <input
+                  name="pageTypeFilter"
+                  defaultValue={
+                    typeof evidencePayload.pageTypeFilter === "string"
+                      ? evidencePayload.pageTypeFilter
+                      : ""
+                  }
+                  placeholder="PORTFOLIO"
+                />
+              </label>
+              <label>
+                Nombre maximum
+                <input
+                  type="number"
+                  name="limit"
+                  min="1"
+                  max="24"
+                  defaultValue={
+                    typeof evidencePayload.limit === "string" ||
+                    typeof evidencePayload.limit === "number"
+                      ? String(evidencePayload.limit)
+                      : "12"
+                  }
+                />
+              </label>
+            </div>
+          ) : null}
+        </>
+      ) : sectionType === "DIVIDER" || sectionType === "CUSTOM_HTML" ? (
         <div className="admin-form-grid">
           <label>
             Ordre

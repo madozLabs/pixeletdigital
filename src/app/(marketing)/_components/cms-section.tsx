@@ -33,12 +33,27 @@ export type CmsPublicService = Readonly<{
   description: string;
 }>;
 
+// The "PAGES" source of a SERVICE_INDEX ("Collection dynamique") block --
+// any published page, filtered by pageType, e.g. every PORTFOLIO page.
+// The caller fetches the union of pages needed by every such block on the
+// page (see resolveCollectionPages in [slug]/page.tsx); pageType lets this
+// component do the final per-block filter + limit itself, since multiple
+// blocks on the same page can each want a different slice of that union.
+export type CmsPublicPageSummary = Readonly<{
+  slug: string;
+  routePath: string | null;
+  pageType: string;
+  title: string;
+  description: string;
+}>;
+
 export function CmsSection({
   sectionId,
   type,
   payload,
   mediaById,
   services,
+  pages = [],
   worldKey,
   editing = false,
 }: Readonly<{
@@ -47,6 +62,7 @@ export function CmsSection({
   payload: Record<string, unknown>;
   mediaById: ReadonlyMap<string, CmsMediaAsset>;
   services: readonly CmsPublicService[];
+  pages?: readonly CmsPublicPageSummary[];
   worldKey: "pixel-digital" | "kwaliti-print";
   editing?: boolean;
 }>) {
@@ -358,6 +374,32 @@ export function CmsSection({
   }
 
   if (type === "SERVICE_INDEX") {
+    const source = stringValue(payload, "source") || "SERVICES";
+    const pageTypeFilter = stringValue(payload, "pageTypeFilter");
+    const limitRaw = Number(stringValue(payload, "limit"));
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : 12;
+    const collectionItems =
+      source === "PAGES"
+        ? pages
+            .filter(
+              (page) => !pageTypeFilter || page.pageType === pageTypeFilter,
+            )
+            .slice(0, limit)
+            .map((page) => ({
+              key: page.slug,
+              href: page.routePath ?? `/${page.slug}`,
+              name: page.title,
+              description: page.description,
+            }))
+        : services.map((service) => ({
+            key: service.slug,
+            href:
+              worldKey === "kwaliti-print"
+                ? `/kwaliti-print/${service.slug}`
+                : `/services/${service.slug}`,
+            name: service.name,
+            description: service.description,
+          }));
     return (
       <section
         {...cmsSectionDesignProps(
@@ -375,24 +417,20 @@ export function CmsSection({
         />
         <EditableCopy as="h2" field="title" value={title} editing={editing} />
         <div className="cms-public-items__grid">
-          {services.map((service) => (
-            <article key={service.slug}>
+          {collectionItems.map((item) => (
+            <article key={item.key}>
               <h3>
-                <Link
-                  href={
-                    worldKey === "kwaliti-print"
-                      ? `/kwaliti-print/${service.slug}`
-                      : `/services/${service.slug}`
-                  }
-                >
-                  {service.name}
-                </Link>
+                <Link href={item.href}>{item.name}</Link>
               </h3>
-              <p>{service.description}</p>
+              <p>{item.description}</p>
             </article>
           ))}
-          {editing && services.length === 0 ? (
-            <div className="cms-editor-placeholder">Aucun service publié.</div>
+          {editing && collectionItems.length === 0 ? (
+            <div className="cms-editor-placeholder">
+              {source === "PAGES"
+                ? "Aucune page publiée ne correspond à ce filtre."
+                : "Aucun service publié."}
+            </div>
           ) : null}
         </div>
       </section>
