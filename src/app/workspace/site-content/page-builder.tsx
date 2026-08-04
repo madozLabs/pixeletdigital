@@ -5,6 +5,7 @@ import {
   Children,
   startTransition,
   useActionState,
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -169,6 +170,17 @@ export function PageBuilder({
   const [selectedId, setSelectedId] = useState<string | null>(
     sectionIds[0] ?? null,
   );
+  // Multi-select is layered on top of the existing single `selectedId`
+  // (which still drives the Properties panel, canvas highlight, inline
+  // editing, and the media picker unchanged). It only exists to power bulk
+  // delete/duplicate from the Calques list -- `selectedId` is always the
+  // last-clicked block within the set.
+  const [multiSelectedIds, setMultiSelectedIds] = useState<readonly string[]>(
+    sectionIds[0] ? [sectionIds[0]] : [],
+  );
+  const multiSelectAnchorRef = useRef<string | null>(sectionIds[0] ?? null);
+  const [bulkMutationState, setBulkMutationState] = useState(IDLE_ACTION_STATE);
+  const [isBulkPending, startBulkTransition] = useTransition();
   const [panel, setPanel] = useState<"layers" | "properties" | "settings">(
     "layers",
   );
@@ -215,6 +227,11 @@ export function PageBuilder({
   if (sectionIdsKey !== syncedSectionIdsKey) {
     setSyncedSectionIdsKey(sectionIdsKey);
     setOrderedIds(sectionIds);
+    // Drop any multi-selected ids that no longer exist (bulk delete,
+    // undo/redo, another editor's change, ...).
+    setMultiSelectedIds((current) =>
+      current.filter((id) => sectionIds.includes(id)),
+    );
   }
 
   // Autosave no longer remounts the whole builder (that used to be how the
@@ -249,10 +266,60 @@ export function PageBuilder({
     });
   }
 
-  // Ctrl/Cmd+Z and Ctrl/Cmd+Shift+Z (or +Y) drive the same server-backed
-  // history as the toolbar buttons, but only while focus isn't inside a
-  // text field -- otherwise this would hijack the browser's native
-  // single-field undo while typing, in the sidebar or inside the preview.
+  const bulkDeleteSelected = useCallback(() => {
+    if (!editable || !revisionId || multiSelectedIds.length === 0) return;
+    const ids = [...multiSelectedIds];
+    startBulkTransition(async () => {
+      for (const id of ids) {
+        const data = new FormData();
+        data.set("pageId", pageId);
+        data.set("revisionId", revisionId);
+        data.set("id", id);
+        const state = await deleteSectionAction(IDLE_ACTION_STATE, data);
+        if (state.status === "error") {
+          setBulkMutationState(state);
+          router.refresh();
+          return;
+        }
+      }
+      setMultiSelectedIds([]);
+      setBulkMutationState({
+        status: "success",
+        message: `${ids.length} bloc(s) supprimé(s).`,
+      });
+      router.refresh();
+    });
+  }, [editable, revisionId, multiSelectedIds, pageId, router]);
+
+  const bulkDuplicateSelected = useCallback(() => {
+    if (!editable || !revisionId || multiSelectedIds.length === 0) return;
+    const ids = [...multiSelectedIds];
+    startBulkTransition(async () => {
+      for (const id of ids) {
+        const data = new FormData();
+        data.set("pageId", pageId);
+        data.set("revisionId", revisionId);
+        data.set("sectionId", id);
+        const state = await duplicatePageBlockAction(IDLE_ACTION_STATE, data);
+        if (state.status === "error") {
+          setBulkMutationState(state);
+          router.refresh();
+          return;
+        }
+      }
+      setBulkMutationState({
+        status: "success",
+        message: `${ids.length} bloc(s) dupliqué(s).`,
+      });
+      router.refresh();
+    });
+  }, [editable, revisionId, multiSelectedIds, pageId, router]);
+
+  // Ctrl/Cmd+Z (undo), Ctrl/Cmd+Shift+Z or +Y (redo), Delete/Backspace
+  // (delete selection), Ctrl/Cmd+D (duplicate selection), Escape (clear
+  // multi-select) -- all skipped while focus is inside a text field
+  // (sidebar or preview iframe) so native browser/field behavior wins
+  // there instead.
   useEffect(() => {
     if (!editable) return;
     function isTextEditingTarget(target: Element | null): boolean {
@@ -272,18 +339,43 @@ export function PageBuilder({
     }
     function handleKeydown(event: KeyboardEvent) {
       const key = event.key.toLowerCase();
-      if (!(event.ctrlKey || event.metaKey) || (key !== "z" && key !== "y")) {
+      const withModifier = event.ctrlKey || event.metaKey;
+      if (withModifier && (key === "z" || key === "y")) {
+        if (isTextEditingTarget(document.activeElement)) return;
+        const isRedo = key === "y" || (key === "z" && event.shiftKey);
+        event.preventDefault();
+        if (isRedo) redoFormRef.current?.requestSubmit();
+        else undoFormRef.current?.requestSubmit();
         return;
       }
-      if (isTextEditingTarget(document.activeElement)) return;
-      const isRedo = key === "y" || (key === "z" && event.shiftKey);
-      event.preventDefault();
-      if (isRedo) redoFormRef.current?.requestSubmit();
-      else undoFormRef.current?.requestSubmit();
+      if (withModifier && key === "d") {
+        if (isTextEditingTarget(document.activeElement)) return;
+        if (multiSelectedIds.length === 0) return;
+        event.preventDefault();
+        bulkDuplicateSelected();
+        return;
+      }
+      if (key === "delete" || key === "backspace") {
+        if (isTextEditingTarget(document.activeElement)) return;
+        if (multiSelectedIds.length === 0) return;
+        event.preventDefault();
+        bulkDeleteSelected();
+        return;
+      }
+      if (key === "escape") {
+        if (multiSelectedIds.length <= 1) return;
+        setMultiSelectedIds(selectedId ? [selectedId] : []);
+      }
     }
     window.addEventListener("keydown", handleKeydown);
     return () => window.removeEventListener("keydown", handleKeydown);
-  }, [editable]);
+  }, [
+    editable,
+    multiSelectedIds,
+    selectedId,
+    bulkDeleteSelected,
+    bulkDuplicateSelected,
+  ]);
 
   function toggleSidebar() {
     setIsSidebarCollapsed((current) => {
@@ -680,6 +772,8 @@ export function PageBuilder({
 
   function selectSection(id: string) {
     setSelectedId(id);
+    setMultiSelectedIds([id]);
+    multiSelectAnchorRef.current = id;
     setPanel("properties");
     window.dispatchEvent(
       new CustomEvent("cms:section-selected", {
@@ -702,6 +796,40 @@ export function PageBuilder({
         block: "start",
       });
     });
+  }
+
+  // Shift-click extends a contiguous range from the last anchor; Ctrl/Cmd-
+  // click toggles one block in or out. A plain click falls back to normal
+  // single-select, which also drives the Properties panel/canvas highlight.
+  function handleOutlineItemClick(
+    id: string,
+    event: React.MouseEvent<HTMLButtonElement>,
+  ) {
+    if (event.shiftKey && multiSelectAnchorRef.current) {
+      const anchorIndex = orderedIds.indexOf(multiSelectAnchorRef.current);
+      const targetIndex = orderedIds.indexOf(id);
+      if (anchorIndex >= 0 && targetIndex >= 0) {
+        const [start, end] =
+          anchorIndex <= targetIndex
+            ? [anchorIndex, targetIndex]
+            : [targetIndex, anchorIndex];
+        setMultiSelectedIds(orderedIds.slice(start, end + 1));
+        setSelectedId(id);
+        return;
+      }
+    }
+    if (event.ctrlKey || event.metaKey) {
+      setMultiSelectedIds((current) => {
+        const next = new Set(current);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return orderedIds.filter((oid) => next.has(oid));
+      });
+      setSelectedId(id);
+      multiSelectAnchorRef.current = id;
+      return;
+    }
+    selectSection(id);
   }
 
   function onDragEnd(result: DropResult) {
@@ -803,6 +931,12 @@ export function PageBuilder({
                 onChange={(event) => setOutlineSearch(event.target.value)}
               />
             </label>
+            {editable ? (
+              <p className="cms-outline-hint">
+                Maj+clic pour une plage, Ctrl/Cmd+clic pour ajouter un bloc à
+                la sélection.
+              </p>
+            ) : null}
             <DragDropContext onDragEnd={onDragEnd}>
               <Droppable droppableId="page-blocks" isDropDisabled={!editable}>
                 {(provided) => (
@@ -831,7 +965,7 @@ export function PageBuilder({
                                 ref={dragProvided.innerRef}
                                 {...dragProvided.draggableProps}
                                 className={
-                                  id === selectedId
+                                  multiSelectedIds.includes(id)
                                     ? "cms-outline-item is-selected"
                                     : "cms-outline-item"
                                 }
@@ -839,7 +973,9 @@ export function PageBuilder({
                                 <button
                                   type="button"
                                   className="cms-outline-item__select"
-                                  onClick={() => selectSection(id)}
+                                  onClick={(event) =>
+                                    handleOutlineItemClick(id, event)
+                                  }
                                 >
                                   <span
                                     {...dragProvided.dragHandleProps}
@@ -881,13 +1017,42 @@ export function PageBuilder({
                 )}
               </Droppable>
             </DragDropContext>
+            {editable && multiSelectedIds.length > 1 ? (
+              <div className="cms-bulk-actions">
+                <span>{multiSelectedIds.length} blocs sélectionnés</span>
+                <div className="cms-bulk-actions__buttons">
+                  <button
+                    type="button"
+                    onClick={bulkDuplicateSelected}
+                    disabled={isBulkPending}
+                  >
+                    <Copy size={14} /> Dupliquer
+                  </button>
+                  <button
+                    type="button"
+                    className="is-danger"
+                    onClick={bulkDeleteSelected}
+                    disabled={isBulkPending}
+                  >
+                    <Trash2 size={14} /> Supprimer
+                  </button>
+                </div>
+                <Feedback state={bulkMutationState} />
+              </div>
+            ) : null}
           </>
         ) : (
           <div ref={inspectorRef} className="cms-visual-builder__inspector">
             {!editable ? (
               <div className="cms-visual-builder__activate">{settings}</div>
             ) : null}
-            {selectedId && childById.has(selectedId) ? (
+            {multiSelectedIds.length > 1 ? (
+              <p className="admin-empty">
+                {multiSelectedIds.length} blocs sélectionnés. Utilisez
+                Dupliquer/Supprimer dans l’onglet Calques, ou cliquez un seul
+                bloc pour modifier ses propriétés.
+              </p>
+            ) : selectedId && childById.has(selectedId) ? (
               <>
                 <div className="cms-visual-builder__inspector-header">
                   <strong>
