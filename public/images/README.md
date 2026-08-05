@@ -15,7 +15,7 @@ automatiquement.
 
 | Fichier | Emplacement | Type | Style |
 |---|---|---|---|
-| `hero/hero-bg.jpg` | Fond du hero d'accueil | Plan large, espace de travail créatif en activité | Documentaire, lumière naturelle, légèrement désaturé |
+| `hero/hero-bg.mp4` (+ `hero/hero-bg.jpg` en repli/poster) | Fond plein cadre du hero d'accueil | Plan large, espace de travail créatif en activité — vidéo en boucle si possible, sinon photo | Documentaire, lumière naturelle, légèrement désaturé |
 | `case-study/before-after.jpg` | Étude de cas phare | Mockup site/campagne réelle | Sobre, fond neutre, pas d'ombre exagérée |
 | `bridge/kwaliti-bridge.jpg` | Section pont vers Kwaliti Print | Macro objet imprimé (tranche carte, pliage) | Contraste fort, éclairage dirigé |
 | `portfolio/portfolio-1.jpg` … `portfolio-6.jpg` | Grille portfolio (6 vignettes) | Une image signature par projet | Cadrage cohérent entre les 6 |
