@@ -3,8 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { CmsPreviewBridge } from "@/app/_components/cms-preview-bridge";
-import { HeroParallax } from "@/app/_components/hero-parallax";
 import { KineticHeading } from "@/app/_components/kinetic-heading";
+import { LiveClock } from "@/app/_components/live-clock";
 import { MagneticButton } from "@/app/_components/magnetic-button";
 import { Reveal } from "@/app/_components/reveal";
 import {
@@ -228,7 +228,7 @@ function PixelHomeSection({
         <div className="home-hero__eyebrow" data-cms-field="eyebrow">
           {value(payload, "eyebrow") || "Agence créative & digitale"}
         </div>
-        <div className="home-hero__grid">
+        <div className="home-hero__body">
           <div className="home-hero__copy">
             <KineticHeading
               className="home-hero__title"
@@ -261,53 +261,60 @@ function PixelHomeSection({
             </Reveal>
           </div>
           <Reveal delay={0.1}>
-            <div className="home-hero__visual" data-cms-media-slot="primary">
-              <HeroParallax className="home-hero__parallax" strength={22}>
-                {asset?.mimeType.startsWith("image/") ? (
+            <div className="home-hero__rail" data-cms-media-slot="primary">
+              {asset?.mimeType.startsWith("image/") ? (
+                <>
                   <Image
-                    className="home-hero__photo"
+                    className="home-hero__rail-photo"
                     src={asset.publicUrl}
                     alt={asset.altText}
                     fill
                     priority
-                    sizes="(max-width: 760px) 100vw, 46vw"
+                    sizes="(max-width: 900px) 100vw, 18rem"
                   />
-                ) : localHeroImage ? (
+                  <CmsPrimaryImageOverlay />
+                </>
+              ) : localHeroImage ? (
+                <>
                   <Image
-                    className="home-hero__photo"
+                    className="home-hero__rail-photo"
                     src={localHeroImage}
                     alt="Atelier Pixel&Digital en pleine activité"
                     fill
                     priority
-                    sizes="(max-width: 760px) 100vw, 46vw"
+                    sizes="(max-width: 900px) 100vw, 18rem"
                   />
-                ) : (
-                  <div className="home-hero__blueprint" aria-hidden="true">
-                    <div className="home-hero__crosshair" />
-                    <span className="home-hero__coords">
-                      12.3714° N · 1.5197° O
-                    </span>
+                  <CmsPrimaryImageOverlay />
+                </>
+              ) : (
+                <div className="home-hero__rail-info">
+                  <span className="home-hero__rail-status" aria-hidden="true">
+                    <span className="home-hero__rail-dot" />
+                    Studio en ligne
+                  </span>
+                  <div>
+                    <LiveClock
+                      timeZone="Africa/Ouagadougou"
+                      className="home-hero__rail-time"
+                    />
+                    <div className="home-hero__rail-place">Ouagadougou</div>
                   </div>
-                )}
-              </HeroParallax>
-              {asset?.mimeType.startsWith("image/") || localHeroImage ? (
-                <CmsPrimaryImageOverlay />
-              ) : null}
-              {!asset && !localHeroImage ? (
-                <div className="home-hero__stamp">P&amp;D</div>
-              ) : null}
-              <div className="home-hero__caption">
-                Stratégie · Identité · Contenu · Digital · Production
-              </div>
+                  <span className="home-hero__rail-coords">
+                    12.3714° N · 1.5197° O
+                  </span>
+                </div>
+              )}
             </div>
           </Reveal>
         </div>
-        <div className="home-hero__ticker" aria-hidden="true">
-          <span>STRAT&Eacute;GIE</span>
-          <span>IDENTIT&Eacute;</span>
-          <span>CONTENU</span>
-          <span>DIGITAL</span>
-          <span>PRODUCTION</span>
+        <div className="home-hero__ticker-wrap">
+          <div className="home-hero__ticker" aria-hidden="true">
+            <span>STRAT&Eacute;GIE</span>
+            <span>IDENTIT&Eacute;</span>
+            <span>CONTENU</span>
+            <span>DIGITAL</span>
+            <span>PRODUCTION</span>
+          </div>
         </div>
       </section>
     );
