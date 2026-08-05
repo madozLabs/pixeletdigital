@@ -4,7 +4,6 @@ import Link from "next/link";
 
 import { CmsPreviewBridge } from "@/app/_components/cms-preview-bridge";
 import { KineticHeading } from "@/app/_components/kinetic-heading";
-import { LiveClock } from "@/app/_components/live-clock";
 import { MagneticButton } from "@/app/_components/magnetic-button";
 import { Reveal } from "@/app/_components/reveal";
 import {
@@ -14,7 +13,8 @@ import {
   type CmsHomeSection,
 } from "@/app/_lib/cms-home";
 import { groupServicesByFamily } from "@/app/_lib/group-services-by-family";
-import { resolveLocalImage } from "@/app/_lib/local-image";
+import { resolveLocalImage, resolveLocalVideo } from "@/app/_lib/local-image";
+import { HeroVideoBackground } from "@/app/_components/hero-video-background";
 import { recordPageView } from "@/modules/content/application/record-page-view";
 import { prisma } from "@/infrastructure/shared/prisma-client";
 import { listPublishedServiceFamilies } from "@/modules/content/application/public/list-published-service-families";
@@ -214,6 +214,7 @@ function PixelHomeSection({
           .filter(Boolean)
       : DEFAULT_HERO_LINES;
     const asset = primaryMedia(payload, mediaById);
+    const localHeroVideo = resolveLocalVideo("pixel-digital/hero/hero-bg.mp4");
     const localHeroImage = resolveLocalImage("pixel-digital/hero/hero-bg.jpg");
     return (
       <section
@@ -225,11 +226,50 @@ function PixelHomeSection({
           mediaById={mediaById}
           priority
         />
-        <div className="home-hero__eyebrow" data-cms-field="eyebrow">
-          {value(payload, "eyebrow") || "Agence créative & digitale"}
+        <div className="home-hero__media">
+          {asset?.mimeType.startsWith("video/") ? (
+            <HeroVideoBackground
+              className="home-hero__media-video"
+              src={asset.publicUrl}
+              poster={localHeroImage ?? undefined}
+              alt={asset.altText}
+            />
+          ) : localHeroVideo ? (
+            <HeroVideoBackground
+              className="home-hero__media-video"
+              src={localHeroVideo}
+              poster={localHeroImage ?? undefined}
+              alt="Tournage en studio Pixel&Digital"
+            />
+          ) : asset?.mimeType.startsWith("image/") ? (
+            <Image
+              className="home-hero__media-image"
+              src={asset.publicUrl}
+              alt={asset.altText}
+              fill
+              priority
+              sizes="100vw"
+            />
+          ) : localHeroImage ? (
+            <Image
+              className="home-hero__media-image"
+              src={localHeroImage}
+              alt="Atelier Pixel&Digital en pleine activité"
+              fill
+              priority
+              sizes="100vw"
+            />
+          ) : (
+            <div className="home-hero__media-fallback" aria-hidden="true" />
+          )}
+          <div className="home-hero__overlay" aria-hidden="true" />
         </div>
-        <div className="home-hero__body">
-          <div className="home-hero__copy">
+
+        <div className="home-hero__content">
+          <div className="home-hero__eyebrow" data-cms-field="eyebrow">
+            {value(payload, "eyebrow") || "Agence créative & digitale"}
+          </div>
+          <div className="home-hero__headline-row">
             <KineticHeading
               className="home-hero__title"
               cmsField="title"
@@ -240,81 +280,27 @@ function PixelHomeSection({
               }
               accentLastLine={heroLines.length > 2}
             />
-            <Reveal delay={0.15}>
+            <Reveal delay={0.25}>
               <p className="home-hero__lede" data-cms-field="text">
                 {value(payload, "text") ||
                   "Nous construisons des marques visibles, crédibles et difficiles à oublier de la stratégie à l’exécution."}
               </p>
             </Reveal>
-            <Reveal delay={0.25}>
-              <div className="home-hero__actions">
-                <MagneticButton
-                  href={value(payload, "href") || "/contact"}
-                  className="button button--primary"
-                >
-                  {value(payload, "label") || "Lancer un projet"}
-                </MagneticButton>
-                <Link href="#capacites" className="home-hero__secondary-link">
-                  Voir nos expertises
-                </Link>
-              </div>
-            </Reveal>
           </div>
-          <Reveal delay={0.1}>
-            <div className="home-hero__rail" data-cms-media-slot="primary">
-              {asset?.mimeType.startsWith("image/") ? (
-                <>
-                  <Image
-                    className="home-hero__rail-photo"
-                    src={asset.publicUrl}
-                    alt={asset.altText}
-                    fill
-                    priority
-                    sizes="(max-width: 900px) 100vw, 18rem"
-                  />
-                  <CmsPrimaryImageOverlay />
-                </>
-              ) : localHeroImage ? (
-                <>
-                  <Image
-                    className="home-hero__rail-photo"
-                    src={localHeroImage}
-                    alt="Atelier Pixel&Digital en pleine activité"
-                    fill
-                    priority
-                    sizes="(max-width: 900px) 100vw, 18rem"
-                  />
-                  <CmsPrimaryImageOverlay />
-                </>
-              ) : (
-                <div className="home-hero__rail-info">
-                  <span className="home-hero__rail-status" aria-hidden="true">
-                    <span className="home-hero__rail-dot" />
-                    Studio en ligne
-                  </span>
-                  <div>
-                    <LiveClock
-                      timeZone="Africa/Ouagadougou"
-                      className="home-hero__rail-time"
-                    />
-                    <div className="home-hero__rail-place">Ouagadougou</div>
-                  </div>
-                  <span className="home-hero__rail-coords">
-                    12.3714° N · 1.5197° O
-                  </span>
-                </div>
-              )}
+          <div className="home-hero__divider" aria-hidden="true" />
+          <Reveal delay={0.35}>
+            <div className="home-hero__footer-row">
+              <MagneticButton
+                href={value(payload, "href") || "/contact"}
+                className="button button--primary home-hero__cta"
+              >
+                {value(payload, "label") || "Lancer un projet"}
+              </MagneticButton>
+              <Link href="#capacites" className="home-hero__secondary-link">
+                Voir nos expertises
+              </Link>
             </div>
           </Reveal>
-        </div>
-        <div className="home-hero__ticker-wrap">
-          <div className="home-hero__ticker" aria-hidden="true">
-            <span>STRAT&Eacute;GIE</span>
-            <span>IDENTIT&Eacute;</span>
-            <span>CONTENU</span>
-            <span>DIGITAL</span>
-            <span>PRODUCTION</span>
-          </div>
         </div>
       </section>
     );

@@ -13,3 +13,8 @@ export function resolveLocalImage(relativePath: string): string | null {
   const absolute = path.join(process.cwd(), "public", "images", normalized);
   return existsSync(absolute) ? `/images/${normalized}` : null;
 }
+
+/** Same idea as resolveLocalImage, for a background video. */
+export function resolveLocalVideo(relativePath: string): string | null {
+  return resolveLocalImage(relativePath);
+}

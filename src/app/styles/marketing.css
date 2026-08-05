@@ -759,11 +759,13 @@ a.world-switcher__item:focus-visible {
   color: #080808;
 }
 
+/* Full-bleed video/image hero, dark overlay, content anchored to the
+   bottom edge -- the "Slider Revolution" agency convention. */
 .home-hero {
   position: relative;
-  padding: clamp(6rem, 14vh, 8.5rem) clamp(1.25rem, 4vw, 4rem) 0;
-  overflow-x: hidden;
-  background: #0a0a0a;
+  min-height: 100svh;
+  overflow: hidden;
+  background: #050505;
   color: #f4f0e8;
 }
 
@@ -778,25 +780,71 @@ a.world-switcher__item:focus-visible {
   text-transform: uppercase;
 }
 
-.home-hero__body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem);
-  gap: clamp(2rem, 5vw, 4.5rem);
-  align-items: stretch;
-  min-height: 58vh;
+.home-hero__media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
 }
 
-.home-hero__copy {
+.home-hero__media-video,
+.home-hero__media-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Shown until a real video or photo exists at
+   public/images/pixel-digital/hero/hero-bg.{mp4,jpg} -- a quiet dark
+   texture, not an empty black rectangle. */
+.home-hero__media-fallback {
+  position: absolute;
+  inset: 0;
+  background-color: #0a0a0a;
+  background-image:
+    linear-gradient(rgb(255 255 255 / 4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 4%) 1px, transparent 1px);
+  background-size: 3rem 3rem;
+}
+
+.home-hero__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgb(5 5 5 / 40%) 0%,
+    rgb(5 5 5 / 52%) 45%,
+    rgb(5 5 5 / 84%) 100%
+  );
+}
+
+.home-hero__content {
   position: relative;
   z-index: 2;
-  min-width: 0;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: clamp(7rem, 16vh, 9rem) clamp(1.25rem, 4vw, 4rem)
+    clamp(2.5rem, 6vh, 4rem);
+}
+
+.home-hero__headline-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 2rem;
+  margin-top: 1.25rem;
 }
 
 .home-hero__title {
   display: flex;
   flex-direction: column;
-  margin-top: 1.5rem;
-  font-size: clamp(3rem, 5.6vw, 6rem);
+  flex: 1 1 32rem;
+  min-width: 0;
+  font-size: clamp(2.75rem, 5vw, 5.5rem);
   line-height: 1;
   letter-spacing: -0.05em;
   text-transform: uppercase;
@@ -817,142 +865,31 @@ a.world-switcher__item:focus-visible {
 }
 
 .home-hero__lede {
-  max-width: 40rem;
-  margin-top: 2rem;
-  font-size: clamp(1.15rem, 2vw, 1.7rem);
-  line-height: 1.35;
+  flex: 0 1 20rem;
+  max-width: 20rem;
+  padding-bottom: 0.5rem;
+  font-size: 1.05rem;
+  line-height: 1.5;
   color: rgb(244 240 232 / 78%);
 }
 
-.home-hero__actions {
+.home-hero__divider {
+  margin: clamp(1.75rem, 4vh, 2.75rem) 0 clamp(1.5rem, 3vh, 2rem);
+  height: 1px;
+  background: rgb(244 240 232 / 22%);
+}
+
+.home-hero__footer-row {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 1.25rem;
-  margin-top: 2rem;
+  flex-wrap: wrap;
+  gap: 1.5rem;
 }
 
 .home-hero__secondary-link {
   font-weight: 700;
   text-underline-offset: 0.3em;
   color: #f4f0e8;
-}
-
-/* The rail: a thin vertical strip standing in for the old decorative
-   blob. Shows a real, honest signal (Ouagadougou's current time) until
-   images/pixel-digital/hero/hero-bg.jpg exists, then becomes a full-bleed
-   photo -- never a fixed-share grid column, so it can't force the
-   headline to overflow its own space again. */
-.home-hero__rail {
-  position: relative;
-  overflow: hidden;
-  border-left: 1px solid rgb(244 240 232 / 14%);
-}
-
-.home-hero__rail-photo {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: var(--cms-image-fit, cover);
-  object-position: var(--cms-image-position-x, 50%)
-    var(--cms-image-position-y, 50%);
-  z-index: 0;
-  opacity: var(--cms-image-opacity, 0.85);
-  transform: scale(var(--cms-image-zoom, 1));
-  transform-origin: var(--cms-image-position-x, 50%)
-    var(--cms-image-position-y, 50%);
-}
-
-.home-hero__rail-info {
-  position: relative;
-  z-index: 1;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 0 0 0 clamp(1.25rem, 2vw, 2rem);
-}
-
-.home-hero__rail-status {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
-  font-size: 0.68rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgb(244 240 232 / 62%);
-}
-
-.home-hero__rail-dot {
-  width: 0.45rem;
-  height: 0.45rem;
-  border-radius: 50%;
-  background: var(--pd-red);
-  animation: railPulse 2.2s ease-in-out infinite;
-}
-
-@keyframes railPulse {
-  0%,
-  100% {
-    opacity: 1;
-    box-shadow: 0 0 0 0 rgb(231 30 45 / 45%);
-  }
-  50% {
-    opacity: 0.6;
-    box-shadow: 0 0 0 0.3rem rgb(231 30 45 / 0%);
-  }
-}
-
-.home-hero__rail-time {
-  margin-top: 1rem;
-  font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
-  font-size: clamp(1.6rem, 2.6vw, 2.4rem);
-  font-weight: 700;
-  color: #fff;
-}
-
-.home-hero__rail-place {
-  margin-top: 0.4rem;
-  font-size: 0.78rem;
-  color: rgb(244 240 232 / 62%);
-}
-
-.home-hero__rail-coords {
-  margin-bottom: 2rem;
-  font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
-  color: rgb(244 240 232 / 45%);
-}
-
-.home-hero__ticker-wrap {
-  margin-top: clamp(2rem, 5vh, 4rem);
-  border-top: 1px solid rgb(244 240 232 / 14%);
-}
-
-.home-hero__ticker {
-  display: flex;
-  gap: 3rem;
-  width: max-content;
-  padding: 1.25rem 0;
-  font-weight: 900;
-  font-size: clamp(1.2rem, 2.3vw, 2.5rem);
-  letter-spacing: -0.03em;
-  animation: homeTicker 24s linear infinite;
-}
-
-.home-hero__ticker span::after {
-  content: "✦";
-  margin-left: 3rem;
-  color: var(--pd-red);
-}
-
-@keyframes homeTicker {
-  to {
-    transform: translateX(-25%);
-  }
 }
 
 .home-manifesto,
@@ -1200,26 +1137,19 @@ a.world-switcher__item:focus-visible {
 }
 
 @media (max-width: 900px) {
-  .home-hero__body,
   .home-section-head,
   .home-method,
   .home-kwaliti {
     grid-template-columns: 1fr;
   }
 
-  .home-hero__body {
-    padding-top: 2rem;
+  .home-hero__headline-row {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  .home-hero__rail {
-    min-height: 14rem;
-    border-left: none;
-    border-top: 1px solid rgb(244 240 232 / 14%);
-    padding-top: 1.5rem;
-  }
-
-  .home-hero__rail-info {
-    padding-left: 0;
+  .home-hero__lede {
+    max-width: none;
   }
 
   .home-method__intro h2,
@@ -1240,10 +1170,6 @@ a.world-switcher__item:focus-visible {
   .site-header__nav > a:not(.site-header__cta),
   .site-header__nav-wrapper {
     display: none;
-  }
-
-  .home-hero__title {
-    font-size: clamp(3.6rem, 18vw, 6.5rem);
   }
 
   .home-service-row {
@@ -2317,6 +2243,16 @@ a.world-switcher__item:focus-visible {
   isolation: isolate;
 }
 
+/* The bespoke PXD hero's full-bleed background layer needs true absolute
+   positioning -- overrides the generic CMS section/media-slot rules
+   above (same specificity, later wins) since it's a direct child of a
+   .cms-designed-section like any other, but isn't one of the generic
+   in-flow content blocks those rules were written for. */
+.home-hero > .home-hero__media {
+  position: absolute;
+  inset: 0;
+}
+
 /* Per-breakpoint visibility, matching the builder's own preview
    breakpoints (mobile ≤760, tablet 761-1024, desktop ≥1025). */
 @media (max-width: 760px) {
@@ -2699,8 +2635,6 @@ a.world-switcher__item:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .home-hero__rail-dot,
-  .home-hero__ticker,
   .kp-hero h1,
   .kp-shape--cyan,
   .kp-shape--yellow,
