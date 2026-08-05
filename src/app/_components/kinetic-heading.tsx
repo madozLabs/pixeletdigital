@@ -54,24 +54,28 @@ export function KineticHeading({
               : undefined
           }
         >
-          {line.split(" ").map((word, wordIndex) => (
-            <span
-              key={`${word}-${wordIndex}`}
-              className="kinetic-heading__word"
-            >
-              <motion.span
-                className="kinetic-heading__word-inner"
-                variants={{
-                  hidden: { y: "110%" },
-                  visible: {
-                    y: "0%",
-                    transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
-                  },
-                }}
-              >
-                {word}
-                {wordIndex < line.split(" ").length - 1 ? " " : ""}
-              </motion.span>
+          {line.split(" ").map((word, wordIndex, words) => (
+            // The trailing space lives OUTSIDE the overflow:hidden word box
+            // (as its own text node) rather than as the last character
+            // inside it -- a space at the very end of an inline-block's own
+            // content collapses away in rendered layout (and in innerText),
+            // gluing words together, even though it survives in the DOM.
+            <span key={`${word}-${wordIndex}`}>
+              <span className="kinetic-heading__word">
+                <motion.span
+                  className="kinetic-heading__word-inner"
+                  variants={{
+                    hidden: { y: "110%" },
+                    visible: {
+                      y: "0%",
+                      transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+                    },
+                  }}
+                >
+                  {word}
+                </motion.span>
+              </span>
+              {wordIndex < words.length - 1 ? " " : ""}
             </span>
           ))}
         </span>

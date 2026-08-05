@@ -41,9 +41,7 @@ export function SiteFooter({ identity }: { identity: PublishedSiteIdentity }) {
             <Link href={identity.privacyPolicyHref}>Confidentialité</Link>
           ) : null}
         </nav>
-        <p>
-          {identity.address || "Ouagadougou · Afrique de l’Ouest & au-delà"}
-        </p>
+        <p>{identity.address || "Ouagadougou, Burkina Faso"}</p>
       </div>
     </footer>
   );

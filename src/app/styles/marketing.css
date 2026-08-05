@@ -42,7 +42,17 @@
   box-shadow: 0 12px 30px -18px rgb(0 0 0 / 35%);
 }
 
+/* The logo mark is red/black -- give it a permanently light backdrop so
+   it stays legible on the header's translucent glass no matter what's
+   scrolling behind it (dark hero, OS dark-mode surface, ...). Cheaper and
+   safer right now than a scroll-aware light/dark logo swap, which would
+   need a second uploaded asset + a schema field. */
 .site-header__mark {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3em 0.65em;
+  border-radius: var(--radius-control);
+  background: rgb(255 255 255 / 88%);
   font-weight: 700;
   font-size: var(--step-2);
   text-decoration: none;
@@ -1189,11 +1199,7 @@ a.world-switcher__item:focus-visible {
   width: 42rem;
   aspect-ratio: 1;
   transform: translateX(-50%);
-  background: radial-gradient(
-    circle,
-    rgb(231 30 45 / 22%) 0%,
-    transparent 70%
-  );
+  background: radial-gradient(circle, rgb(231 30 45 / 22%) 0%, transparent 70%);
   filter: blur(10px);
   pointer-events: none;
 }
