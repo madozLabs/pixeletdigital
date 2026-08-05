@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import type { PublishedSiteIdentity } from "@/app/_lib/site-identity";
 
@@ -29,8 +32,22 @@ function NavigationLinks({ identity }: { identity: PublishedSiteIdentity }) {
 }
 
 export function SiteHeader({ identity }: { identity: PublishedSiteIdentity }) {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    function handleScroll() {
+      setScrolled(window.scrollY > 8);
+    }
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
-    <header className="site-header">
+    <header
+      className="site-header"
+      data-scrolled={scrolled ? "true" : "false"}
+    >
       <Link
         href="/"
         className="site-header__mark"
@@ -52,7 +69,9 @@ export function SiteHeader({ identity }: { identity: PublishedSiteIdentity }) {
         <NavigationLinks identity={identity} />
       </nav>
       <details className="site-header__mobile">
-        <summary>Menu</summary>
+        <summary>
+          <span>Menu</span>
+        </summary>
         <nav aria-label="Navigation mobile">
           <NavigationLinks identity={identity} />
         </nav>

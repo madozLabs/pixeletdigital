@@ -216,6 +216,15 @@ function PixelHomeSection({
     const asset = primaryMedia(payload, mediaById);
     const localHeroVideo = resolveLocalVideo("pixel-digital/hero/hero-bg.mp4");
     const localHeroImage = resolveLocalImage("pixel-digital/hero/hero-bg.jpg");
+    const hasMedia = Boolean(
+      asset?.mimeType.startsWith("video/") ||
+        asset?.mimeType.startsWith("image/") ||
+        localHeroVideo ||
+        localHeroImage,
+    );
+    const capabilityChips = groupServicesByFamily(services, families)
+      .map((group) => group.label)
+      .slice(0, 5);
     return (
       <section
         {...cmsSectionDesignProps(payload, "home-hero")}
@@ -226,6 +235,17 @@ function PixelHomeSection({
           mediaById={mediaById}
           priority
         />
+        <div className="home-hero__field" aria-hidden="true">
+          {!hasMedia ? (
+            <div className="home-hero__aurora">
+              <span className="home-hero__aurora-blob home-hero__aurora-blob--a" />
+              <span className="home-hero__aurora-blob home-hero__aurora-blob--b" />
+              <span className="home-hero__aurora-blob home-hero__aurora-blob--c" />
+            </div>
+          ) : null}
+          <div className="home-hero__gridlines" />
+          <div className="home-grain" />
+        </div>
         <div className="home-hero__media">
           {asset?.mimeType.startsWith("video/") ? (
             <HeroVideoBackground
@@ -259,17 +279,29 @@ function PixelHomeSection({
               priority
               sizes="100vw"
             />
-          ) : (
-            <div className="home-hero__media-fallback" aria-hidden="true" />
-          )}
-          <div className="home-hero__overlay" aria-hidden="true" />
+          ) : null}
         </div>
+        <div className="home-hero__overlay" aria-hidden="true" />
 
         <div className="home-hero__content">
-          <div className="home-hero__eyebrow" data-cms-field="eyebrow">
-            {value(payload, "eyebrow") || "Agence créative & digitale"}
+          <div className="home-hero__top">
+            <Reveal>
+              <div className="home-hero__eyebrow" data-cms-field="eyebrow">
+                {value(payload, "eyebrow") || "Agence créative & digitale"}
+              </div>
+            </Reveal>
+            {capabilityChips.length ? (
+              <Reveal delay={0.1}>
+                <ul className="home-hero__chips">
+                  {capabilityChips.map((label) => (
+                    <li key={label}>{label}</li>
+                  ))}
+                </ul>
+              </Reveal>
+            ) : null}
           </div>
-          <div className="home-hero__headline-row">
+
+          <div className="home-hero__bottom">
             <KineticHeading
               className="home-hero__title"
               cmsField="title"
@@ -280,27 +312,52 @@ function PixelHomeSection({
               }
               accentLastLine={heroLines.length > 2}
             />
-            <Reveal delay={0.25}>
-              <p className="home-hero__lede" data-cms-field="text">
-                {value(payload, "text") ||
-                  "Nous construisons des marques visibles, crédibles et difficiles à oublier de la stratégie à l’exécution."}
-              </p>
-            </Reveal>
-          </div>
-          <div className="home-hero__divider" aria-hidden="true" />
-          <Reveal delay={0.35}>
-            <div className="home-hero__footer-row">
-              <MagneticButton
-                href={value(payload, "href") || "/contact"}
-                className="button button--primary home-hero__cta"
-              >
-                {value(payload, "label") || "Lancer un projet"}
-              </MagneticButton>
-              <Link href="#capacites" className="home-hero__secondary-link">
-                Voir nos expertises
-              </Link>
+            <div className="home-hero__side">
+              <Reveal delay={0.25}>
+                <p className="home-hero__lede" data-cms-field="text">
+                  {value(payload, "text") ||
+                    "Nous construisons des marques visibles, crédibles et difficiles à oublier de la stratégie à l’exécution."}
+                </p>
+              </Reveal>
+              <div className="home-hero__divider" aria-hidden="true" />
+              <Reveal delay={0.35}>
+                <div className="home-hero__actions">
+                  <MagneticButton
+                    href={value(payload, "href") || "/contact"}
+                    className="button button--primary home-hero__cta"
+                  >
+                    {value(payload, "label") || "Lancer un projet"}
+                  </MagneticButton>
+                  <Link
+                    href="#capacites"
+                    className="home-hero__secondary-link"
+                  >
+                    Voir nos expertises
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M3 8h10M9 4l4 4-4 4"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </Link>
+                </div>
+              </Reveal>
             </div>
-          </Reveal>
+          </div>
+        </div>
+
+        <div className="home-hero__scrollcue" aria-hidden="true">
+          <span />
+          Défiler
         </div>
       </section>
     );
@@ -317,6 +374,8 @@ function PixelHomeSection({
         {...sectionProps}
       >
         <CmsSectionBackground payload={payload} mediaById={mediaById} />
+        <div className="home-manifesto__glow" aria-hidden="true" />
+        <div className="home-grain" aria-hidden="true" />
         <Reveal>
           <p className="home-manifesto__label" data-cms-field="eyebrow">
             {value(payload, "eyebrow") || "Notre façon de voir les choses"}
@@ -447,8 +506,15 @@ function PixelHomeSection({
             </>
           ) : (
             <>
-              <span>K</span>
-              <span>P</span>
+              <div className="home-kwaliti__swatch" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="home-kwaliti__mark">
+                <span>K</span>
+                <span>P</span>
+              </div>
             </>
           )}
         </div>
@@ -481,6 +547,8 @@ function PixelHomeSection({
         {...sectionProps}
       >
         <CmsSectionBackground payload={payload} mediaById={mediaById} />
+        <div className="home-closing__glow" aria-hidden="true" />
+        <div className="home-grain" aria-hidden="true" />
         <Reveal>
           <p data-cms-field="eyebrow">
             {value(payload, "eyebrow") ||
