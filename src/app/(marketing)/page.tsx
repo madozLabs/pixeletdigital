@@ -23,7 +23,10 @@ import { PrismaServiceFamilyRepository } from "@/modules/content/infrastructure/
 import { PrismaServiceRepository } from "@/modules/content/infrastructure/prisma-service-repository";
 import { PrismaWorldRepository } from "@/modules/worlds/infrastructure/prisma-world-repository";
 
-import { CmsSection, type CmsPublicPageSummary } from "./_components/cms-section";
+import {
+  CmsSection,
+  type CmsPublicPageSummary,
+} from "./_components/cms-section";
 import {
   CmsPrimaryImageOverlay,
   CmsSectionBackground,
@@ -59,7 +62,10 @@ export async function generateMetadata({
       type: "website",
       images: cms.seo?.ogImageUrl ? [{ url: cms.seo.ogImageUrl }] : undefined,
     },
-    robots: preview || cms.isSharedPreview ? { index: false, follow: false } : undefined,
+    robots:
+      preview || cms.isSharedPreview
+        ? { index: false, follow: false }
+        : undefined,
   };
 }
 
@@ -218,9 +224,9 @@ function PixelHomeSection({
     const localHeroImage = resolveLocalImage("pixel-digital/hero/hero-bg.jpg");
     const hasMedia = Boolean(
       asset?.mimeType.startsWith("video/") ||
-        asset?.mimeType.startsWith("image/") ||
-        localHeroVideo ||
-        localHeroImage,
+      asset?.mimeType.startsWith("image/") ||
+      localHeroVideo ||
+      localHeroImage,
     );
     const capabilityChips = groupServicesByFamily(services, families)
       .map((group) => group.label)
@@ -328,10 +334,7 @@ function PixelHomeSection({
                   >
                     {value(payload, "label") || "Lancer un projet"}
                   </MagneticButton>
-                  <Link
-                    href="#capacites"
-                    className="home-hero__secondary-link"
-                  >
+                  <Link href="#capacites" className="home-hero__secondary-link">
                     Voir nos expertises
                     <svg
                       width="14"
@@ -486,6 +489,9 @@ function PixelHomeSection({
 
   if (type === "MEDIA") {
     const asset = primaryMedia(payload, mediaById);
+    const localBridgeImage = resolveLocalImage(
+      "pixel-digital/bridge/kwaliti-bridge.jpg",
+    );
     return (
       <section
         {...cmsSectionDesignProps(payload, "home-kwaliti")}
@@ -499,6 +505,17 @@ function PixelHomeSection({
                 className="home-kwaliti__image"
                 src={asset.publicUrl}
                 alt={asset.altText}
+                fill
+                sizes="(max-width: 760px) 100vw, 50vw"
+              />
+              <CmsPrimaryImageOverlay />
+            </>
+          ) : localBridgeImage ? (
+            <>
+              <Image
+                className="home-kwaliti__image"
+                src={localBridgeImage}
+                alt="Presse offset en pleine impression chez Kwaliti Print"
                 fill
                 sizes="(max-width: 760px) 100vw, 50vw"
               />
